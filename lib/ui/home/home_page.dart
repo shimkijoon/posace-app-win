@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../core/storage/auth_storage.dart';
+import '../../core/theme/app_theme.dart';
 import '../../data/local/app_database.dart';
 import '../../data/remote/api_client.dart';
 import '../../data/remote/pos_master_api.dart';
 import '../../sync/sync_service.dart';
 import '../auth/login_page.dart';
+import '../sales/sales_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.database});
@@ -236,6 +238,33 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // 판매 시작 버튼
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _productsCount > 0
+                    ? () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => SalesPage(database: widget.database),
+                          ),
+                        );
+                      }
+                    : null,
+                icon: const Icon(Icons.point_of_sale, size: 24),
+                label: const Text(
+                  '판매 시작',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),

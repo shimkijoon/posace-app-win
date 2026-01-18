@@ -53,6 +53,7 @@ class AppDatabase {
         categoryId TEXT NOT NULL,
         name TEXT NOT NULL,
         price INTEGER NOT NULL,
+        barcode TEXT,
         stockEnabled INTEGER NOT NULL,
         stockQuantity INTEGER,
         isActive INTEGER NOT NULL,

@@ -44,6 +44,7 @@ class ProductModel {
   final String categoryId;
   final String name;
   final int price;
+  final String? barcode;
   final bool stockEnabled;
   final int? stockQuantity;
   final bool isActive;
@@ -56,6 +57,7 @@ class ProductModel {
     required this.categoryId,
     required this.name,
     required this.price,
+    this.barcode,
     required this.stockEnabled,
     this.stockQuantity,
     required this.isActive,
@@ -70,6 +72,7 @@ class ProductModel {
       'categoryId': categoryId,
       'name': name,
       'price': price,
+      'barcode': barcode,
       'stockEnabled': stockEnabled ? 1 : 0,
       'stockQuantity': stockQuantity,
       'isActive': isActive ? 1 : 0,
@@ -91,6 +94,7 @@ class ProductModel {
       categoryId: map['categoryId'] as String,
       name: map['name'] as String,
       price: price,
+      barcode: map['barcode'] as String?,
       stockEnabled: map['stockEnabled'] is bool
           ? map['stockEnabled'] as bool
           : (map['stockEnabled'] as int) == 1,
