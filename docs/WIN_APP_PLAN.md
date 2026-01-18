@@ -91,3 +91,39 @@
 - [ ] 6) 재고/상품 상태 동기화
 - [ ] 7) 세션/마감
 - [ ] 8) 로그/모니터링
+
+## 10) 현재까지 진행 내역
+
+- Flutter Windows 프로젝트 생성 및 구조 분리(core/data/ui/sync)
+- POS 디바이스 토큰 로그인 화면 구현
+- POS 토큰/매장 정보 로컬 저장
+
+## 11) 로컬 실행 방법 (전체 스택)
+
+### 1) DB (Postgres)
+```
+cd D:\workspace\github.com\shimkijoon\posace-api
+docker compose -f docker-compose.local.yml up -d
+```
+
+### 2) API
+```
+cd D:\workspace\github.com\shimkijoon\posace-api
+$env:DATABASE_URL="postgresql://posace:posace@localhost:5432/posace_local"
+$env:JWT_SECRET="dev-secret"
+pnpm dev
+```
+
+### 3) Backoffice
+```
+cd D:\workspace\github.com\shimkijoon\posace-backoffice
+$env:NEXT_PUBLIC_API_BASE_URL="http://localhost:3000/api/v1"
+pnpm dev
+```
+
+### 4) Windows App
+```
+cd D:\workspace\github.com\shimkijoon\posace-app-win
+flutter config --enable-windows-desktop
+flutter run -d windows --dart-define=API_BASE_URL=http://localhost:3000/api/v1
+```
