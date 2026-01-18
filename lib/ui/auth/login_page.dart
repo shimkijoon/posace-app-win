@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../core/auth/pos_auth_service.dart';
+import '../../data/local/app_database.dart';
 import '../home/home_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, required this.database});
+
+  final AppDatabase database;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -31,7 +34,7 @@ class _LoginPageState extends State<LoginPage> {
       await _authService.loginWithDeviceToken(_deviceTokenController.text.trim());
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomePage()),
+        MaterialPageRoute(builder: (_) => HomePage(database: widget.database)),
       );
     } catch (e) {
       setState(() {

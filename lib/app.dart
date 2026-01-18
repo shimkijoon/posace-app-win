@@ -26,7 +26,7 @@ class PosaceApp extends StatelessWidget {
           }
           final token = snapshot.data;
           if (token == null || token.isEmpty) {
-            return const LoginPage();
+            return LoginPage(database: database);
           }
           return HomePage(database: database);
         },

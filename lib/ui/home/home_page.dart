@@ -143,7 +143,7 @@ class _HomePageState extends State<HomePage> {
     await _storage.clear();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
+      MaterialPageRoute(builder: (_) => LoginPage(database: widget.database)),
     );
   }
 

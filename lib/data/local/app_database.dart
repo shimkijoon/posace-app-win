@@ -1,4 +1,5 @@
-import 'package:sqflite/sqflite.dart';
+import 'dart:io';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'models.dart';
@@ -16,6 +17,12 @@ class AppDatabase {
   }
 
   Future<Database> _initDatabase() async {
+    // Windows에서 sqflite_common_ffi 초기화
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+
     final documentsDirectory = await getApplicationDocumentsDirectory();
     final path = join(documentsDirectory.path, _databaseName);
 
