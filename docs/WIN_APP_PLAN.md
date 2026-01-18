@@ -97,6 +97,11 @@
 - Flutter Windows 프로젝트 생성 및 구조 분리(core/data/ui/sync)
 - POS 디바이스 토큰 로그인 화면 구현
 - POS 토큰/매장 정보 로컬 저장
+- Flutter 업데이트 완료 (3.35.5 → 3.38.7)
+- Visual Studio 2026 설치 완료 (D:\Microsoft Visual Studio\18\Community)
+- Windows 앱 빌드 및 실행 성공
+- POS 디바이스 토큰으로 로그인 성공 확인
+- 시드 데이터에 POS 디바이스 토큰 자동 생성 기능 추가
 
 ## 11) 로컬 실행 방법 (전체 스택)
 
@@ -124,6 +129,10 @@ pnpm dev
 ### 4) Windows App
 ```
 cd D:\workspace\github.com\shimkijoon\posace-app-win
-flutter config --enable-windows-desktop
 flutter run -d windows --dart-define=API_BASE_URL=http://localhost:3000/api/v1
 ```
+
+**참고:**
+- Visual Studio 2026 (또는 2022) 설치 필요 (Desktop development with C++ 워크로드)
+- Flutter 3.38.7 이상 권장
+- 시드 데이터 실행 후 생성된 POS 디바이스 토큰을 앱에 입력하여 로그인
