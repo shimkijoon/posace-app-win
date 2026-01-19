@@ -6,7 +6,7 @@ import 'models.dart';
 
 class AppDatabase {
   static const _databaseName = 'posace.db';
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 3;
 
   Database? _database;
 
@@ -84,10 +84,72 @@ class AppDatabase {
         value TEXT NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE sales (
+        id TEXT PRIMARY KEY,
+        clientSaleId TEXT,
+        storeId TEXT NOT NULL,
+        posId TEXT,
+        totalAmount INTEGER NOT NULL,
+        paidAmount INTEGER NOT NULL,
+        paymentMethod TEXT NOT NULL,
+        status TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        syncedAt TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE sale_items (
+        id TEXT PRIMARY KEY,
+        saleId TEXT NOT NULL,
+        productId TEXT NOT NULL,
+        qty INTEGER NOT NULL,
+        price INTEGER NOT NULL,
+        discountAmount INTEGER NOT NULL,
+        FOREIGN KEY (saleId) REFERENCES sales (id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // TODO: Handle database migrations
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE sales (
+          id TEXT PRIMARY KEY,
+          clientSaleId TEXT,
+          storeId TEXT NOT NULL,
+          posId TEXT,
+          totalAmount INTEGER NOT NULL,
+          paidAmount INTEGER NOT NULL,
+          paymentMethod TEXT NOT NULL,
+          status TEXT NOT NULL,
+          createdAt TEXT NOT NULL,
+          syncedAt TEXT
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE sale_items (
+          id TEXT PRIMARY KEY,
+          saleId TEXT NOT NULL,
+          productId TEXT NOT NULL,
+          qty INTEGER NOT NULL,
+          price INTEGER NOT NULL,
+          discountAmount INTEGER NOT NULL,
+          FOREIGN KEY (saleId) REFERENCES sales (id) ON DELETE CASCADE
+        )
+      ''');
+    }
+
+    if (oldVersion < 3) {
+      try {
+        await db.execute('ALTER TABLE products ADD COLUMN barcode TEXT');
+      } catch (e) {
+        // 이미 컬럼이 존재하는 경우 무시
+      }
+    }
   }
 
   Future<void> init() async {
@@ -99,6 +161,8 @@ class AppDatabase {
     await db.delete('categories');
     await db.delete('products');
     await db.delete('discounts');
+    await db.delete('sales');
+    await db.delete('sale_items');
     await db.delete('sync_metadata');
   }
 
@@ -192,5 +256,48 @@ class AppDatabase {
     );
     if (maps.isEmpty) return null;
     return maps.first['value'] as String?;
+  }
+
+  // Sales
+  Future<void> insertSale(SaleModel sale, List<SaleItemModel> items) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('sales', sale.toMap());
+      for (final item in items) {
+        await txn.insert('sale_items', item.toMap());
+      }
+    });
+  }
+
+  Future<List<SaleModel>> getUnsyncedSales() async {
+    final db = await database;
+    final maps = await db.query(
+      'sales',
+      where: 'syncedAt IS NULL',
+      orderBy: 'createdAt ASC',
+    );
+    return maps.map((map) => SaleModel.fromMap(map)).toList();
+  }
+
+  Future<List<SaleItemModel>> getSaleItems(String saleId) async {
+    final db = await database;
+    final maps = await db.query(
+      'sale_items',
+      where: 'saleId = ?',
+      whereArgs: [saleId],
+    );
+    return maps.map((map) => SaleItemModel.fromMap(map)).toList();
+  }
+
+  Future<void> markSaleAsSynced(String saleId, {DateTime? syncedAt}) async {
+    final db = await database;
+    await db.update(
+      'sales',
+      {
+        'syncedAt': (syncedAt ?? DateTime.now()).toIso8601String(),
+      },
+      where: 'id = ?',
+      whereArgs: [saleId],
+    );
   }
 }

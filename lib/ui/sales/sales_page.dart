@@ -4,6 +4,8 @@ import '../../core/models/cart_item.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/local/app_database.dart';
 import '../../data/local/models.dart';
+import 'package:uuid/uuid.dart';
+import '../../core/storage/auth_storage.dart';
 import '../home/home_page.dart';
 import 'widgets/title_bar.dart';
 import 'widgets/cart_grid.dart';
@@ -230,7 +232,7 @@ class _SalesPageState extends State<SalesPage> {
     );
   }
 
-  void _onCheckout() {
+  Future<void> _onCheckout() async {
     if (_cart.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('결제할 상품이 없습니다')),
@@ -238,10 +240,91 @@ class _SalesPageState extends State<SalesPage> {
       return;
     }
 
-    // TODO: 결제 화면으로 이동
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('결제 화면은 다음 단계에서 구현됩니다')),
+    // 결제 수단 선택 다이얼로그
+    final String? method = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('결제 수단 선택'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.money),
+              title: const Text('현금 (CASH)'),
+              onTap: () => Navigator.pop(context, 'CASH'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.credit_card),
+              title: const Text('카드 (CARD)'),
+              onTap: () => Navigator.pop(context, 'CARD'),
+            ),
+          ],
+        ),
+      ),
     );
+
+    if (method == null) return;
+
+    await _processPayment(method);
+  }
+
+  Future<void> _processPayment(String method) async {
+    setState(() => _isLoading = true);
+
+    try {
+      final session = await AuthStorage().getSessionInfo();
+      final storeId = session['storeId'];
+      final posId = session['posId'];
+
+      if (storeId == null) throw Exception('매장 정보를 찾을 수 없습니다');
+
+      final saleId = const Uuid().v4();
+      final sale = SaleModel(
+        id: saleId,
+        storeId: storeId,
+        posId: posId,
+        totalAmount: _cart.total,
+        paidAmount: _cart.total,
+        paymentMethod: method,
+        status: 'COMPLETED',
+        createdAt: DateTime.now(),
+      );
+
+      final items = _cart.items.map((item) => SaleItemModel(
+        id: const Uuid().v4(),
+        saleId: saleId,
+        productId: item.product.id,
+        qty: item.quantity,
+        price: item.unitPrice,
+        discountAmount: item.discountAmount,
+      )).toList();
+
+      await widget.database.insertSale(sale, items);
+
+      if (mounted) {
+        setState(() {
+          _cart = Cart().applyDiscounts(_discounts);
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('결제가 완료되었습니다'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('결제 처리 중 오류 발생: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    }
   }
 
   @override

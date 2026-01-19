@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/models/cart.dart';
 import '../../../core/models/cart_item.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/local/models.dart';
 
 typedef ValueChanged2<T1, T2> = void Function(T1 value1, T2 value2);
 
@@ -46,8 +47,23 @@ class _CartGridState extends State<CartGrid> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _updateScrollButtons();
+        
+        // 상품이 추가되었을 때 하단으로 자동 스크롤
+        if (widget.cart.items.length > oldWidget.cart.items.length) {
+          _scrollToBottom();
+        }
       }
     });
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   @override
@@ -185,18 +201,21 @@ class _CartGridState extends State<CartGrid> {
                             ),
                       ),
                     ),
-                    Expanded(
+                     Expanded(
                       flex: 1,
-                      child: Text(
-                        '금액',
-                        textAlign: TextAlign.right,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textPrimary,
-                            ),
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 12), // 스크롤바 공간 확보
+                        child: Text(
+                          '금액',
+                          textAlign: TextAlign.right,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary,
+                              ),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 4),
                   ],
                 ),
               ),
@@ -261,37 +280,59 @@ class _CartGridState extends State<CartGrid> {
                       _updateScrollButtons();
                       return false;
                     },
-                    child: ListView.builder(
+                    child: Scrollbar(
                       controller: _scrollController,
-                      padding: EdgeInsets.zero,
-                      itemCount: cart.items.length,
-                      itemBuilder: (context, index) {
-                        final item = cart.items[index];
-                        final isSelected = _selectedItemId == item.product.id;
-                        return _CartGridRow(
-                          item: item,
-                          isSelected: isSelected,
-                          onTap: () {
-                            setState(() {
-                              _selectedItemId = isSelected ? null : item.product.id;
-                            });
-                          },
-                          onQuantityChanged: (quantity) =>
-                              widget.onQuantityChanged(item.product.id, quantity),
-                          onRemove: () {
-                            widget.onItemRemove(item.product.id);
-                            setState(() {
-                              if (_selectedItemId == item.product.id) {
-                                _selectedItemId = null;
-                              }
-                            });
-                          },
-                          formatPrice: _formatPrice,
-                        );
-                      },
+                      thumbVisibility: true, // 항상 표시
+                      trackVisibility: true,
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: EdgeInsets.zero,
+                        itemCount: cart.items.length,
+                        itemBuilder: (context, index) {
+                          final item = cart.items[index];
+                          final isSelected = _selectedItemId == item.product.id;
+                          return _CartGridRow(
+                            item: item,
+                            isSelected: isSelected,
+                            onTap: () {
+                              setState(() {
+                                _selectedItemId = isSelected ? null : item.product.id;
+                              });
+                            },
+                            onQuantityChanged: (quantity) =>
+                                widget.onQuantityChanged(item.product.id, quantity),
+                            onRemove: () {
+                              widget.onItemRemove(item.product.id);
+                              setState(() {
+                                if (_selectedItemId == item.product.id) {
+                                  _selectedItemId = null;
+                                }
+                              });
+                            },
+                            formatPrice: _formatPrice,
+                          );
+                        },
+                      ),
                     ),
                   ),
           ),
+
+          // 장바구니 할인 (고정 푸터)
+          if (cart.cartDiscounts.isNotEmpty)
+            Container(
+              decoration: BoxDecoration(
+                color: AppTheme.error.withOpacity(0.02),
+                border: Border(
+                  top: BorderSide(color: AppTheme.border.withOpacity(0.5), width: 1),
+                ),
+              ),
+              child: Column(
+                children: cart.cartDiscounts.map((discount) => _CartGridDiscountFooterRow(
+                  discount: discount,
+                  formatPrice: _formatPrice,
+                )).toList(),
+              ),
+            ),
 
           // 하단 합계 정보
           Container(
@@ -323,25 +364,23 @@ class _CartGridState extends State<CartGrid> {
                 const SizedBox(height: 8),
                 
                 // 할인
-                if (cart.cartDiscountAmount > 0) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '할인',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      Text(
-                        '-${_formatPrice(cart.cartDiscountAmount)}',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.success,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '할인',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    Text(
+                      '-${_formatPrice(cart.totalDiscountAmount)}',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.error,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 
                 // 세금 (간단히 소계의 10%로 계산, 나중에 실제 세금 로직으로 대체)
                 if (cart.subtotal > 0) ...[
@@ -542,24 +581,29 @@ class _CartGridRow extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: item.discountAmount > 0
-                        ? AppTheme.success
+                        ? AppTheme.error
                         : AppTheme.textSecondary,
                     fontWeight: FontWeight.w500,
                   ),
             ),
           ),
 
-          // 금액
+          // 최종 금액 (우측 정렬)
           Expanded(
             flex: 1,
-            child: Text(
-              formatPrice(item.finalPrice),
-              textAlign: TextAlign.right,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 12), // 스크롤바 공간 확보
+              child: Text(
+                formatPrice(item.finalPrice),
+                textAlign: TextAlign.right,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primary,
+                    ),
+              ),
             ),
           ),
+          const SizedBox(width: 4),
         ],
           ),
         ),
@@ -612,6 +656,84 @@ class _ScrollButton extends StatelessWidget {
             color: enabled ? AppTheme.primary : AppTheme.textSecondary,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CartGridDiscountFooterRow extends StatelessWidget {
+  const _CartGridDiscountFooterRow({
+    required this.discount,
+    required this.formatPrice,
+  });
+
+  final DiscountModel discount;
+  final String Function(int) formatPrice;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: AppTheme.border.withOpacity(0.2), width: 1),
+        ),
+      ),
+      child: Row(
+        children: [
+          // 할인 태그 및 이름 (왼쪽 정렬)
+          Expanded(
+            flex: 6, // 2(이름) + 1(바코드) + 1(단가) + 1(수량) + 1(할인) = 6
+            child: Row(
+              children: [
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: AppTheme.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '할인',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppTheme.error,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    discount.name,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.error,
+                          fontWeight: FontWeight.w500,
+                        ),
+                    overflow: TextOverflow.visible, // 이름이 다 보이도록 설정
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 할인 금액 (오른쪽 끝 정렬, 상품 가격 컬럼에 맞춤)
+          Expanded(
+            flex: 1, // Final Price 컬럼에 맞춰 flex 1
+            child: Padding(
+              padding: const EdgeInsets.only(right: 12), // 스크롤바 공간 확보
+              child: Text(
+                '-${formatPrice(discount.rateOrAmount)}',
+                textAlign: TextAlign.right,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.error,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4), // 우측 여백 보정
+        ],
       ),
     );
   }

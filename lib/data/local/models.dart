@@ -173,3 +173,99 @@ class DiscountModel {
     );
   }
 }
+
+class SaleModel {
+  final String id;
+  final String? clientSaleId;
+  final String storeId;
+  final String? posId;
+  final int totalAmount;
+  final int paidAmount;
+  final String paymentMethod;
+  final String status;
+  final DateTime createdAt;
+  final DateTime? syncedAt;
+
+  SaleModel({
+    required this.id,
+    this.clientSaleId,
+    required this.storeId,
+    this.posId,
+    required this.totalAmount,
+    required this.paidAmount,
+    required this.paymentMethod,
+    required this.status,
+    required this.createdAt,
+    this.syncedAt,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'clientSaleId': clientSaleId,
+      'storeId': storeId,
+      'posId': posId,
+      'totalAmount': totalAmount,
+      'paidAmount': paidAmount,
+      'paymentMethod': paymentMethod,
+      'status': status,
+      'createdAt': createdAt.toIso8601String(),
+      'syncedAt': syncedAt?.toIso8601String(),
+    };
+  }
+
+  factory SaleModel.fromMap(Map<String, dynamic> map) {
+    return SaleModel(
+      id: map['id'] as String,
+      clientSaleId: map['clientSaleId'] as String?,
+      storeId: map['storeId'] as String,
+      posId: map['posId'] as String?,
+      totalAmount: map['totalAmount'] as int,
+      paidAmount: map['paidAmount'] as int,
+      paymentMethod: map['paymentMethod'] as String,
+      status: map['status'] as String,
+      createdAt: DateTime.parse(map['createdAt'] as String),
+      syncedAt: map['syncedAt'] != null ? DateTime.parse(map['syncedAt'] as String) : null,
+    );
+  }
+}
+
+class SaleItemModel {
+  final String id;
+  final String saleId;
+  final String productId;
+  final int qty;
+  final int price;
+  final int discountAmount;
+
+  SaleItemModel({
+    required this.id,
+    required this.saleId,
+    required this.productId,
+    required this.qty,
+    required this.price,
+    required this.discountAmount,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'saleId': saleId,
+      'productId': productId,
+      'qty': qty,
+      'price': price,
+      'discountAmount': discountAmount,
+    };
+  }
+
+  factory SaleItemModel.fromMap(Map<String, dynamic> map) {
+    return SaleItemModel(
+      id: map['id'] as String,
+      saleId: map['saleId'] as String,
+      productId: map['productId'] as String,
+      qty: map['qty'] as int,
+      price: map['price'] as int,
+      discountAmount: map['discountAmount'] as int,
+    );
+  }
+}

@@ -4,6 +4,7 @@ import '../../core/theme/app_theme.dart';
 import '../../data/local/app_database.dart';
 import '../../data/remote/api_client.dart';
 import '../../data/remote/pos_master_api.dart';
+import '../../data/remote/pos_sales_api.dart';
 import '../../sync/sync_service.dart';
 import '../auth/login_page.dart';
 import '../sales/sales_page.dart';
@@ -25,6 +26,7 @@ class _HomePageState extends State<HomePage> {
   int _categoriesCount = 0;
   int _productsCount = 0;
   int _discountsCount = 0;
+  int _unsyncedSalesCount = 0;
 
   @override
   void initState() {
@@ -50,11 +52,13 @@ class _HomePageState extends State<HomePage> {
     final categories = await widget.database.getCategories();
     final products = await widget.database.getProducts();
     final discounts = await widget.database.getDiscounts();
+    final unsyncedSales = await widget.database.getUnsyncedSales();
     if (!mounted) return;
     setState(() {
       _categoriesCount = categories.length;
       _productsCount = products.length;
       _discountsCount = discounts.length;
+      _unsyncedSalesCount = unsyncedSales.length;
     });
   }
 
@@ -74,15 +78,24 @@ class _HomePageState extends State<HomePage> {
     try {
       final apiClient = ApiClient(accessToken: accessToken);
       final masterApi = PosMasterApi(apiClient);
+      final salesApi = PosSalesApi(apiClient);
       final syncService = SyncService(
         database: widget.database,
         masterApi: masterApi,
+        salesApi: salesApi,
       );
 
+      // 1. 마스터 동기화
       final result = await syncService.syncMaster(
         storeId: storeId,
         manual: !auto,
       );
+
+      // 2. 미동기화 매출 업로드
+      int uploadedCount = 0;
+      if (result.success) {
+        uploadedCount = await syncService.flushSalesQueue();
+      }
 
       if (!mounted) return;
 
@@ -98,9 +111,7 @@ class _HomePageState extends State<HomePage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                '동기화 완료: 카테고리 ${result.categoriesCount ?? 0}개, '
-                '상품 ${result.productsCount ?? 0}개, '
-                '할인 ${result.discountsCount ?? 0}개',
+                '동기화 완료: 마스터(${result.productsCount ?? 0}개), 매출($uploadedCount건) 업로드',
               ),
             ),
           );
@@ -235,6 +246,7 @@ class _HomePageState extends State<HomePage> {
                         _buildStatCard('카테고리', _categoriesCount),
                         _buildStatCard('상품', _productsCount),
                         _buildStatCard('할인', _discountsCount),
+                        _buildStatCard('미전송 매출', _unsyncedSalesCount, highlight: _unsyncedSalesCount > 0),
                       ],
                     ),
                   ],
@@ -274,12 +286,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildStatCard(String label, int count) {
+  Widget _buildStatCard(String label, int count, {bool highlight = false}) {
     return Column(
       children: [
         Text(
           count.toString(),
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontSize: 24, 
+            fontWeight: FontWeight.bold,
+            color: highlight ? Colors.orange : null,
+          ),
         ),
         Text(
           label,

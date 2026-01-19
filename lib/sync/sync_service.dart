@@ -1,15 +1,18 @@
 import '../data/local/app_database.dart';
+import '../data/local/models.dart';
 import '../data/remote/pos_master_api.dart';
-import '../data/remote/api_client.dart';
+import '../data/remote/pos_sales_api.dart';
 
 class SyncService {
   SyncService({
     required this.database,
     required this.masterApi,
+    required this.salesApi,
   });
 
   final AppDatabase database;
   final PosMasterApi masterApi;
+  final PosSalesApi salesApi;
 
   Future<SyncResult> syncMaster({
     required String storeId,
@@ -46,8 +49,40 @@ class SyncService {
     }
   }
 
-  Future<void> flushSalesQueue() async {
-    // TODO: Implement queued sales upload.
+  Future<int> flushSalesQueue() async {
+    final unsyncedSales = await database.getUnsyncedSales();
+    int successCount = 0;
+
+    for (final sale in unsyncedSales) {
+      try {
+        final items = await database.getSaleItems(sale.id);
+        
+        final saleData = {
+          'storeId': sale.storeId,
+          'posId': sale.posId,
+          'clientSaleId': sale.id, // 로컬 ID를 클라이언트 세일 ID로 사용
+          'totalAmount': sale.totalAmount,
+          'paidAmount': sale.paidAmount,
+          'paymentMethod': sale.paymentMethod,
+          'status': sale.status,
+          'items': items.map((item) => {
+            'productId': item.productId,
+            'qty': item.qty,
+            'price': item.price,
+            'discountAmount': item.discountAmount,
+          }).toList(),
+        };
+
+        await salesApi.createSale(saleData);
+        await database.markSaleAsSynced(sale.id);
+        successCount++;
+      } catch (e) {
+        print('Failed to sync sale ${sale.id}: $e');
+        // 한 건 실패해도 다음 건 계속 진행
+      }
+    }
+
+    return successCount;
   }
 
   Future<void> clearLocalData() async {
