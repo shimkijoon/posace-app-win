@@ -30,6 +30,7 @@ class SyncService {
       await database.upsertCategories(response.categories);
       await database.upsertProducts(response.products);
       await database.upsertDiscounts(response.discounts);
+      await database.upsertTaxes(response.taxes);
 
       // 동기화 시간 업데이트
       await database.setSyncMetadata('lastMasterSync', response.serverTime);
@@ -39,6 +40,7 @@ class SyncService {
         categoriesCount: response.categories.length,
         productsCount: response.products.length,
         discountsCount: response.discounts.length,
+        taxesCount: response.taxes.length,
         serverTime: response.serverTime,
       );
     } catch (e) {
@@ -95,6 +97,7 @@ class SyncResult {
   final int? categoriesCount;
   final int? productsCount;
   final int? discountsCount;
+  final int? taxesCount;
   final String? serverTime;
   final String? error;
 
@@ -103,6 +106,7 @@ class SyncResult {
     this.categoriesCount,
     this.productsCount,
     this.discountsCount,
+    this.taxesCount,
     this.serverTime,
     this.error,
   });

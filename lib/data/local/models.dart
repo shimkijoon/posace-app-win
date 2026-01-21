@@ -1,3 +1,7 @@
+import './models/taxes_models.dart';
+import './models/options_models.dart';
+import './models/bundle_models.dart';
+
 class CategoryModel {
   final String id;
   final String storeId;
@@ -43,6 +47,7 @@ class ProductModel {
   final String storeId;
   final String categoryId;
   final String name;
+  final String type; // SINGLE, COMBO
   final int price;
   final String? barcode;
   final bool stockEnabled;
@@ -51,11 +56,16 @@ class ProductModel {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  final List<TaxModel> taxes;
+  final List<ProductOptionGroupModel> optionGroups;
+  final List<BundleItemModel> bundleItems;
+
   ProductModel({
     required this.id,
     required this.storeId,
     required this.categoryId,
     required this.name,
+    required this.type,
     required this.price,
     this.barcode,
     required this.stockEnabled,
@@ -63,6 +73,9 @@ class ProductModel {
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
+    this.taxes = const [],
+    this.optionGroups = const [],
+    this.bundleItems = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -71,6 +84,7 @@ class ProductModel {
       'storeId': storeId,
       'categoryId': categoryId,
       'name': name,
+      'type': type,
       'price': price,
       'barcode': barcode,
       'stockEnabled': stockEnabled ? 1 : 0,
@@ -93,6 +107,7 @@ class ProductModel {
       storeId: map['storeId'] as String,
       categoryId: map['categoryId'] as String,
       name: map['name'] as String,
+      type: map['type'] as String? ?? 'SINGLE',
       price: price,
       barcode: map['barcode'] as String?,
       stockEnabled: map['stockEnabled'] is bool
@@ -104,6 +119,21 @@ class ProductModel {
           : (map['isActive'] as int) == 1,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
+      taxes: map['taxes'] != null
+          ? (map['taxes'] as List).map((e) => TaxModel.fromMap(e as Map<String, dynamic>)).toList()
+          : [],
+      optionGroups: map['optionGroups'] != null
+          ? (map['optionGroups'] as List).map((e) {
+              final groupMap = e as Map<String, dynamic>;
+              final options = groupMap['options'] != null
+                  ? (groupMap['options'] as List).map((o) => ProductOptionModel.fromMap(o as Map<String, dynamic>)).toList()
+                  : <ProductOptionModel>[];
+              return ProductOptionGroupModel.fromMap(groupMap, options: options);
+            }).toList()
+          : [],
+      bundleItems: map['bundleItems'] != null
+          ? (map['bundleItems'] as List).map((e) => BundleItemModel.fromMap(e as Map<String, dynamic>)).toList()
+          : [],
     );
   }
 }
@@ -186,6 +216,8 @@ class SaleModel {
   final DateTime createdAt;
   final DateTime? syncedAt;
 
+  final int taxAmount;
+
   SaleModel({
     required this.id,
     this.clientSaleId,
@@ -197,6 +229,7 @@ class SaleModel {
     required this.status,
     required this.createdAt,
     this.syncedAt,
+    this.taxAmount = 0,
   });
 
   Map<String, dynamic> toMap() {
@@ -211,6 +244,7 @@ class SaleModel {
       'status': status,
       'createdAt': createdAt.toIso8601String(),
       'syncedAt': syncedAt?.toIso8601String(),
+      'taxAmount': taxAmount,
     };
   }
 
@@ -226,6 +260,7 @@ class SaleModel {
       status: map['status'] as String,
       createdAt: DateTime.parse(map['createdAt'] as String),
       syncedAt: map['syncedAt'] != null ? DateTime.parse(map['syncedAt'] as String) : null,
+      taxAmount: map['taxAmount'] as int? ?? 0,
     );
   }
 }

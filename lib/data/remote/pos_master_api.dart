@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_client.dart';
 import '../local/models.dart';
+import '../local/models/taxes_models.dart';
 
 class PosMasterApi {
   PosMasterApi(this.apiClient);
@@ -37,6 +38,7 @@ class MasterDataResponse {
   final List<CategoryModel> categories;
   final List<ProductModel> products;
   final List<DiscountModel> discounts;
+  final List<TaxModel> taxes;
 
   MasterDataResponse({
     required this.serverTime,
@@ -44,6 +46,7 @@ class MasterDataResponse {
     required this.categories,
     required this.products,
     required this.discounts,
+    required this.taxes,
   });
 
   factory MasterDataResponse.fromJson(Map<String, dynamic> json) {
@@ -58,6 +61,9 @@ class MasterDataResponse {
           .toList(),
       discounts: (json['discounts'] as List)
           .map((e) => DiscountModel.fromMap(e as Map<String, dynamic>))
+          .toList(),
+      taxes: (json['taxes'] as List? ?? [])
+          .map((e) => TaxModel.fromMap(e as Map<String, dynamic>))
           .toList(),
     );
   }

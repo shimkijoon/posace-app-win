@@ -12,6 +12,8 @@ import 'widgets/cart_grid.dart';
 import 'widgets/product_selection_area.dart';
 import 'widgets/function_buttons.dart';
 import 'widgets/product_search_bar.dart';
+import 'widgets/option_selection_dialog.dart';
+import '../../data/local/models/options_models.dart';
 
 class SalesPage extends StatefulWidget {
   const SalesPage({
@@ -78,9 +80,22 @@ class _SalesPageState extends State<SalesPage> {
     });
   }
 
-  void _onProductTap(ProductModel product) {
+  Future<void> _onProductTap(ProductModel product) async {
+    List<ProductOptionModel>? selectedOptions;
+
+    // 옵션이 있거나 콤보 메뉴인 경우 옵션 선택 창 표시
+    if (product.optionGroups.isNotEmpty || product.type == 'COMBO') {
+      final result = await showDialog<List<ProductOptionModel>>(
+        context: context,
+        builder: (context) => OptionSelectionDialog(product: product),
+      );
+
+      if (result == null) return; // 취소됨
+      selectedOptions = result;
+    }
+
     setState(() {
-      _cart = _cart.addItem(product);
+      _cart = _cart.addItem(product, selectedOptions: selectedOptions);
       _cart = _cart.applyDiscounts(_discounts);
     });
   }

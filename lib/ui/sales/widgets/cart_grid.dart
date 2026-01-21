@@ -148,7 +148,7 @@ class _CartGridState extends State<CartGrid> {
                 child: Row(
                   children: [
                     Expanded(
-                      flex: 2,
+                      flex: 5, // 2.5 * 2
                       child: Text(
                         '상품명',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -158,7 +158,7 @@ class _CartGridState extends State<CartGrid> {
                       ),
                     ),
                     Expanded(
-                      flex: 1,
+                      flex: 2, // 1 * 2
                       child: Text(
                         '바코드',
                         textAlign: TextAlign.center,
@@ -169,7 +169,7 @@ class _CartGridState extends State<CartGrid> {
                       ),
                     ),
                     Expanded(
-                      flex: 1,
+                      flex: 2, // 1 * 2
                       child: Text(
                         '단가',
                         textAlign: TextAlign.center,
@@ -180,7 +180,7 @@ class _CartGridState extends State<CartGrid> {
                       ),
                     ),
                     Expanded(
-                      flex: 1,
+                      flex: 2, // 1 * 2
                       child: Text(
                         '수량',
                         textAlign: TextAlign.center,
@@ -191,7 +191,7 @@ class _CartGridState extends State<CartGrid> {
                       ),
                     ),
                     Expanded(
-                      flex: 1,
+                      flex: 2, // 1 * 2
                       child: Text(
                         '할인',
                         textAlign: TextAlign.center,
@@ -202,7 +202,7 @@ class _CartGridState extends State<CartGrid> {
                       ),
                     ),
                      Expanded(
-                      flex: 1,
+                      flex: 3, // 1.5 * 2
                       child: Padding(
                         padding: const EdgeInsets.only(right: 12), // 스크롤바 공간 확보
                         child: Text(
@@ -382,19 +382,41 @@ class _CartGridState extends State<CartGrid> {
                 ),
                 const SizedBox(height: 8),
                 
-                // 세금 (간단히 소계의 10%로 계산, 나중에 실제 세금 로직으로 대체)
-                if (cart.subtotal > 0) ...[
+                // 세금 (별도세)
+                if (cart.totalTax > 0) ...[
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '세금',
+                        '세금 (별도)',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       Text(
-                        _formatPrice((cart.subtotal * 0.1).round()),
+                        _formatPrice(cart.totalTax),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                // 포함세 정보 (참고용)
+                if (cart.totalInclusiveTax > 0) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '부가세 (포함)',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                      ),
+                      Text(
+                        _formatPrice(cart.totalInclusiveTax),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textSecondary,
                             ),
                       ),
                     ],
@@ -479,7 +501,7 @@ class _CartGridRow extends StatelessWidget {
         children: [
           // 상품명
           Expanded(
-            flex: 2,
+            flex: 5,
             child: Row(
               children: [
                 // X 버튼 (선택되었을 때만 표시)
@@ -498,14 +520,30 @@ class _CartGridRow extends StatelessWidget {
                   const SizedBox(width: 28),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    item.product.name,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected ? AppTheme.primary : null,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.product.name,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              color: isSelected ? AppTheme.primary : null,
+                            ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (item.selectedOptions.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2.0),
+                          child: Text(
+                            item.selectedOptions.map((o) => '+ ${o.name}').join(', '),
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 10,
+                                ),
+                          ),
                         ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    ],
                   ),
                 ),
               ],
@@ -514,7 +552,7 @@ class _CartGridRow extends StatelessWidget {
 
           // 바코드
           Expanded(
-            flex: 1,
+            flex: 2,
             child: Text(
               item.product.barcode ?? '-',
               textAlign: TextAlign.center,
@@ -527,7 +565,7 @@ class _CartGridRow extends StatelessWidget {
 
           // 단가
           Expanded(
-            flex: 1,
+            flex: 2,
             child: Text(
               formatPrice(item.unitPrice),
               textAlign: TextAlign.center,
@@ -537,7 +575,7 @@ class _CartGridRow extends StatelessWidget {
 
           // 수량
           Expanded(
-            flex: 1,
+            flex: 2,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -573,7 +611,7 @@ class _CartGridRow extends StatelessWidget {
 
           // 할인금액
           Expanded(
-            flex: 1,
+            flex: 2,
             child: Text(
               item.discountAmount > 0
                   ? '-${formatPrice(item.discountAmount)}'
@@ -590,7 +628,7 @@ class _CartGridRow extends StatelessWidget {
 
           // 최종 금액 (우측 정렬)
           Expanded(
-            flex: 1,
+            flex: 3,
             child: Padding(
               padding: const EdgeInsets.only(right: 12), // 스크롤바 공간 확보
               child: Text(
@@ -683,7 +721,7 @@ class _CartGridDiscountFooterRow extends StatelessWidget {
         children: [
           // 할인 태그 및 이름 (왼쪽 정렬)
           Expanded(
-            flex: 6, // 2(이름) + 1(바코드) + 1(단가) + 1(수량) + 1(할인) = 6
+            flex: 13, // 5 + 2 + 2 + 2 + 2 = 13 (Price 컬럼 3 제외)
             child: Row(
               children: [
                 const SizedBox(width: 8),
@@ -719,7 +757,7 @@ class _CartGridDiscountFooterRow extends StatelessWidget {
 
           // 할인 금액 (오른쪽 끝 정렬, 상품 가격 컬럼에 맞춤)
           Expanded(
-            flex: 1, // Final Price 컬럼에 맞춰 flex 1
+            flex: 3, // Final Price 컬럼에 맞춰 flex 3
             child: Padding(
               padding: const EdgeInsets.only(right: 12), // 스크롤바 공간 확보
               child: Text(

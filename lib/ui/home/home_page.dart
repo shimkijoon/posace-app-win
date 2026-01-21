@@ -152,6 +152,61 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _resetData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('데이터 초기화'),
+        content: const Text('로컬의 모든 데이터를 삭제하고 서버에서 다시 불러오시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('아니오'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text('예, 초기화합니다'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _syncing = true;
+      _syncStatus = '데이터 초기화 중...';
+    });
+
+    try {
+      final accessToken = await _storage.getAccessToken();
+      final apiClient = ApiClient(accessToken: accessToken!);
+      final masterApi = PosMasterApi(apiClient);
+      final salesApi = PosSalesApi(apiClient);
+      final syncService = SyncService(
+        database: widget.database,
+        masterApi: masterApi,
+        salesApi: salesApi,
+      );
+
+      await syncService.clearLocalData();
+      await _syncMaster(auto: false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _syncStatus = '초기화 오류: $e';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('초기화 중 오류 발생: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _syncing = false);
+      }
+    }
+  }
+
   Future<void> _logout() async {
     await _storage.clear();
     if (!mounted) return;
@@ -213,16 +268,26 @@ class _HomePageState extends State<HomePage> {
                           '마스터 데이터',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
-                        ElevatedButton.icon(
-                          onPressed: _syncing ? null : () => _syncMaster(),
-                          icon: _syncing
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Icon(Icons.sync),
-                          label: const Text('동기화'),
+                        Row(
+                          children: [
+                            TextButton.icon(
+                              onPressed: _syncing ? null : _resetData,
+                              icon: const Icon(Icons.delete_forever, color: Colors.red),
+                              label: const Text('데이터 초기화', style: TextStyle(color: Colors.red)),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: _syncing ? null : () => _syncMaster(),
+                              icon: _syncing
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.sync),
+                              label: const Text('동기화'),
+                            ),
+                          ],
                         ),
                       ],
                     ),

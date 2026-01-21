@@ -3,10 +3,13 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'models.dart';
+import 'models/taxes_models.dart';
+import 'models/options_models.dart';
+import 'models/bundle_models.dart';
 
 class AppDatabase {
   static const _databaseName = 'posace.db';
-  static const _databaseVersion = 3;
+  static const _databaseVersion = 5;
 
   Database? _database;
 
@@ -52,6 +55,7 @@ class AppDatabase {
         storeId TEXT NOT NULL,
         categoryId TEXT NOT NULL,
         name TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'SINGLE',
         price INTEGER NOT NULL,
         barcode TEXT,
         stockEnabled INTEGER NOT NULL,
@@ -59,6 +63,57 @@ class AppDatabase {
         isActive INTEGER NOT NULL,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE taxes (
+        id TEXT PRIMARY KEY,
+        storeId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        rate REAL NOT NULL,
+        isInclusive INTEGER NOT NULL,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE product_taxes (
+        productId TEXT NOT NULL,
+        taxId TEXT NOT NULL,
+        PRIMARY KEY (productId, taxId)
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE product_option_groups (
+        id TEXT PRIMARY KEY,
+        productId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        isRequired INTEGER NOT NULL,
+        isMultiSelect INTEGER NOT NULL,
+        sortOrder INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE product_options (
+        id TEXT PRIMARY KEY,
+        groupId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        priceAdjustment REAL NOT NULL,
+        sortOrder INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE bundle_items (
+        id TEXT PRIMARY KEY,
+        parentProductId TEXT NOT NULL,
+        componentProductId TEXT NOT NULL,
+        quantity INTEGER NOT NULL,
+        priceAdjustment REAL NOT NULL
       )
     ''');
 
@@ -93,6 +148,7 @@ class AppDatabase {
         posId TEXT,
         totalAmount INTEGER NOT NULL,
         paidAmount INTEGER NOT NULL,
+        taxAmount INTEGER NOT NULL DEFAULT 0,
         paymentMethod TEXT NOT NULL,
         status TEXT NOT NULL,
         createdAt TEXT NOT NULL,
@@ -150,6 +206,73 @@ class AppDatabase {
         // 이미 컬럼이 존재하는 경우 무시
       }
     }
+
+    if (oldVersion < 4) {
+      await db.execute('''
+        CREATE TABLE taxes (
+          id TEXT PRIMARY KEY,
+          storeId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          rate REAL NOT NULL,
+          isInclusive INTEGER NOT NULL,
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE product_taxes (
+          productId TEXT NOT NULL,
+          taxId TEXT NOT NULL,
+          PRIMARY KEY (productId, taxId)
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE product_option_groups (
+          id TEXT PRIMARY KEY,
+          productId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          isRequired INTEGER NOT NULL,
+          isMultiSelect INTEGER NOT NULL,
+          sortOrder INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE product_options (
+          id TEXT PRIMARY KEY,
+          groupId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          priceAdjustment REAL NOT NULL,
+          sortOrder INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE bundle_items (
+          id TEXT PRIMARY KEY,
+          parentProductId TEXT NOT NULL,
+          componentProductId TEXT NOT NULL,
+          quantity INTEGER NOT NULL,
+          priceAdjustment REAL NOT NULL
+        )
+      ''');
+
+      try {
+        await db.execute('ALTER TABLE sales ADD COLUMN taxAmount INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        // 이미 존재하는 경우 무시
+      }
+    }
+
+    if (oldVersion < 5) {
+      try {
+        await db.execute("ALTER TABLE products ADD COLUMN type TEXT NOT NULL DEFAULT 'SINGLE'");
+      } catch (e) {
+        // 이미 존재하는 경우 무시
+      }
+    }
   }
 
   Future<void> init() async {
@@ -160,6 +283,11 @@ class AppDatabase {
     final db = await database;
     await db.delete('categories');
     await db.delete('products');
+    await db.delete('taxes');
+    await db.delete('product_taxes');
+    await db.delete('product_option_groups');
+    await db.delete('product_options');
+    await db.delete('bundle_items');
     await db.delete('discounts');
     await db.delete('sales');
     await db.delete('sale_items');
@@ -189,21 +317,53 @@ class AppDatabase {
   // Products
   Future<void> upsertProducts(List<ProductModel> products) async {
     final db = await database;
-    final batch = db.batch();
-    for (final product in products) {
-      batch.insert(
-        'products',
-        product.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }
-    await batch.commit(noResult: true);
+    await db.transaction((txn) async {
+      for (final product in products) {
+        await txn.insert(
+          'products',
+          product.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+
+        // Taxes junction
+        await txn.delete('product_taxes', where: 'productId = ?', whereArgs: [product.id]);
+        for (final tax in product.taxes) {
+          await txn.insert('product_taxes', {
+            'productId': product.id,
+            'taxId': tax.id,
+          });
+        }
+
+        // Option Groups
+        await txn.delete('product_option_groups', where: 'productId = ?', whereArgs: [product.id]);
+        for (final group in product.optionGroups) {
+          await txn.insert('product_option_groups', group.toMap());
+          
+          await txn.delete('product_options', where: 'groupId = ?', whereArgs: [group.id]);
+          for (final option in group.options) {
+            await txn.insert('product_options', option.toMap());
+          }
+        }
+
+        // Bundle Items
+        await txn.delete('bundle_items', where: 'parentProductId = ?', whereArgs: [product.id]);
+        for (final item in product.bundleItems) {
+          await txn.insert('bundle_items', item.toMap());
+        }
+      }
+    });
   }
 
   Future<List<ProductModel>> getProducts() async {
     final db = await database;
     final maps = await db.query('products', orderBy: 'createdAt DESC');
-    return maps.map((map) => ProductModel.fromMap(map)).toList();
+    
+    List<ProductModel> products = [];
+    for (final map in maps) {
+      final product = await _populateProduct(db, map);
+      products.add(product);
+    }
+    return products;
   }
 
   Future<List<ProductModel>> getProductsByCategory(String categoryId) async {
@@ -214,7 +374,73 @@ class AppDatabase {
       whereArgs: [categoryId],
       orderBy: 'createdAt DESC',
     );
-    return maps.map((map) => ProductModel.fromMap(map)).toList();
+    
+    List<ProductModel> products = [];
+    for (final map in maps) {
+      final product = await _populateProduct(db, map);
+      products.add(product);
+    }
+    return products;
+  }
+
+  Future<ProductModel> _populateProduct(Database db, Map<String, dynamic> map) async {
+    final productId = map['id'] as String;
+
+    // Load Taxes
+    final taxMaps = await db.rawQuery('''
+      SELECT t.* FROM taxes t
+      INNER JOIN product_taxes pt ON t.id = pt.taxId
+      WHERE pt.productId = ?
+    ''', [productId]);
+    final taxes = taxMaps.map((m) => TaxModel.fromMap(m)).toList();
+
+    // Load Option Groups
+    final groupMaps = await db.query('product_option_groups', where: 'productId = ?', whereArgs: [productId], orderBy: 'sortOrder ASC');
+    List<ProductOptionGroupModel> groups = [];
+    for (final gMap in groupMaps) {
+      final optionsMap = await db.query('product_options', where: 'groupId = ?', whereArgs: [gMap['id']], orderBy: 'sortOrder ASC');
+      final options = optionsMap.map((o) => ProductOptionModel.fromMap(o)).toList();
+      groups.add(ProductOptionGroupModel.fromMap(gMap, options: options));
+    }
+
+    // Load Bundle Items
+    final bundleMaps = await db.query('bundle_items', where: 'parentProductId = ?', whereArgs: [productId]);
+    List<BundleItemModel> bundleItems = [];
+    for (final bMap in bundleMaps) {
+      // 컴포넌트 상품 정보도 필요할 수 있음 (선택사항)
+      bundleItems.add(BundleItemModel.fromMap(bMap));
+    }
+
+    // JSON 형태로 변환하여 ProductModel.fromMap에 전달 (이미 구현된 fromMap이 List를 기대하므로)
+    final productMap = Map<String, dynamic>.from(map);
+    productMap['taxes'] = taxes.map((t) => t.toMap()).toList();
+    productMap['optionGroups'] = groups.map((g) => {
+      ...g.toMap(),
+      'options': g.options.map((o) => o.toMap()).toList(),
+    }).toList();
+    productMap['bundleItems'] = bundleItems.map((b) => b.toMap()).toList();
+
+    return ProductModel.fromMap(productMap);
+  }
+
+  // Taxes
+  Future<void> upsertTaxes(List<TaxModel> taxes) async {
+    final db = await database;
+    final batch = db.batch();
+    for (final tax in taxes) {
+      batch.insert(
+        'taxes',
+        tax.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<List<TaxModel>> getTaxes() async {
+    final db = await database;
+    final maps = await db.query('taxes', orderBy: 'createdAt ASC');
+    return maps.map((map) => TaxModel.fromMap(map)).toList();
   }
 
   // Discounts

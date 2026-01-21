@@ -25,4 +25,21 @@ class PosAuthService {
       posId: posId,
     );
   }
+
+  Future<void> loginAsOwner(String email, String password) async {
+    final result = await _api.loginAsOwner(email, password);
+    final accessToken = result['accessToken'] as String?;
+    final storeId = result['storeId'] as String?;
+    final posId = result['posId'] as String?;
+
+    if (accessToken == null || storeId == null || posId == null) {
+      throw Exception('응답 형식이 올바르지 않습니다.');
+    }
+
+    await _storage.saveSession(
+      accessToken: accessToken,
+      storeId: storeId,
+      posId: posId,
+    );
+  }
 }

@@ -5,14 +5,31 @@
 * 날짜별로 최신 내용이 위로 오도록, 또는 아래로 쌓이도록 일관성 있게 작성합니다.
 
 ## Next Step (다음에 바로 할 일)
-- [ ] 
+- [ ] Z-Report (마감) 기능 구현
+- [ ] 멤버십/회원 포인트 기능 연동
+- [ ] 영수증 출력 (Thermal Printer) 라이브러리 조사 및 연동
 
 ### 🔑 현재 테스트 정보 (2026-01-19)
 - **POS Device Token**: `f0438cd9fce380c0c447d8a8475ca3fe5fb7964e54cbac01`
 - **Owner Login**: `owner@posace.dev` / `Password123!`
 
 ---
-## 2026-01-19 (Today)
+## 2026-01-21 (Today)
+### ✅ Achievements
+- **Authentication**: Replaced device token login with Email/Password login for owners.
+- **Database**: Bumbed to v5, added `type` column to products, fixed `taxAmount` storage.
+- **Bug Fixes**:
+  - Cart discount deduplication (fixing double discount application).
+  - Product option parsing fix (boolean/int type mismatch).
+  - Cart layout overflow fix (flex adjustment for large amounts > 10,000 KRW).
+- **Features**: Added "Data Reset" (데이터 초기화) button to Home for troubleshooting.
+
+### 💡 Note
+- Model parsing from API needs to handle both `bool` and `int` for SQLite compatibility.
+- Cart layout uses flex ratios: Product(5), Barcode(2), Price(2), Qty(2), Discount(2), Final(3).
+
+---
+## 2026-01-19
 
 ### 💡 Git 한글 깨짐 해결 설정
 윈도우 환경에서 한글 커밋 메시지가 깨지는 경우 다음 명령어를 실행합니다 (이미 설정 완료):
