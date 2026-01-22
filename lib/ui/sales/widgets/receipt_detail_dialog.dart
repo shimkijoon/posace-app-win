@@ -28,6 +28,8 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
   Map<String, ProductModel> _productMap = {};
   bool _isLoading = true;
 
+  Map<String, String?> _storeInfo = {};
+
   @override
   void initState() {
     super.initState();
@@ -39,10 +41,14 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
     final products = await widget.database.getProducts();
     final productMap = {for (var p in products) p.id: p};
     
+    final auth = AuthStorage();
+    final storeInfo = await auth.getSessionInfo();
+    
     if (mounted) {
       setState(() {
         _items = items;
         _productMap = productMap;
+        _storeInfo = storeInfo;
         _isLoading = false;
       });
     }
@@ -52,7 +58,6 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
     print('ReceiptDetailDialog: Requesting reprint for sale ${widget.sale.id}');
     final printer = SerialPrinterService();
     final settings = SettingsStorage();
-    final auth = AuthStorage();
 
     String? port = await settings.getReceiptPrinterPort();
     int baud = await settings.getReceiptPrinterBaud();
@@ -70,10 +75,20 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
       return;
     }
 
-    final storeInfo = await auth.getSessionInfo();
-    final bytes = await ReceiptTemplates.saleReceipt(widget.sale, _items, _productMap, storeInfo: storeInfo);
-    print('ReceiptDetailDialog: Reprint receipt generated, sending ${bytes.length} bytes to $port');
+    final bytes = widget.sale.status == 'CANCELLED'
+        ? await ReceiptTemplates.cancelReceipt(widget.sale, _items, _productMap, storeInfo: _storeInfo)
+        : await ReceiptTemplates.saleReceipt(widget.sale, _items, _productMap, storeInfo: _storeInfo);
+    
+    print('ReceiptDetailDialog: Reprint receipt generated (status: ${widget.sale.status}), sending ${bytes.length} bytes to $port');
     await printer.printBytes(port, bytes);
+  }
+
+  String _localizePaymentMethod(String method) {
+    switch (method.toUpperCase()) {
+      case 'CARD': return '카드';
+      case 'CASH': return '현금';
+      default: return method;
+    }
   }
 
   @override
@@ -83,86 +98,241 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
     }
 
     final currencyFormat = NumberFormat.currency(locale: 'ko_KR', symbol: '₩');
+    final storeName = _storeInfo['name'] ?? 'POSAce Store';
+    final bizNo = _storeInfo['businessNumber'] ?? '-';
+    final address = _storeInfo['address']?.replaceAll('||', ' ') ?? '-';
+    final phone = _storeInfo['phone'] ?? '-';
 
     return Dialog(
-      child: Container(
-        width: 400,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              '영수증 상세',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutBack,
+        builder: (context, value, child) {
+          return Transform.scale(
+            scale: value,
+            child: Opacity(
+              opacity: value.clamp(0.0, 1.0),
+              child: child,
             ),
-            const Divider(),
-            
-            // Receipt Preview (Simplified)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                border: Border.all(color: Colors.grey[300]!),
+          );
+        },
+        child: Container(
+          width: 440,
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('일시: ${DateFormat('yyyy-MM-dd HH:mm').format(widget.sale.createdAt)}'),
-                  const Divider(),
-                  ..._items.map((item) {
-                    final product = _productMap[item.productId];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.receipt_long, color: AppTheme.primary),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      '영수증 상세',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                      iconSize: 20,
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Digital Receipt Area
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9F9F7), // Thermal paper hint
+                      borderRadius: BorderRadius.circular(4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(storeName, 
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Text('사업자 번호: $bizNo', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
+                        Text('주소: $address', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
+                        Text('전화: $phone', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11)),
+                        const SizedBox(height: 16),
+                        _buildReceiptText('일시', DateFormat('yyyy-MM-dd (E) HH:mm:ss', 'ko_KR').format(widget.sale.createdAt)),
+                        _buildReceiptText('거래번호', widget.sale.id.substring(0, 8).toUpperCase()),
+                        _buildReceiptText('상태', widget.sale.status == 'CANCELLED' ? '결제취소' : '정상결제', 
+                          valueColor: widget.sale.status == 'CANCELLED' ? AppTheme.error : AppTheme.success),
+                        
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('------------------------------------------', 
+                            style: TextStyle(color: Colors.grey, letterSpacing: 1), textAlign: TextAlign.center),
+                        ),
+                        
+                        // Header for items
+                        const DefaultTextStyle(
+                          style: TextStyle(fontFamily: 'monospace', color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold),
+                          child: Row(
+                            children: [
+                              Expanded(flex: 20, child: Text('상품명')),
+                              Expanded(flex: 6, child: Text('수량', textAlign: TextAlign.right)),
+                              Expanded(flex: 16, child: Text('금액', textAlign: TextAlign.right)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text('------------------------------------------', 
+                            style: TextStyle(color: Colors.grey, letterSpacing: 1), textAlign: TextAlign.center),
+                        const SizedBox(height: 8),
+
+                        ..._items.map((item) {
+                          final product = _productMap[item.productId];
+                          final name = product?.name ?? 'Unknown';
+                          final qtyStr = item.qty.toString();
+                          final priceStr = currencyFormat.format(item.price * item.qty);
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: DefaultTextStyle(
+                              style: const TextStyle(fontFamily: 'monospace', color: Colors.black, fontSize: 12),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(flex: 20, child: Text(name, overflow: TextOverflow.visible)),
+                                  Expanded(flex: 6, child: Text(qtyStr, textAlign: TextAlign.right)),
+                                  Expanded(flex: 16, child: Text(priceStr, textAlign: TextAlign.right)),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                        
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Text('------------------------------------------', 
+                            style: TextStyle(color: Colors.grey, letterSpacing: 1), textAlign: TextAlign.center),
+                        ),
+                        
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('총 금액', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text(currencyFormat.format(widget.sale.totalAmount), 
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold, 
+                                fontSize: 18, 
+                                color: widget.sale.status == 'CANCELLED' ? AppTheme.error : AppTheme.primary,
+                                fontFamily: 'monospace'
+                              )),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _buildReceiptText('결제수단', _localizePaymentMethod(widget.sale.paymentMethod)),
+                        const SizedBox(height: 16),
+                        Text('이용해 주셔서 감사합니다', 
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11, color: Colors.grey[500])),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              
+              // Actions
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _reprint,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            icon: const Icon(Icons.print, size: 18),
+                            label: const Text('영수증 재출력', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (widget.sale.status != 'CANCELLED') ...[
+                      const SizedBox(height: 12),
+                      Row(
                         children: [
-                          Text(product?.name ?? 'Unknown'),
-                          Text('x${item.qty}   ${currencyFormat.format(item.price * item.qty)}'),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _cancelOrder,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppTheme.error,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: BorderSide(color: AppTheme.error.withOpacity(0.5)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              icon: const Icon(Icons.cancel_outlined, size: 18),
+                              label: const Text('결제 취소', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
                         ],
                       ),
-                    );
-                  }),
-                  const Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('총 금액', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text(currencyFormat.format(widget.sale.totalAmount), style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],
-                  ),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _reprint,
-                    child: const Text('재출력'),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('닫기'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            if (widget.sale.status != 'CANCELLED')
-              ElevatedButton(
-                onPressed: _cancelOrder,
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
-                child: const Text('주문 취소', style: TextStyle(color: Colors.white)),
               ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildReceiptText(String label, String value, {Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: valueColor, fontFamily: 'monospace')),
+        ],
       ),
     );
   }
@@ -204,9 +374,7 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
         }
         
         if (printer.isConnected(port)) {
-          final auth = AuthStorage();
-          final storeInfo = await auth.getSessionInfo();
-          final bytes = await ReceiptTemplates.cancelReceipt(widget.sale, _items, _productMap, storeInfo: storeInfo);
+          final bytes = await ReceiptTemplates.cancelReceipt(widget.sale, _items, _productMap, storeInfo: _storeInfo);
           print('ReceiptDetailDialog: Cancellation receipt generated, sending ${bytes.length} bytes to $port');
           await printer.printBytes(port, bytes);
         } else {
