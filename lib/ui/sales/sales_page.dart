@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../core/models/cart.dart';
 import '../../core/models/cart_item.dart';
@@ -14,6 +15,10 @@ import 'widgets/function_buttons.dart';
 import 'widgets/product_search_bar.dart';
 import 'widgets/option_selection_dialog.dart';
 import '../../data/local/models/options_models.dart';
+import '../../core/printer/serial_printer_service.dart';
+import '../../core/printer/receipt_templates.dart';
+import '../sales/sales_inquiry_page.dart';
+import '../../core/storage/settings_storage.dart';
 
 class SalesPage extends StatefulWidget {
   const SalesPage({
@@ -318,9 +323,13 @@ class _SalesPageState extends State<SalesPage> {
 
       if (mounted) {
         setState(() {
-          _cart = Cart().applyDiscounts(_discounts);
           _isLoading = false;
+          _cart = Cart(); // 장바구니 초기화
+          _cart = _cart.applyDiscounts(_discounts);
         });
+
+        // 영수증 출력
+        _printReceipt(sale, items);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -339,6 +348,56 @@ class _SalesPageState extends State<SalesPage> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _printReceipt(SaleModel sale, List<SaleItemModel> items) async {
+    print('SalesPage: Requesting print for sale ${sale.id}');
+    try {
+      final printer = SerialPrinterService();
+      final settings = SettingsStorage();
+      final auth = AuthStorage();
+      
+      final productMap = {for (var p in _products) p.id: p};
+      final storeInfo = await auth.getSessionInfo();
+
+      // 1. 영수증 출력
+      final rPort = await settings.getReceiptPrinterPort();
+      final rBaud = await settings.getReceiptPrinterBaud();
+      
+      if (rPort != null) {
+        print('SalesPage: Attempting to print receipt on $rPort');
+        if (!printer.isConnected(rPort)) {
+          printer.connect(rPort, baudRate: rBaud);
+        }
+        if (printer.isConnected(rPort)) {
+          final receiptBytes = await ReceiptTemplates.saleReceipt(sale, items, productMap, storeInfo: storeInfo);
+          print('SalesPage: Receipt generated, sending ${receiptBytes.length} bytes to $rPort');
+          await printer.printBytes(rPort, receiptBytes);
+        } else {
+          print('SalesPage: Receipt printer $rPort not connected.');
+        }
+      }
+
+      // 2. 주방주문서 출력
+      final kPort = await settings.getKitchenPrinterPort();
+      final kBaud = await settings.getKitchenPrinterBaud();
+
+      if (kPort != null) {
+        print('SalesPage: Attempting to print kitchen order on $kPort');
+        if (!printer.isConnected(kPort)) {
+          printer.connect(kPort, baudRate: kBaud);
+        }
+        if (printer.isConnected(kPort)) {
+          final kitchenBytes = await ReceiptTemplates.kitchenOrder(sale, items, productMap);
+          print('SalesPage: Kitchen order generated, sending ${kitchenBytes.length} bytes to $kPort');
+          await printer.printBytes(kPort, kitchenBytes);
+        } else {
+          print('SalesPage: Kitchen printer $kPort not connected.');
+        }
+      }
+    } catch (e) {
+      print('SalesPage: Printing error: $e');
     }
   }
 
@@ -372,8 +431,8 @@ class _SalesPageState extends State<SalesPage> {
             child: Row(
               children: [
                 // 2. 좌측: 장바구니 그리드 (50%)
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.5,
+                Expanded(
+                  flex: 1,
                   child: CartGrid(
                     cart: _cart,
                     onQuantityChanged: _onCartItemQuantityChanged,
@@ -383,6 +442,7 @@ class _SalesPageState extends State<SalesPage> {
 
                 // 3. 우측: 상품 선택 영역 (50%)
                 Expanded(
+                  flex: 1,
                   child: Column(
                     children: [
                       // 우측 상단: 카테고리 + 상품 카드 (4컬럼 2열)

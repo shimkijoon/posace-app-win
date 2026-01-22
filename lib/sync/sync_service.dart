@@ -2,6 +2,7 @@ import '../data/local/app_database.dart';
 import '../data/local/models.dart';
 import '../data/remote/pos_master_api.dart';
 import '../data/remote/pos_sales_api.dart';
+import '../core/storage/auth_storage.dart';
 
 class SyncService {
   SyncService({
@@ -13,6 +14,7 @@ class SyncService {
   final AppDatabase database;
   final PosMasterApi masterApi;
   final PosSalesApi salesApi;
+  final AuthStorage authStorage = AuthStorage();
 
   Future<SyncResult> syncMaster({
     required String storeId,
@@ -34,6 +36,18 @@ class SyncService {
 
       // 동기화 시간 업데이트
       await database.setSyncMetadata('lastMasterSync', response.serverTime);
+
+      // 매장 정보 업데이트
+      final session = await authStorage.getSessionInfo();
+      await authStorage.saveSession(
+        accessToken: session['accessToken'] ?? '',
+        storeId: session['storeId'] ?? '',
+        posId: session['posId'] ?? '',
+        storeName: response.store.name,
+        storeBizNo: response.store.businessNumber,
+        storeAddr: response.store.address,
+        storePhone: response.store.phone,
+      );
 
       return SyncResult(
         success: true,

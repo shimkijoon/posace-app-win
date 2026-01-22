@@ -201,7 +201,7 @@ class _CartGridState extends State<CartGrid> {
                             ),
                       ),
                     ),
-                     Expanded(
+                    Expanded(
                       flex: 3, // 1.5 * 2
                       child: Padding(
                         padding: const EdgeInsets.only(right: 12), // 스크롤바 공간 확보
@@ -215,7 +215,6 @@ class _CartGridState extends State<CartGrid> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 4),
                   ],
                 ),
               ),
@@ -641,7 +640,6 @@ class _CartGridRow extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 4),
         ],
           ),
         ),
@@ -770,7 +768,6 @@ class _CartGridDiscountFooterRow extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 4), // 우측 여백 보정
         ],
       ),
     );

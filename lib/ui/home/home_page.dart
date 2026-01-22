@@ -8,6 +8,8 @@ import '../../data/remote/pos_sales_api.dart';
 import '../../sync/sync_service.dart';
 import '../auth/login_page.dart';
 import '../sales/sales_page.dart';
+import '../sales/sales_inquiry_page.dart';
+import 'settings_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.database});
@@ -315,6 +317,56 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            // 매출 조회 버튼
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => SalesInquiryPage(database: widget.database),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.history, size: 24),
+                label: const Text(
+                  '매출 조회',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // 환경설정 버튼
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SettingsPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.settings, size: 24),
+                label: const Text(
+                  '환경설정',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),

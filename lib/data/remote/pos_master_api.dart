@@ -74,6 +74,9 @@ class StoreInfo {
   final String name;
   final String timezone;
   final String currency;
+  final String? businessNumber;
+  final String? address;
+  final String? phone;
   final List<PosDeviceInfo> posDevices;
 
   StoreInfo({
@@ -81,6 +84,9 @@ class StoreInfo {
     required this.name,
     required this.timezone,
     required this.currency,
+    this.businessNumber,
+    this.address,
+    this.phone,
     required this.posDevices,
   });
 
@@ -90,6 +96,9 @@ class StoreInfo {
       name: json['name'] as String,
       timezone: json['timezone'] as String,
       currency: json['currency'] as String,
+      businessNumber: json['businessNumber'] as String?,
+      address: json['address'] as String?,
+      phone: json['phone'] as String?,
       posDevices: (json['posDevices'] as List)
           .map((e) => PosDeviceInfo.fromJson(e as Map<String, dynamic>))
           .toList(),
