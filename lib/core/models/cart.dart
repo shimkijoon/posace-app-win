@@ -12,6 +12,8 @@ class Cart {
   })  : items = items ?? [],
         cartDiscounts = cartDiscounts ?? [];
 
+  factory Cart.empty() => Cart(items: [], cartDiscounts: []);
+
   int get itemCount => items.fold(0, (sum, item) => sum + item.quantity);
 
   // 소계: 할인 전 정가 합계 (Gross Subtotal, 옵션 포함)

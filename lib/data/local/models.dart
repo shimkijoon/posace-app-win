@@ -204,11 +204,56 @@ class DiscountModel {
   }
 }
 
+class MemberModel {
+  final String id;
+  final String storeId;
+  final String name;
+  final String phone;
+  final int points;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  MemberModel({
+    required this.id,
+    required this.storeId,
+    required this.name,
+    required this.phone,
+    this.points = 0,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'storeId': storeId,
+      'name': name,
+      'phone': phone,
+      'points': points,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+  factory MemberModel.fromMap(Map<String, dynamic> map) {
+    return MemberModel(
+      id: map['id'] as String,
+      storeId: map['storeId'] as String,
+      name: map['name'] as String,
+      phone: map['phone'] as String,
+      points: map['points'] as int? ?? 0,
+      createdAt: DateTime.parse(map['createdAt'] as String),
+      updatedAt: DateTime.parse(map['updatedAt'] as String),
+    );
+  }
+}
+
 class SaleModel {
   final String id;
   final String? clientSaleId;
   final String storeId;
   final String? posId;
+  final String? memberId; // Added
   final int totalAmount;
   final int paidAmount;
   final String paymentMethod;
@@ -217,12 +262,14 @@ class SaleModel {
   final DateTime? syncedAt;
 
   final int taxAmount;
+  final int memberPointsEarned; // Added
 
   SaleModel({
     required this.id,
     this.clientSaleId,
     required this.storeId,
     this.posId,
+    this.memberId,
     required this.totalAmount,
     required this.paidAmount,
     required this.paymentMethod,
@@ -230,6 +277,7 @@ class SaleModel {
     required this.createdAt,
     this.syncedAt,
     this.taxAmount = 0,
+    this.memberPointsEarned = 0,
   });
 
   Map<String, dynamic> toMap() {
@@ -238,6 +286,7 @@ class SaleModel {
       'clientSaleId': clientSaleId,
       'storeId': storeId,
       'posId': posId,
+      'memberId': memberId,
       'totalAmount': totalAmount,
       'paidAmount': paidAmount,
       'paymentMethod': paymentMethod,
@@ -245,6 +294,7 @@ class SaleModel {
       'createdAt': createdAt.toIso8601String(),
       'syncedAt': syncedAt?.toIso8601String(),
       'taxAmount': taxAmount,
+      'memberPointsEarned': memberPointsEarned,
     };
   }
 
@@ -254,6 +304,7 @@ class SaleModel {
       clientSaleId: map['clientSaleId'] as String?,
       storeId: map['storeId'] as String,
       posId: map['posId'] as String?,
+      memberId: map['memberId'] as String?,
       totalAmount: map['totalAmount'] as int,
       paidAmount: map['paidAmount'] as int,
       paymentMethod: map['paymentMethod'] as String,
@@ -261,6 +312,7 @@ class SaleModel {
       createdAt: DateTime.parse(map['createdAt'] as String),
       syncedAt: map['syncedAt'] != null ? DateTime.parse(map['syncedAt'] as String) : null,
       taxAmount: map['taxAmount'] as int? ?? 0,
+      memberPointsEarned: map['memberPointsEarned'] as int? ?? 0,
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../core/models/cart.dart';
 import '../../core/models/cart_item.dart';
@@ -18,7 +19,11 @@ import '../../data/local/models/options_models.dart';
 import '../../core/printer/serial_printer_service.dart';
 import '../../core/printer/receipt_templates.dart';
 import '../sales/sales_inquiry_page.dart';
+import 'widgets/discount_selection_dialog.dart';
+import 'widgets/suspended_sales_dialog.dart';
+import 'widgets/member_search_dialog.dart';
 import '../../core/storage/settings_storage.dart';
+import '../../data/remote/pos_suspended_api.dart';
 
 class SalesPage extends StatefulWidget {
   const SalesPage({
@@ -39,6 +44,8 @@ class _SalesPageState extends State<SalesPage> {
   String? _selectedCategoryId;
   String _searchQuery = '';
   Cart _cart = Cart();
+  Set<String> _selectedManualDiscountIds = {};
+  MemberModel? _selectedMember;
   bool _isLoading = true;
 
   @override
@@ -55,18 +62,15 @@ class _SalesPageState extends State<SalesPage> {
       final products = await widget.database.getProducts();
       final discounts = await widget.database.getDiscounts();
       
-      // 할인 적용
-      final cartWithDiscounts = _cart.applyDiscounts(discounts);
-      
       if (mounted) {
         setState(() {
           _categories = categories;
           _products = products;
           _discounts = discounts;
           _selectedCategoryId = categories.isNotEmpty ? categories.first.id : null;
-          _cart = cartWithDiscounts;
           _isLoading = false;
         });
+        _updateCartDiscounts();
       }
     } catch (e) {
       if (mounted) {
@@ -76,6 +80,20 @@ class _SalesPageState extends State<SalesPage> {
         );
       }
     }
+  }
+
+  void _updateCartDiscounts() {
+    // 1. Filter discounts to apply
+    // Automatically apply PRODUCT discounts, but only apply selected CART discounts
+    final discountsToApply = _discounts.where((d) {
+      if (d.type == 'PRODUCT') return true;
+      if (d.type == 'CART') return _selectedManualDiscountIds.contains(d.id);
+      return false;
+    }).toList();
+
+    setState(() {
+      _cart = _cart.applyDiscounts(discountsToApply);
+    });
   }
 
   void _onCategorySelected(String? categoryId) {
@@ -101,22 +119,22 @@ class _SalesPageState extends State<SalesPage> {
 
     setState(() {
       _cart = _cart.addItem(product, selectedOptions: selectedOptions);
-      _cart = _cart.applyDiscounts(_discounts);
     });
+    _updateCartDiscounts();
   }
 
   void _onCartItemQuantityChanged(String productId, int quantity) {
     setState(() {
       _cart = _cart.updateItemQuantity(productId, quantity);
-      _cart = _cart.applyDiscounts(_discounts);
     });
+    _updateCartDiscounts();
   }
 
   void _onCartItemRemove(String productId) {
     setState(() {
       _cart = _cart.removeItem(productId);
-      _cart = _cart.applyDiscounts(_discounts);
     });
+    _updateCartDiscounts();
   }
 
   List<ProductModel> get _filteredProducts {
@@ -162,9 +180,9 @@ class _SalesPageState extends State<SalesPage> {
       
       setState(() {
         _cart = _cart.addItem(product);
-        _cart = _cart.applyDiscounts(_discounts);
         _searchQuery = ''; // 검색어 초기화
       });
+      _updateCartDiscounts();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -185,24 +203,50 @@ class _SalesPageState extends State<SalesPage> {
     );
   }
 
-  void _onDiscount() {
-    // TODO: 할인 기능 구현
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('할인 기능은 다음 단계에서 구현됩니다')),
+  Future<void> _onDiscount() async {
+    if (_cart.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('할인을 적용할 상품이 없습니다')),
+      );
+      return;
+    }
+
+    final result = await showDialog<Set<String>>(
+      context: context,
+      builder: (context) => DiscountSelectionDialog(
+        availableDiscounts: _discounts,
+        selectedDiscountIds: _selectedManualDiscountIds,
+      ),
     );
+
+    if (result != null) {
+      setState(() {
+        _selectedManualDiscountIds = result;
+      });
+      _updateCartDiscounts();
+    }
   }
 
-  void _onMember() {
-    // TODO: 회원 기능 구현
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('회원 기능은 다음 단계에서 구현됩니다')),
+  Future<void> _onMember() async {
+    final MemberModel? member = await showDialog<MemberModel>(
+      context: context,
+      builder: (context) => MemberSearchDialog(database: widget.database),
     );
+
+    if (member != null) {
+      setState(() {
+        _selectedMember = member;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${member.name} 회원이 선택되었습니다.')),
+      );
+    }
   }
 
   void _onCancel() {
-    if (_cart.isEmpty) {
+    if (_cart.isEmpty && _selectedMember == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('취소할 거래가 없습니다')),
+        const SnackBar(content: Text('취소할 내역이 없습니다')),
       );
       return;
     }
@@ -211,7 +255,7 @@ class _SalesPageState extends State<SalesPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('거래 취소'),
-        content: const Text('현재 거래를 취소하시겠습니까?'),
+        content: const Text('현재 거래 및 선택된 회원 정보를 취소하시겠습니까?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -221,7 +265,8 @@ class _SalesPageState extends State<SalesPage> {
             onPressed: () {
               setState(() {
                 _cart = Cart();
-                _cart = _cart.applyDiscounts(_discounts);
+                _selectedManualDiscountIds = {};
+                _selectedMember = null;
               });
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -238,18 +283,139 @@ class _SalesPageState extends State<SalesPage> {
     );
   }
 
-  void _onHold() {
+  Future<void> _onHold() async {
+    // 1. Check for partial payment (Guard)
+    // currently POSAce doesn't have split payment UI, but we check if paidAmount > 0
+    // If it were implemented, _cart would probably have a paidTotal property
+    if (_cart.itemCount > 0 && false) { // Placeholder for partial payment check
+       // If we had a real partial payment logic, we'd check it here.
+       // showDialog(...) -> "Please refund partial payment before holding."
+    }
+
     if (_cart.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('보류할 거래가 없습니다')),
+      // Show list if empty
+      final suspendedSaleId = await showDialog<String>(
+        context: context,
+        builder: (context) => SuspendedSalesDialog(database: widget.database),
       );
+
+      if (suspendedSaleId != null) {
+        await _recallSuspendedSale(suspendedSaleId);
+      }
       return;
     }
 
-    // TODO: 거래 보류 기능 구현
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('거래 보류 기능은 다음 단계에서 구현됩니다')),
+    // Save current cart if not empty
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('거래 보류'),
+        content: const Text('현재 거래를 보류하시겠습니까? (다른 POS에서도 확인 가능)'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('아니오')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('예')),
+        ],
+      ),
     );
+
+    if (confirmed != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final auth = AuthStorage();
+      final session = await auth.getSessionInfo();
+      final token = await auth.getAccessToken();
+      final storeId = session['storeId'];
+      final posId = session['posId'];
+
+      if (storeId == null || token == null) throw Exception('인증 정보가 없습니다.');
+
+      final api = PosSuspendedApi(accessToken: token);
+      
+      final payload = {
+        'storeId': storeId,
+        'posId': posId,
+        'totalAmount': _cart.total,
+        'items': _cart.items.map((item) => {
+          'productId': item.product.id,
+          'qty': item.quantity,
+          'price': item.unitPrice,
+          'discountAmount': item.discountAmount,
+          'options': item.selectedOptions.map((o) => o.toMap()).toList(),
+        }).toList(),
+      };
+
+      await api.createSuspendedSale(storeId, payload);
+
+      setState(() {
+        _cart = Cart();
+        _selectedManualDiscountIds = {};
+        _selectedMember = null;
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('거래가 서버에 보류되었습니다.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('거래 보류 실패: $e')));
+      }
+    }
+  }
+
+  Future<void> _recallSuspendedSale(String suspendedSaleId) async {
+    setState(() => _isLoading = true);
+    try {
+      final auth = AuthStorage();
+      final session = await auth.getSessionInfo();
+      final token = await auth.getAccessToken();
+      final storeId = session['storeId'];
+
+      if (storeId == null || token == null) throw Exception('인증 정보가 없습니다.');
+
+      final api = PosSuspendedApi(accessToken: token);
+      final saleData = await api.getSuspendedSales(storeId).then((list) => list.firstWhere((s) => s['id'] == suspendedSaleId));
+      
+      final products = await widget.database.getProducts();
+      final productMap = {for (var p in products) p.id: p};
+
+      final List<CartItem> cartItems = [];
+      final List<dynamic> itemsData = saleData['items'];
+
+      for (var item in itemsData) {
+        final product = productMap[item['productId']];
+        if (product != null) {
+          final optionsList = item['options'] as List?;
+          final List<ProductOptionModel> options = optionsList != null 
+              ? optionsList.map((o) => ProductOptionModel.fromMap(o as Map<String, dynamic>)).toList()
+              : [];
+
+          cartItems.add(CartItem(
+            product: product,
+            quantity: int.tryParse(item['qty'].toString()) ?? 1,
+            selectedOptions: options,
+          ));
+        }
+      }
+
+      await api.deleteSuspendedSale(storeId, suspendedSaleId);
+
+      if (mounted) {
+        setState(() {
+          _cart = Cart(items: cartItems);
+          _selectedManualDiscountIds = {}; 
+          _isLoading = false;
+        });
+        _updateCartDiscounts();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('보류 거래 호출 실패: $e')));
+      }
+    }
   }
 
   Future<void> _onCheckout() async {
@@ -299,15 +465,18 @@ class _SalesPageState extends State<SalesPage> {
       if (storeId == null) throw Exception('매장 정보를 찾을 수 없습니다');
 
       final saleId = const Uuid().v4();
+      final pointsToEarn = (_cart.total * 0.01).round(); // 1% earn rate
       final sale = SaleModel(
         id: saleId,
         storeId: storeId,
         posId: posId,
+        memberId: _selectedMember?.id,
         totalAmount: _cart.total,
         paidAmount: _cart.total,
         paymentMethod: method,
         status: 'COMPLETED',
         createdAt: DateTime.now(),
+        memberPointsEarned: pointsToEarn,
       );
 
       final items = _cart.items.map((item) => SaleItemModel(
@@ -321,12 +490,22 @@ class _SalesPageState extends State<SalesPage> {
 
       await widget.database.insertSale(sale, items);
 
+      // Update member points if selected
+      if (_selectedMember != null) {
+        await widget.database.updateMemberPoints(
+          _selectedMember!.id,
+          _selectedMember!.points + pointsToEarn,
+        );
+      }
+
       if (mounted) {
         setState(() {
           _isLoading = false;
           _cart = Cart(); // 장바구니 초기화
-          _cart = _cart.applyDiscounts(_discounts);
+          _selectedManualDiscountIds = {};
+          _selectedMember = null;
         });
+        _updateCartDiscounts();
 
         // 영수증 출력
         _printReceipt(sale, items);
@@ -433,10 +612,47 @@ class _SalesPageState extends State<SalesPage> {
                 // 2. 좌측: 장바구니 그리드 (50%)
                 Expanded(
                   flex: 1,
-                  child: CartGrid(
-                    cart: _cart,
-                    onQuantityChanged: _onCartItemQuantityChanged,
-                    onItemRemove: _onCartItemRemove,
+                  child: Column(
+                    children: [
+                      if (_selectedMember != null)
+                        Container(
+                          margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.person, color: AppTheme.primary, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  '회원: ${_selectedMember!.name} (${_selectedMember!.phone})',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary),
+                                ),
+                              ),
+                              Text(
+                                '${_selectedMember!.points}P',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(width: 8),
+                              InkWell(
+                                onTap: () => setState(() => _selectedMember = null),
+                                child: const Icon(Icons.cancel, size: 18, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      Expanded(
+                        child: CartGrid(
+                          cart: _cart,
+                          onQuantityChanged: _onCartItemQuantityChanged,
+                          onItemRemove: _onCartItemRemove,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 

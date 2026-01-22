@@ -9,7 +9,7 @@ import 'models/bundle_models.dart';
 
 class AppDatabase {
   static const _databaseName = 'posace.db';
-  static const _databaseVersion = 5;
+  static const _databaseVersion = 7;
 
   Database? _database;
 
@@ -141,14 +141,28 @@ class AppDatabase {
     ''');
 
     await db.execute('''
+      CREATE TABLE members (
+        id TEXT PRIMARY KEY,
+        storeId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        points INTEGER NOT NULL DEFAULT 0,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
       CREATE TABLE sales (
         id TEXT PRIMARY KEY,
         clientSaleId TEXT,
         storeId TEXT NOT NULL,
         posId TEXT,
+        memberId TEXT,
         totalAmount INTEGER NOT NULL,
         paidAmount INTEGER NOT NULL,
         taxAmount INTEGER NOT NULL DEFAULT 0,
+        memberPointsEarned INTEGER NOT NULL DEFAULT 0,
         paymentMethod TEXT NOT NULL,
         status TEXT NOT NULL,
         createdAt TEXT NOT NULL,
@@ -165,6 +179,27 @@ class AppDatabase {
         price INTEGER NOT NULL,
         discountAmount INTEGER NOT NULL,
         FOREIGN KEY (saleId) REFERENCES sales (id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE suspended_sales (
+        id TEXT PRIMARY KEY,
+        totalAmount INTEGER NOT NULL,
+        createdAt TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE suspended_sale_items (
+        id TEXT PRIMARY KEY,
+        suspendedSaleId TEXT NOT NULL,
+        productId TEXT NOT NULL,
+        qty INTEGER NOT NULL,
+        price INTEGER NOT NULL,
+        discountAmount INTEGER NOT NULL,
+        optionsJson TEXT,
+        FOREIGN KEY (suspendedSaleId) REFERENCES suspended_sales (id) ON DELETE CASCADE
       )
     ''');
   }
@@ -269,6 +304,50 @@ class AppDatabase {
     if (oldVersion < 5) {
       try {
         await db.execute("ALTER TABLE products ADD COLUMN type TEXT NOT NULL DEFAULT 'SINGLE'");
+      } catch (e) {
+        // 이미 존재하는 경우 무시
+      }
+    }
+
+    if (oldVersion < 6) {
+      await db.execute('''
+        CREATE TABLE suspended_sales (
+          id TEXT PRIMARY KEY,
+          totalAmount INTEGER NOT NULL,
+          createdAt TEXT NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE suspended_sale_items (
+          id TEXT PRIMARY KEY,
+          suspendedSaleId TEXT NOT NULL,
+          productId TEXT NOT NULL,
+          qty INTEGER NOT NULL,
+          price INTEGER NOT NULL,
+          discountAmount INTEGER NOT NULL,
+          optionsJson TEXT,
+          FOREIGN KEY (suspendedSaleId) REFERENCES suspended_sales (id) ON DELETE CASCADE
+        )
+      ''');
+    }
+
+    if (oldVersion < 7) {
+      await db.execute('''
+        CREATE TABLE members (
+          id TEXT PRIMARY KEY,
+          storeId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          phone TEXT NOT NULL,
+          points INTEGER NOT NULL DEFAULT 0,
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT NOT NULL
+        )
+      ''');
+
+      try {
+        await db.execute('ALTER TABLE sales ADD COLUMN memberId TEXT');
+        await db.execute('ALTER TABLE sales ADD COLUMN memberPointsEarned INTEGER NOT NULL DEFAULT 0');
       } catch (e) {
         // 이미 존재하는 경우 무시
       }
@@ -524,6 +603,77 @@ class AppDatabase {
       },
       where: 'id = ?',
       whereArgs: [saleId],
+    );
+  }
+
+  // Suspended Sales
+  Future<void> insertSuspendedSale(String id, int totalAmount, List<Map<String, dynamic>> items) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.insert('suspended_sales', {
+        'id': id,
+        'totalAmount': totalAmount,
+        'createdAt': DateTime.now().toIso8601String(),
+      });
+
+      for (final item in items) {
+        await txn.insert('suspended_sale_items', {
+          ...item,
+          'suspendedSaleId': id,
+        });
+      }
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getSuspendedSales() async {
+    final db = await database;
+    return await db.query('suspended_sales', orderBy: 'createdAt DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getSuspendedSaleItems(String suspendedSaleId) async {
+    final db = await database;
+    return await db.query('suspended_sale_items', where: 'suspendedSaleId = ?', whereArgs: [suspendedSaleId]);
+  }
+
+  Future<void> deleteSuspendedSale(String id) async {
+    final db = await database;
+    await db.delete('suspended_sales', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Members
+  Future<List<MemberModel>> getMembers() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('members', orderBy: 'name ASC');
+    return List.generate(maps.length, (i) => MemberModel.fromMap(maps[i]));
+  }
+
+  Future<List<MemberModel>> searchMembersByPhone(String phone) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'members',
+      where: 'phone LIKE ?',
+      whereArgs: ['%$phone%'],
+      orderBy: 'name ASC',
+    );
+    return List.generate(maps.length, (i) => MemberModel.fromMap(maps[i]));
+  }
+
+  Future<void> upsertMember(MemberModel member) async {
+    final db = await database;
+    await db.insert(
+      'members',
+      member.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> updateMemberPoints(String id, int points) async {
+    final db = await database;
+    await db.update(
+      'members',
+      {'points': points},
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 }
