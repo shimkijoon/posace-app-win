@@ -9,7 +9,7 @@ import 'models/bundle_models.dart';
 
 class AppDatabase {
   static const _databaseName = 'posace.db';
-  static const _databaseVersion = 7;
+  static const _databaseVersion = 8;
 
   Database? _database;
 
@@ -202,6 +202,99 @@ class AppDatabase {
         FOREIGN KEY (suspendedSaleId) REFERENCES suspended_sales (id) ON DELETE CASCADE
       )
     ''');
+
+    // Version 8: New POS Features
+    await db.execute('''
+      CREATE TABLE employees (
+        id TEXT PRIMARY KEY,
+        storeId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL,
+        isActive INTEGER NOT NULL,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE pos_sessions (
+        id TEXT PRIMARY KEY,
+        storeId TEXT NOT NULL,
+        posId TEXT NOT NULL,
+        employeeId TEXT,
+        openingAmount INTEGER NOT NULL,
+        closingAmount INTEGER,
+        expectedAmount INTEGER,
+        variance INTEGER,
+        status TEXT NOT NULL,
+        createdAt TEXT NOT NULL,
+        closedAt TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE sale_payments (
+        id TEXT PRIMARY KEY,
+        saleId TEXT NOT NULL,
+        method TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        cardApproval TEXT,
+        cardLast4 TEXT,
+        FOREIGN KEY (saleId) REFERENCES sales (id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE table_layouts (
+        id TEXT PRIMARY KEY,
+        storeId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        sortOrder INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE restaurant_tables (
+        id TEXT PRIMARY KEY,
+        layoutId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        x REAL NOT NULL,
+        y REAL NOT NULL,
+        width REAL NOT NULL,
+        height REAL NOT NULL,
+        FOREIGN KEY (layoutId) REFERENCES table_layouts (id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE table_orders (
+        id TEXT PRIMARY KEY,
+        tableId TEXT NOT NULL,
+        storeId TEXT NOT NULL,
+        sessionId TEXT,
+        employeeId TEXT,
+        guestCount INTEGER NOT NULL,
+        status TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        note TEXT,
+        createdAt TEXT NOT NULL,
+        closedAt TEXT,
+        saleId TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE table_order_items (
+        id TEXT PRIMARY KEY,
+        orderId TEXT NOT NULL,
+        productId TEXT NOT NULL,
+        qty INTEGER NOT NULL,
+        price INTEGER NOT NULL,
+        options TEXT,
+        note TEXT,
+        FOREIGN KEY (orderId) REFERENCES table_orders (id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -351,6 +444,116 @@ class AppDatabase {
       } catch (e) {
         // 이미 존재하는 경우 무시
       }
+    }
+
+    if (oldVersion < 8) {
+      // Update sales table
+      try {
+        await db.execute('ALTER TABLE sales ADD COLUMN sessionId TEXT');
+        await db.execute('ALTER TABLE sales ADD COLUMN employeeId TEXT');
+        await db.execute('ALTER TABLE sales ALTER COLUMN paymentMethod DROP NOT NULL');
+      } catch (e) {
+        // SQLite doesn't support DROP NOT NULL easily, but adding nullable columns is fine
+        try {
+          await db.execute('ALTER TABLE sales ADD COLUMN sessionId TEXT');
+        } catch (_) {}
+        try {
+          await db.execute('ALTER TABLE sales ADD COLUMN employeeId TEXT');
+        } catch (_) {}
+      }
+
+      // New tables
+      await db.execute('''
+        CREATE TABLE employees (
+          id TEXT PRIMARY KEY,
+          storeId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          role TEXT NOT NULL,
+          isActive INTEGER NOT NULL,
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE pos_sessions (
+          id TEXT PRIMARY KEY,
+          storeId TEXT NOT NULL,
+          posId TEXT NOT NULL,
+          employeeId TEXT,
+          openingAmount INTEGER NOT NULL,
+          closingAmount INTEGER,
+          expectedAmount INTEGER,
+          variance INTEGER,
+          status TEXT NOT NULL,
+          createdAt TEXT NOT NULL,
+          closedAt TEXT
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE sale_payments (
+          id TEXT PRIMARY KEY,
+          saleId TEXT NOT NULL,
+          method TEXT NOT NULL,
+          amount INTEGER NOT NULL,
+          cardApproval TEXT,
+          cardLast4 TEXT,
+          FOREIGN KEY (saleId) REFERENCES sales (id) ON DELETE CASCADE
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE table_layouts (
+          id TEXT PRIMARY KEY,
+          storeId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          sortOrder INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE restaurant_tables (
+          id TEXT PRIMARY KEY,
+          layoutId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          x REAL NOT NULL,
+          y REAL NOT NULL,
+          width REAL NOT NULL,
+          height REAL NOT NULL,
+          FOREIGN KEY (layoutId) REFERENCES table_layouts (id) ON DELETE CASCADE
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE table_orders (
+          id TEXT PRIMARY KEY,
+          tableId TEXT NOT NULL,
+          storeId TEXT NOT NULL,
+          sessionId TEXT,
+          employeeId TEXT,
+          guestCount INTEGER NOT NULL,
+          status TEXT NOT NULL,
+          version INTEGER NOT NULL,
+          note TEXT,
+          createdAt TEXT NOT NULL,
+          closedAt TEXT,
+          saleId TEXT
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE table_order_items (
+          id TEXT PRIMARY KEY,
+          orderId TEXT NOT NULL,
+          productId TEXT NOT NULL,
+          qty INTEGER NOT NULL,
+          price INTEGER NOT NULL,
+          options TEXT,
+          note TEXT,
+          FOREIGN KEY (orderId) REFERENCES table_orders (id) ON DELETE CASCADE
+        )
+      ''');
     }
   }
 
@@ -571,6 +774,9 @@ class AppDatabase {
       for (final item in items) {
         await txn.insert('sale_items', item.toMap());
       }
+      for (final payment in sale.payments) {
+        await txn.insert('sale_payments', payment.toMap());
+      }
     });
   }
 
@@ -581,7 +787,15 @@ class AppDatabase {
       where: 'syncedAt IS NULL',
       orderBy: 'createdAt ASC',
     );
-    return maps.map((map) => SaleModel.fromMap(map)).toList();
+    
+    List<SaleModel> sales = [];
+    for (final map in maps) {
+      final saleId = map['id'] as String;
+      final paymentMaps = await db.query('sale_payments', where: 'saleId = ?', whereArgs: [saleId]);
+      final payments = paymentMaps.map((m) => SalePaymentModel.fromMap(m)).toList();
+      sales.add(SaleModel.fromMap(map, payments: payments));
+    }
+    return sales;
   }
 
   Future<List<SaleItemModel>> getSaleItems(String saleId) async {
@@ -675,5 +889,78 @@ class AppDatabase {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  // Employees
+  Future<void> upsertEmployees(List<EmployeeModel> employees) async {
+    final db = await database;
+    final batch = db.batch();
+    for (final employee in employees) {
+      batch.insert('employees', employee.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<List<EmployeeModel>> getEmployees() async {
+    final db = await database;
+    final maps = await db.query('employees', where: 'isActive = 1', orderBy: 'name ASC');
+    return maps.map((m) => EmployeeModel.fromMap(m)).toList();
+  }
+
+  // POS Sessions
+  Future<void> upsertSession(PosSessionModel session) async {
+    final db = await database;
+    await db.insert('pos_sessions', session.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<PosSessionModel?> getActiveSession() async {
+    final db = await database;
+    final maps = await db.query('pos_sessions', where: "status = 'OPEN'", limit: 1);
+    if (maps.isEmpty) return null;
+    return PosSessionModel.fromMap(maps.first);
+  }
+
+  // Tables & Layouts
+  Future<void> upsertTableLayouts(List<Map<String, dynamic>> layouts) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      for (final layout in layouts) {
+        await txn.insert('table_layouts', {
+          'id': layout['id'],
+          'storeId': layout['storeId'],
+          'name': layout['name'],
+          'sortOrder': layout['sortOrder'],
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+        if (layout['tables'] != null) {
+          for (final table in layout['tables']) {
+            await txn.insert('restaurant_tables', {
+              'id': table['id'],
+              'layoutId': layout['id'],
+              'name': table['name'],
+              'x': table['x'],
+              'y': table['y'],
+              'width': table['width'],
+              'height': table['height'],
+            }, conflictAlgorithm: ConflictAlgorithm.replace);
+          }
+        }
+      }
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> getTableLayouts() async {
+    final db = await database;
+    final layoutMaps = await db.query('table_layouts', orderBy: 'sortOrder ASC');
+    
+    List<Map<String, dynamic>> results = [];
+    for (final lMap in layoutMaps) {
+      final tables = await db.query('restaurant_tables', where: 'layoutId = ?', whereArgs: [lMap['id']]);
+      results.add({
+        ...lMap,
+        'tables': tables,
+      });
+    }
+    return results;
   }
 }

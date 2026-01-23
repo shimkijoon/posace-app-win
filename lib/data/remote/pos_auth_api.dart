@@ -32,4 +32,20 @@ class PosAuthApi {
 
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
+
+  Future<bool> verifyToken(String token) async {
+    final url = Uri.parse('${AppConfig.apiBaseUrl}/pos/auth/verify');
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      return false;
+    }
+  }
 }

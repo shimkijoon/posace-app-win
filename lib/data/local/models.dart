@@ -1,6 +1,16 @@
 import './models/taxes_models.dart';
 import './models/options_models.dart';
 import './models/bundle_models.dart';
+import './models/employee_model.dart';
+import './models/session_model.dart';
+import './models/payment_model.dart';
+
+export './models/taxes_models.dart';
+export './models/options_models.dart';
+export './models/bundle_models.dart';
+export './models/employee_model.dart';
+export './models/session_model.dart';
+export './models/payment_model.dart';
 
 class CategoryModel {
   final String id;
@@ -253,31 +263,38 @@ class SaleModel {
   final String? clientSaleId;
   final String storeId;
   final String? posId;
-  final String? memberId; // Added
+  final String? sessionId; // Added
+  final String? employeeId; // Added
+  final String? memberId;
   final int totalAmount;
   final int paidAmount;
-  final String paymentMethod;
+  final String? paymentMethod; // Made nullable
   final String status;
   final DateTime createdAt;
   final DateTime? syncedAt;
 
   final int taxAmount;
-  final int memberPointsEarned; // Added
+  final int memberPointsEarned;
+
+  final List<SalePaymentModel> payments; // Added
 
   SaleModel({
     required this.id,
     this.clientSaleId,
     required this.storeId,
     this.posId,
+    this.sessionId,
+    this.employeeId,
     this.memberId,
     required this.totalAmount,
     required this.paidAmount,
-    required this.paymentMethod,
+    this.paymentMethod,
     required this.status,
     required this.createdAt,
     this.syncedAt,
     this.taxAmount = 0,
     this.memberPointsEarned = 0,
+    this.payments = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -286,6 +303,8 @@ class SaleModel {
       'clientSaleId': clientSaleId,
       'storeId': storeId,
       'posId': posId,
+      'sessionId': sessionId,
+      'employeeId': employeeId,
       'memberId': memberId,
       'totalAmount': totalAmount,
       'paidAmount': paidAmount,
@@ -298,21 +317,24 @@ class SaleModel {
     };
   }
 
-  factory SaleModel.fromMap(Map<String, dynamic> map) {
+  factory SaleModel.fromMap(Map<String, dynamic> map, {List<SalePaymentModel> payments = const []}) {
     return SaleModel(
       id: map['id'] as String,
       clientSaleId: map['clientSaleId'] as String?,
       storeId: map['storeId'] as String,
       posId: map['posId'] as String?,
+      sessionId: map['sessionId'] as String?,
+      employeeId: map['employeeId'] as String?,
       memberId: map['memberId'] as String?,
       totalAmount: map['totalAmount'] as int,
       paidAmount: map['paidAmount'] as int,
-      paymentMethod: map['paymentMethod'] as String,
+      paymentMethod: map['paymentMethod'] as String?,
       status: map['status'] as String,
       createdAt: DateTime.parse(map['createdAt'] as String),
       syncedAt: map['syncedAt'] != null ? DateTime.parse(map['syncedAt'] as String) : null,
       taxAmount: map['taxAmount'] as int? ?? 0,
       memberPointsEarned: map['memberPointsEarned'] as int? ?? 0,
+      payments: payments,
     );
   }
 }

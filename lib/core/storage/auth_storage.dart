@@ -8,6 +8,8 @@ class AuthStorage {
   static const _storeBizNoKey = 'pos_store_biz_no';
   static const _storeAddrKey = 'pos_store_addr';
   static const _storePhoneKey = 'pos_store_phone';
+  static const _employeeIdKey = 'pos_employee_id';
+  static const _sessionIdKey = 'pos_session_id';
 
   Future<String?> getAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -43,7 +45,27 @@ class AuthStorage {
       'businessNumber': prefs.getString(_storeBizNoKey),
       'address': prefs.getString(_storeAddrKey),
       'phone': prefs.getString(_storePhoneKey),
+      'employeeId': prefs.getString(_employeeIdKey),
+      'sessionId': prefs.getString(_sessionIdKey),
     };
+  }
+
+  Future<void> saveEmployee(String? employeeId) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (employeeId == null) {
+      await prefs.remove(_employeeIdKey);
+    } else {
+      await prefs.setString(_employeeIdKey, employeeId);
+    }
+  }
+
+  Future<void> savePosSession(String? sessionId) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (sessionId == null) {
+      await prefs.remove(_sessionIdKey);
+    } else {
+      await prefs.setString(_sessionIdKey, sessionId);
+    }
   }
 
   Future<void> clear() async {

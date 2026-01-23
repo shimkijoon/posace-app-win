@@ -42,4 +42,15 @@ class PosAuthService {
       posId: posId,
     );
   }
+
+  Future<bool> verifyToken() async {
+    final token = await _storage.getAccessToken();
+    if (token == null) return false;
+    
+    final isValid = await _api.verifyToken(token);
+    if (!isValid) {
+      await _storage.clear();
+    }
+    return isValid;
+  }
 }

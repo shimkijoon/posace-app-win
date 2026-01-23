@@ -260,7 +260,7 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        _buildReceiptText('결제수단', _localizePaymentMethod(widget.sale.paymentMethod)),
+                        _buildReceiptText('결제수단', _localizePaymentMethod(widget.sale.paymentMethod ?? 'CASH')),
                         const SizedBox(height: 16),
                         Text('이용해 주셔서 감사합니다', 
                           textAlign: TextAlign.center,

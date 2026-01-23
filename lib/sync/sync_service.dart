@@ -79,13 +79,19 @@ class SyncService {
           'clientSaleId': sale.id, // 로컬 ID를 클라이언트 세일 ID로 사용
           'totalAmount': sale.totalAmount,
           'paidAmount': sale.paidAmount,
-          'paymentMethod': sale.paymentMethod,
+          // 'paymentMethod': sale.paymentMethod, // Removed
           'status': sale.status,
           'items': items.map((item) => {
             'productId': item.productId,
             'qty': item.qty,
             'price': item.price,
             'discountAmount': item.discountAmount,
+          }).toList(),
+          'payments': sale.payments.map((p) => {
+            'method': p.method,
+            'amount': p.amount,
+            // 'cardApproval': p.cardApproval, // If needed
+            // 'cardLast4': p.cardLast4, // If needed
           }).toList(),
         };
 

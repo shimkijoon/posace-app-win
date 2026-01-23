@@ -1,0 +1,21 @@
+- [x] Phase 1: Schema Updates (Database)
+    - [x] Update `schema.prisma` (PosSession, Sale, Employee, Tables)
+    - [x] Reset DB, run migration, and generate client
+- [x] Phase 2: Core API Logic Updates
+    - [x] Update `PosSession` module (Extended fields, Statistics)
+    - [x] Update `Sales` module (SalePayment integration, EmployeeId)
+    - [x] Implement `Employee` module (Auth with PIN)
+    - [x] Implement `Refunds` module (Partial/Full refunds)
+    - [x] Implement `TableService` module (Layouts, Orders, Locking)
+- [x] Windows POS App Development (`posace-app-win`)
+    - [x] Research existing app structure (Data layer, UI)
+    - [x] Save documentation to project directory
+    - [x] Update Models (Sale, PosSession, Employee)
+    - [x] Update API Client (Split payments, Staff login)
+    - [x] Implement Staff Login (PIN keyboard)
+    - [x] Implement Split Payment UI
+    - [x] Implement Table Service UI
+- [x] Verification and Reporting
+    - [x] Create `walkthrough.md` documenting Backend changes
+    - [ ] Update `walkthrough.md` with Windows App results
+    - [ ] Notify user of completion

@@ -302,7 +302,7 @@ class _SalesInquiryPageState extends State<SalesInquiryPage> {
                               subtitle: Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  '${dateFormat.format(sale.createdAt)}  |  ${_localizePaymentMethod(sale.paymentMethod)}',
+                                  '${dateFormat.format(sale.createdAt)}  |  ${_localizePaymentMethod(sale.paymentMethod ?? 'CASH')}',
                                   style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
                                 ),
                               ),

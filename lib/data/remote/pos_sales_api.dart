@@ -10,13 +10,17 @@ class PosSalesApi {
   Future<Map<String, dynamic>> createSale(Map<String, dynamic> saleData) async {
     final uri = apiClient.buildUri('/sales/pos');
 
+    // The saleData is already built by the caller, so we just encode and send.
+    // We can add a simple check or logging here if needed.
+    final body = json.encode(saleData);
+
     final response = await http.post(
       uri,
       headers: {
         'Content-Type': 'application/json',
         if (apiClient.accessToken != null) 'Authorization': 'Bearer ${apiClient.accessToken}',
       },
-      body: json.encode(saleData),
+      body: body,
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {

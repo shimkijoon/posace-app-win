@@ -9,6 +9,7 @@ import '../../sync/sync_service.dart';
 import '../auth/login_page.dart';
 import '../sales/sales_page.dart';
 import '../sales/sales_inquiry_page.dart';
+import '../tables/table_layout_page.dart';
 import 'settings_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -29,6 +30,8 @@ class _HomePageState extends State<HomePage> {
   int _productsCount = 0;
   int _discountsCount = 0;
   int _unsyncedSalesCount = 0;
+  String? _currentEmployeeName;
+  bool _isSessionActive = false;
 
   @override
   void initState() {
@@ -55,12 +58,26 @@ class _HomePageState extends State<HomePage> {
     final products = await widget.database.getProducts();
     final discounts = await widget.database.getDiscounts();
     final unsyncedSales = await widget.database.getUnsyncedSales();
+    final activeSession = await widget.database.getActiveSession();
+    final employees = await widget.database.getEmployees();
+    final currentEmployeeId = _session['employeeId'];
+    
+    String? employeeName;
+    if (currentEmployeeId != null) {
+      try {
+        final emp = employees.firstWhere((e) => e.id == currentEmployeeId);
+        employeeName = emp.name;
+      } catch (_) {}
+    }
+
     if (!mounted) return;
     setState(() {
       _categoriesCount = categories.length;
       _productsCount = products.length;
       _discountsCount = discounts.length;
       _unsyncedSalesCount = unsyncedSales.length;
+      _isSessionActive = activeSession != null;
+      _currentEmployeeName = employeeName;
     });
   }
 
@@ -252,6 +269,11 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 8),
                     Text('Store ID: ${_session['storeId'] ?? '-'}'),
                     Text('POS ID: ${_session['posId'] ?? '-'}'),
+                    const Divider(),
+                    Text('상태: ${_isSessionActive ? "영업 중 (Session Open)" : "영업 종료 (Session Closed)"}', 
+                      style: TextStyle(color: _isSessionActive ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
+                    if (_currentEmployeeName != null)
+                      Text('담당 직원: $_currentEmployeeName', style: const TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -372,30 +394,59 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 24),
             // 판매 시작 버튼
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _productsCount > 0
-                    ? () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => SalesPage(database: widget.database),
-                          ),
-                        );
-                      }
-                    : null,
-                icon: const Icon(Icons.point_of_sale, size: 24),
-                label: const Text(
-                  '판매 시작',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _productsCount > 0
+                        ? () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => SalesPage(database: widget.database),
+                              ),
+                            );
+                          }
+                        : null,
+                    icon: const Icon(Icons.point_of_sale, size: 24),
+                    label: const Text(
+                      '판매 시작',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _productsCount > 0
+                        ? () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => TableLayoutPage(database: widget.database),
+                              ),
+                            );
+                          }
+                        : null,
+                    icon: const Icon(Icons.table_restaurant, size: 24),
+                    label: const Text(
+                      '테이블 주문',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepOrange, // Different color to distinguish
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

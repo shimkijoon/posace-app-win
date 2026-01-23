@@ -24,6 +24,9 @@ import 'widgets/suspended_sales_dialog.dart';
 import 'widgets/member_search_dialog.dart';
 import '../../core/storage/settings_storage.dart';
 import '../../data/remote/pos_suspended_api.dart';
+import 'widgets/split_payment_dialog.dart';
+import '../../data/local/models/payment_model.dart';
+import '../../data/remote/pos_sales_api.dart'; // Ensure API is imported if needed
 
 class SalesPage extends StatefulWidget {
   const SalesPage({
@@ -418,65 +421,64 @@ class _SalesPageState extends State<SalesPage> {
     }
   }
 
-  Future<void> _onCheckout() async {
+  // New method to handle split payment dialog
+  Future<void> _onSplitCheckout() async {
     if (_cart.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('결제할 상품이 없습니다')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('결제할 상품이 없습니다')));
       return;
     }
 
-    // 결제 수단 선택 다이얼로그
-    final String? method = await showDialog<String>(
+    final payments = await showDialog<List<SalePaymentModel>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('결제 수단 선택'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.money),
-              title: const Text('현금 (CASH)'),
-              onTap: () => Navigator.pop(context, 'CASH'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.credit_card),
-              title: const Text('카드 (CARD)'),
-              onTap: () => Navigator.pop(context, 'CARD'),
-            ),
-          ],
-        ),
-      ),
+      builder: (context) => SplitPaymentDialog(totalAmount: _cart.total),
     );
 
-    if (method == null) return;
-
-    await _processPayment(method);
+    if (payments != null && payments.isNotEmpty) {
+      await _processPayment(payments);
+    }
   }
 
-  Future<void> _processPayment(String method) async {
+  Future<void> _processPayment(List<SalePaymentModel> payments) async {
     setState(() => _isLoading = true);
 
     try {
-      final session = await AuthStorage().getSessionInfo();
+      final auth = AuthStorage();
+      final session = await auth.getSessionInfo();
       final storeId = session['storeId'];
       final posId = session['posId'];
+      final sessionId = session['sessionId'];
+      final employeeId = session['employeeId'];
 
       if (storeId == null) throw Exception('매장 정보를 찾을 수 없습니다');
 
       final saleId = const Uuid().v4();
-      final pointsToEarn = (_cart.total * 0.01).round(); // 1% earn rate
+      final totalPaid = payments.fold<int>(0, (sum, p) => sum + p.amount);
+      final pointsToEarn = (_cart.total * 0.01).round(); 
+
+      // Prepare payments with saleId
+      final finalPayments = payments.map((p) => SalePaymentModel(
+        id: p.id,
+        saleId: saleId,
+        method: p.method,
+        amount: p.amount,
+        cardApproval: p.cardApproval,
+        cardLast4: p.cardLast4,
+      )).toList();
+
       final sale = SaleModel(
         id: saleId,
         storeId: storeId,
         posId: posId,
+        sessionId: sessionId,
+        employeeId: employeeId,
         memberId: _selectedMember?.id,
         totalAmount: _cart.total,
-        paidAmount: _cart.total,
-        paymentMethod: method,
+        paidAmount: totalPaid,
+        paymentMethod: payments.length == 1 ? payments.first.method : 'SPLIT',
         status: 'COMPLETED',
         createdAt: DateTime.now(),
         memberPointsEarned: pointsToEarn,
+        payments: finalPayments,
       );
 
       final items = _cart.items.map((item) => SaleItemModel(
@@ -501,13 +503,12 @@ class _SalesPageState extends State<SalesPage> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _cart = Cart(); // 장바구니 초기화
+          _cart = Cart(); 
           _selectedManualDiscountIds = {};
           _selectedMember = null;
         });
         _updateCartDiscounts();
 
-        // 영수증 출력
         _printReceipt(sale, items);
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -678,7 +679,7 @@ class _SalesPageState extends State<SalesPage> {
                         onMember: _onMember,
                         onCancel: _onCancel,
                         onHold: _onHold,
-                        onCheckout: _onCheckout,
+                        onCheckout: _onSplitCheckout,
                         isCheckoutEnabled: !_cart.isEmpty,
                       ),
                     ],
