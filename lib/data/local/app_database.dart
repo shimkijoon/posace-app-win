@@ -1010,4 +1010,45 @@ class AppDatabase {
     }
     return results;
   }
+
+  // Weekly Sales for Chart - Returns last 7 days from today
+  Future<List<Map<String, dynamic>>> getWeeklySales() async {
+    final db = await database;
+    final now = DateTime.now();
+    
+    // Create a map to store sales by date
+    final salesByDate = <String, double>{};
+    
+    // Query sales for the last 7 days
+    final sevenDaysAgo = now.subtract(const Duration(days: 6)); // 6 days ago + today = 7 days
+    final result = await db.rawQuery('''
+      SELECT 
+        DATE(createdAt) as date,
+        SUM(totalAmount) as total
+      FROM sales
+      WHERE DATE(createdAt) >= DATE(?) AND status = 'COMPLETED'
+      GROUP BY DATE(createdAt)
+    ''', [sevenDaysAgo.toIso8601String()]);
+    
+    // Store actual sales data
+    for (var row in result) {
+      final dateStr = row['date'] as String;
+      final total = (row['total'] as num?)?.toDouble() ?? 0.0;
+      salesByDate[dateStr] = total;
+    }
+    
+    // Generate all 7 days from 6 days ago to today
+    final weekData = <Map<String, dynamic>>[];
+    for (int i = 6; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+      final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      
+      weekData.add({
+        'date': dateStr,
+        'total': salesByDate[dateStr] ?? 0.0,
+      });
+    }
+    
+    return weekData;
+  }
 }

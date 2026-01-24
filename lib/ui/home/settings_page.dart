@@ -3,11 +3,19 @@ import 'package:flutter/material.dart';
 import '../../core/printer/serial_printer_service.dart';
 import '../../core/printer/esc_pos_encoder.dart';
 import '../../core/storage/settings_storage.dart';
+import '../../core/storage/auth_storage.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/local/app_database.dart';
+import '../../data/remote/api_client.dart';
+import '../../data/remote/pos_master_api.dart';
+import '../../data/remote/pos_sales_api.dart';
+import '../../sync/sync_service.dart';
 import '../sales/widgets/title_bar.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  const SettingsPage({super.key, required this.database});
+
+  final AppDatabase database;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -16,15 +24,22 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final _printerService = SerialPrinterService();
   final _settingsStorage = SettingsStorage();
+  final _authStorage = AuthStorage();
   
   List<String> _availablePorts = [];
   final List<int> _baudRates = [9600, 19200, 38400, 57600, 115200];
 
   String? _receiptPort;
-  int _receiptBaudInt = 9600; // Renamed from _receiptBaud
+  int _receiptBaudInt = 9600;
   String? _kitchenPort;
   int _kitchenBaud = 9600;
-  bool _usePosSession = true; // New state variable
+  bool _usePosSession = true;
+  
+  bool _syncing = false;
+  String? _syncStatus;
+  int _categoriesCount = 0;
+  int _productsCount = 0;
+  int _discountsCount = 0;
 
   bool _isLoading = true;
 
@@ -52,6 +67,8 @@ class _SettingsPageState extends State<SettingsPage> {
       _usePosSession = useSession; // Set new state
       _isLoading = false;
     });
+    
+    await _loadDataCounts();
   }
 
   Future<void> _saveSettings() async {
@@ -121,6 +138,156 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _loadDataCounts() async {
+    final categories = await widget.database.getCategories();
+    final products = await widget.database.getProducts();
+    final discounts = await widget.database.getDiscounts();
+    
+    if (!mounted) return;
+    setState(() {
+      _categoriesCount = categories.length;
+      _productsCount = products.length;
+      _discountsCount = discounts.length;
+    });
+  }
+
+  Future<void> _syncMaster() async {
+    final accessToken = await _authStorage.getAccessToken();
+    final sessionInfo = await _authStorage.getSessionInfo();
+    final storeId = sessionInfo['storeId'];
+    
+    if (storeId == null || accessToken == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('로그인 정보가 없습니다.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _syncing = true;
+      _syncStatus = '동기화 중...';
+    });
+
+    try {
+      final apiClient = ApiClient(accessToken: accessToken);
+      final masterApi = PosMasterApi(apiClient);
+      final salesApi = PosSalesApi(apiClient);
+      final syncService = SyncService(
+        database: widget.database,
+        masterApi: masterApi,
+        salesApi: salesApi,
+      );
+
+      final result = await syncService.syncMaster(
+        storeId: storeId,
+        manual: true,
+      );
+
+      int uploadedCount = 0;
+      if (result.success) {
+        uploadedCount = await syncService.flushSalesQueue();
+      }
+
+      if (!mounted) return;
+
+      if (result.success) {
+        await _settingsStorage.setLastSyncAt(DateTime.now());
+        await _loadDataCounts();
+        setState(() {
+          _syncStatus = '동기화 완료';
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '동기화 완료: 마스터(${result.productsCount ?? 0}개), 매출($uploadedCount건) 업로드',
+            ),
+          ),
+        );
+      } else {
+        setState(() {
+          _syncStatus = '동기화 실패: ${result.error}';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('동기화 실패: ${result.error}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _syncStatus = '동기화 오류: $e';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('동기화 오류: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _syncing = false);
+      }
+    }
+  }
+
+  Future<void> _resetData() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('데이터 초기화'),
+        content: const Text('로컬의 모든 데이터를 삭제하고 서버에서 다시 불러오시겠습니까?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('아니오'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text('예, 초기화합니다'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _syncing = true;
+      _syncStatus = '데이터 초기화 중...';
+    });
+
+    try {
+      final accessToken = await _authStorage.getAccessToken();
+      final apiClient = ApiClient(accessToken: accessToken!);
+      final masterApi = PosMasterApi(apiClient);
+      final salesApi = PosSalesApi(apiClient);
+      final syncService = SyncService(
+        database: widget.database,
+        masterApi: masterApi,
+        salesApi: salesApi,
+      );
+
+      await syncService.clearLocalData();
+      await _syncMaster();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _syncStatus = '초기화 오류: $e';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('초기화 중 오류 발생: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _syncing = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -165,6 +332,63 @@ class _SettingsPageState extends State<SettingsPage> {
                       onPortChanged: (val) => setState(() => _kitchenPort = val),
                       onBaudChanged: (val) => setState(() => _kitchenBaud = val ?? 9600),
                       onTestPrint: () => _testPrint('kitchen'),
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSection(
+                      title: '데이터 관리',
+                      children: [
+                        if (_syncStatus != null) ...[
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              _syncStatus!,
+                              style: TextStyle(
+                                color: _syncStatus!.contains('완료') ? AppTheme.success : (_syncStatus!.contains('실패') || _syncStatus!.contains('오류') ? AppTheme.error : AppTheme.textSecondary),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('카테고리: $_categoriesCount개', style: const TextStyle(fontSize: 13)),
+                                    Text('상품: $_productsCount개', style: const TextStyle(fontSize: 13)),
+                                    Text('할인: $_discountsCount개', style: const TextStyle(fontSize: 13)),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Column(
+                                children: [
+                                  ElevatedButton.icon(
+                                    onPressed: _syncing ? null : _syncMaster,
+                                    icon: _syncing
+                                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                        : const Icon(Icons.sync, size: 18),
+                                    label: const Text('동기화'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primary,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextButton.icon(
+                                    onPressed: _syncing ? null : _resetData,
+                                    icon: const Icon(Icons.refresh, color: AppTheme.error, size: 18),
+                                    label: const Text('초기화', style: TextStyle(color: AppTheme.error)),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 32),
                     ElevatedButton(

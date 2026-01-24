@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/auth/pos_auth_service.dart';
 import '../../data/local/app_database.dart';
 import '../home/home_page.dart';
+import 'store_selection_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.database});
@@ -47,14 +48,34 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      await _authService.loginAsOwner(
+      // NOTE: In a real app, we would get the actual hardware device ID here.
+      // For now, we'll use a placeholder or dummy ID.
+      const String deviceId = 'WIN-DEVICE-001'; 
+
+      final result = await _authService.loginAsOwner(
         _emailController.text.trim(),
         _passwordController.text,
+        deviceId: deviceId,
       );
+
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => HomePage(database: widget.database)),
-      );
+
+      if (result['autoSelected'] == true) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => HomePage(database: widget.database)),
+        );
+      } else {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => StoreSelectionPage(
+              database: widget.database,
+              email: _emailController.text.trim(),
+              stores: result['stores'],
+              deviceId: deviceId,
+            ),
+          ),
+        );
+      }
     } catch (e) {
       setState(() {
         _error = e.toString().replaceAll('Exception: ', '');

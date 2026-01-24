@@ -18,16 +18,45 @@ class PosAuthApi {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> loginAsOwner(String email, String password) async {
+  Future<Map<String, dynamic>> loginAsOwner(String email, String password, {String? deviceId}) async {
     final url = Uri.parse('${AppConfig.apiBaseUrl}/pos/auth/login-owner');
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
+      body: jsonEncode({
+        'email': email, 
+        'password': password,
+        'deviceId': deviceId,
+      }),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('이메일/비밀번호 로그인에 실패했습니다. (${response.statusCode})');
+    }
+
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> selectPos({
+    required String email,
+    required String storeId,
+    required String posId,
+    String? deviceId,
+  }) async {
+    final url = Uri.parse('${AppConfig.apiBaseUrl}/pos/auth/select-pos');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'storeId': storeId,
+        'posId': posId,
+        'deviceId': deviceId,
+      }),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('POS 선택에 실패했습니다. (${response.statusCode})');
     }
 
     return jsonDecode(response.body) as Map<String, dynamic>;

@@ -26,13 +26,56 @@ class PosAuthService {
     );
   }
 
-  Future<void> loginAsOwner(String email, String password) async {
-    final result = await _api.loginAsOwner(email, password);
-    final accessToken = result['accessToken'] as String?;
-    final storeId = result['storeId'] as String?;
-    final posId = result['posId'] as String?;
+  Future<Map<String, dynamic>> loginAsOwner(String email, String password, {String? deviceId}) async {
+    final result = await _api.loginAsOwner(email, password, deviceId: deviceId);
+    
+    final bool autoSelected = result['autoSelected'] ?? false;
+    
+    if (autoSelected) {
+      final accessToken = result['accessToken'] as String?;
+      final storeId = result['storeId'] as String?;
+      final posId = result['posId'] as String?;
 
-    if (accessToken == null || storeId == null || posId == null) {
+      if (accessToken == null || storeId == null || posId == null) {
+        throw Exception('응답 형식이 올바르지 않습니다.');
+      }
+
+      await _storage.saveSession(
+        accessToken: accessToken,
+        storeId: storeId,
+        posId: posId,
+        storeName: result['storeName'],
+        storeBizNo: result['businessNumber'],
+        storeAddr: result['address'],
+        storePhone: result['phone'],
+      );
+      
+      return {'success': true, 'autoSelected': true};
+    } else {
+      // Return stores for selection
+      return {
+        'success': true, 
+        'autoSelected': false, 
+        'stores': result['stores']
+      };
+    }
+  }
+
+  Future<void> selectPos({
+    required String email,
+    required String storeId,
+    required String posId,
+    String? deviceId,
+  }) async {
+    final result = await _api.selectPos(
+      email: email,
+      storeId: storeId,
+      posId: posId,
+      deviceId: deviceId,
+    );
+    
+    final accessToken = result['accessToken'] as String?;
+    if (accessToken == null) {
       throw Exception('응답 형식이 올바르지 않습니다.');
     }
 
@@ -40,6 +83,10 @@ class PosAuthService {
       accessToken: accessToken,
       storeId: storeId,
       posId: posId,
+      storeName: result['storeName'],
+      storeBizNo: result['businessNumber'],
+      storeAddr: result['address'],
+      storePhone: result['phone'],
     );
   }
 
