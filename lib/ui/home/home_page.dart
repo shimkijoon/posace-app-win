@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../core/storage/auth_storage.dart';
+import '../../core/storage/settings_storage.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/local/app_database.dart';
 import '../../data/remote/api_client.dart';
 import '../../data/remote/pos_master_api.dart';
 import '../../data/remote/pos_sales_api.dart';
+import '../../data/remote/pos_session_api.dart';
 import '../../sync/sync_service.dart';
 import '../auth/login_page.dart';
 import '../sales/sales_page.dart';
@@ -23,6 +25,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _storage = AuthStorage();
+  final _settingsStorage = SettingsStorage();
   Map<String, String?> _session = {};
   bool _syncing = false;
   String? _syncStatus;
@@ -32,6 +35,8 @@ class _HomePageState extends State<HomePage> {
   int _unsyncedSalesCount = 0;
   String? _currentEmployeeName;
   bool _isSessionActive = false;
+  String? _currentSessionId;
+  bool _usePosSession = true;
 
   @override
   void initState() {
@@ -42,9 +47,13 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadSession() async {
     final session = await _storage.getSessionInfo();
+    final useSession = await _settingsStorage.getUsePosSession();
     if (!mounted) return;
     setState(() {
       _session = session;
+      _currentSessionId = session['sessionId'];
+      _isSessionActive = session['sessionId'] != null;
+      _usePosSession = useSession;
     });
     
     // 자동 동기화 (최초 로그인 시)
@@ -76,7 +85,9 @@ class _HomePageState extends State<HomePage> {
       _productsCount = products.length;
       _discountsCount = discounts.length;
       _unsyncedSalesCount = unsyncedSales.length;
-      _isSessionActive = activeSession != null;
+      // We trust AuthStorage for session state mostly, but local DB check is good too
+      // _isSessionActive = activeSession != null; 
+      // Let's use AuthStorage as primary source of truth for "active session" ID from server perspective
       _currentEmployeeName = employeeName;
     });
   }
@@ -234,6 +245,149 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _handleOpenSession() async {
+    final amountController = TextEditingController(text: '0');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('영업 시작 (세션 열기)'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('영업 준비금(시재)을 입력하세요.'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: '금액',
+                border: OutlineInputBorder(),
+                suffixText: '원',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('영업 시작'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final openingAmount = int.tryParse(amountController.text) ?? 0;
+    
+    try {
+      final accessToken = await _storage.getAccessToken();
+      final storeId = _session['storeId'];
+      
+      if (accessToken == null || storeId == null) return;
+
+      setState(() { _syncing = true; }); // Show loading
+
+      final apiClient = ApiClient(accessToken: accessToken);
+      final sessionApi = PosSessionApi(apiClient);
+      
+      final result = await sessionApi.openSession(storeId, openingAmount);
+      
+      // Save Session ID
+      final sessionId = result['id']; // Assuming API returns object with id
+      await _storage.savePosSession(sessionId);
+
+      await _loadSession(); // Refresh UI state
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('영업이 시작되었습니다.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('세션 시작 실패: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() { _syncing = false; });
+    }
+  }
+
+  Future<void> _handleCloseSession() async {
+    final amountController = TextEditingController(text: '0');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('영업 마감 (세션 종료)'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('최종 시재(현금 잔액)를 입력하세요.'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: '금액',
+                border: OutlineInputBorder(),
+                suffixText: '원',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('취소'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('영업 마감'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final closingAmount = int.tryParse(amountController.text) ?? 0;
+    
+    try {
+      final accessToken = await _storage.getAccessToken();
+      final sessionId = _currentSessionId;
+      
+      if (accessToken == null || sessionId == null) return;
+
+      setState(() { _syncing = true; });
+
+      final apiClient = ApiClient(accessToken: accessToken);
+      final sessionApi = PosSessionApi(apiClient);
+      
+      // For now, passing 0 as computed totalCash as specific implementation might vary
+      await sessionApi.closeSession(sessionId, closingAmount, 0);
+      
+      // Clear Session ID
+      await _storage.savePosSession(null);
+
+      await _loadSession(); // Refresh UI state
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('영업이 마감되었습니다.')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('세션 종료 실패: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() { _syncing = false; });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -268,12 +422,45 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(height: 8),
                     Text('Store ID: ${_session['storeId'] ?? '-'}'),
-                    Text('POS ID: ${_session['posId'] ?? '-'}'),
+                    // Text('POS ID: ${_session['posId'] ?? '-'}'),
                     const Divider(),
-                    Text('상태: ${_isSessionActive ? "영업 중 (Session Open)" : "영업 종료 (Session Closed)"}', 
-                      style: TextStyle(color: _isSessionActive ? Colors.green : Colors.red, fontWeight: FontWeight.bold)),
-                    if (_currentEmployeeName != null)
-                      Text('담당 직원: $_currentEmployeeName', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _usePosSession 
+                                ? '상태: ${_isSessionActive ? "영업 중 (Session Open)" : "영업 종료 (Session Closed)"}'
+                                : '상태: 영업 관리 미사용',
+                              style: TextStyle(
+                                color: (_usePosSession && !_isSessionActive) ? Colors.red : Colors.green, 
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            if (_currentEmployeeName != null)
+                              Text('담당 직원: $_currentEmployeeName', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        if (_usePosSession)
+                          _isSessionActive
+                          ? ElevatedButton.icon(
+                              onPressed: _handleCloseSession,
+                              icon: const Icon(Icons.logout),
+                              label: const Text('영업 마감'),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                            )
+                          : ElevatedButton.icon(
+                              onPressed: _productsCount > 0 ? _handleOpenSession : null, 
+                              // Only allow opening session if we have data, to encourage sync first
+                              icon: const Icon(Icons.login),
+                              label: const Text('영업 시작'),
+                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                            ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -398,7 +585,7 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _productsCount > 0
+                    onPressed: _productsCount > 0 && (!_usePosSession || _isSessionActive)
                         ? () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
@@ -423,7 +610,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _productsCount > 0
+                    onPressed: _productsCount > 0 && (!_usePosSession || _isSessionActive)
                         ? () {
                             Navigator.of(context).push(
                               MaterialPageRoute(

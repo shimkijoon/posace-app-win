@@ -571,8 +571,13 @@ class AppDatabase {
     await db.delete('product_options');
     await db.delete('bundle_items');
     await db.delete('discounts');
-    await db.delete('sales');
+    await db.delete('sale_payments');
     await db.delete('sale_items');
+    await db.delete('sales');
+    await db.delete('table_order_items');
+    await db.delete('table_orders');
+    await db.delete('restaurant_tables');
+    await db.delete('table_layouts');
     await db.delete('sync_metadata');
   }
 

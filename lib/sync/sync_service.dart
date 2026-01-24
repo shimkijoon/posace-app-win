@@ -21,6 +21,7 @@ class SyncService {
     bool manual = false,
   }) async {
     try {
+      print('[POS] Starting Master Sync...');
       // 마지막 동기화 시간 확인
       final lastSyncTime = await database.getSyncMetadata('lastMasterSync');
       final updatedAfter = manual ? null : lastSyncTime;
@@ -29,10 +30,18 @@ class SyncService {
       final response = await masterApi.getMasterData(storeId, updatedAfter: updatedAfter);
 
       // 로컬 DB에 저장
+      print('[POS] Saving ${response.categories.length} categories');
       await database.upsertCategories(response.categories);
+      print('[POS] Saving ${response.products.length} products');
       await database.upsertProducts(response.products);
       await database.upsertDiscounts(response.discounts);
       await database.upsertTaxes(response.taxes);
+
+      // 테이블 레이아웃 저장
+      print('[POS] Saving ${response.tableLayouts.length} layouts to local DB');
+      await database.upsertTableLayouts(
+        response.tableLayouts.map((layout) => layout.toMap()).toList(),
+      );
 
       // 동기화 시간 업데이트
       await database.setSyncMetadata('lastMasterSync', response.serverTime);
@@ -55,6 +64,7 @@ class SyncService {
         productsCount: response.products.length,
         discountsCount: response.discounts.length,
         taxesCount: response.taxes.length,
+        tableLayoutsCount: response.tableLayouts.length,
         serverTime: response.serverTime,
       );
     } catch (e) {
@@ -118,6 +128,7 @@ class SyncResult {
   final int? productsCount;
   final int? discountsCount;
   final int? taxesCount;
+  final int? tableLayoutsCount;
   final String? serverTime;
   final String? error;
 
@@ -127,6 +138,7 @@ class SyncResult {
     this.productsCount,
     this.discountsCount,
     this.taxesCount,
+    this.tableLayoutsCount,
     this.serverTime,
     this.error,
   });

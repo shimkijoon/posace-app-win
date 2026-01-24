@@ -51,4 +51,18 @@ class SettingsStorage {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_keyKitchenPrinterBaud) ?? 9600;
   }
+
+  // Session Management
+  static const _keyUsePosSession = 'use_pos_session';
+
+  Future<void> setUsePosSession(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyUsePosSession, value);
+  }
+
+  Future<bool> getUsePosSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Default to true as it was the original behavior
+    return prefs.getBool(_keyUsePosSession) ?? true;
+  }
 }

@@ -148,7 +148,7 @@ class _CartGridState extends State<CartGrid> {
                 child: Row(
                   children: [
                     Expanded(
-                      flex: 5, // 2.5 * 2
+                      flex: 6, // 상품명
                       child: Text(
                         '상품명',
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -158,7 +158,7 @@ class _CartGridState extends State<CartGrid> {
                       ),
                     ),
                     Expanded(
-                      flex: 2, // 1 * 2
+                      flex: 2, // 바코드
                       child: Text(
                         '바코드',
                         textAlign: TextAlign.center,
@@ -169,7 +169,7 @@ class _CartGridState extends State<CartGrid> {
                       ),
                     ),
                     Expanded(
-                      flex: 2, // 1 * 2
+                      flex: 2, // 단가
                       child: Text(
                         '단가',
                         textAlign: TextAlign.center,
@@ -180,7 +180,7 @@ class _CartGridState extends State<CartGrid> {
                       ),
                     ),
                     Expanded(
-                      flex: 2, // 1 * 2
+                      flex: 3, // 수량 (공간 추가 확보)
                       child: Text(
                         '수량',
                         textAlign: TextAlign.center,
@@ -191,7 +191,7 @@ class _CartGridState extends State<CartGrid> {
                       ),
                     ),
                     Expanded(
-                      flex: 2, // 1 * 2
+                      flex: 2, // 할인
                       child: Text(
                         '할인',
                         textAlign: TextAlign.center,
@@ -202,9 +202,9 @@ class _CartGridState extends State<CartGrid> {
                       ),
                     ),
                     Expanded(
-                      flex: 3, // 1.5 * 2
+                      flex: 4, // 금액 (공간 추가 확보)
                       child: Padding(
-                        padding: const EdgeInsets.only(right: 12), // 스크롤바 공간 확보
+                        padding: const EdgeInsets.only(right: 12),
                         child: Text(
                           '금액',
                           textAlign: TextAlign.right,
@@ -500,7 +500,7 @@ class _CartGridRow extends StatelessWidget {
         children: [
           // 상품명
           Expanded(
-            flex: 5,
+            flex: 6,
             child: Row(
               children: [
                 // X 버튼 (선택되었을 때만 표시)
@@ -574,7 +574,7 @@ class _CartGridRow extends StatelessWidget {
 
           // 수량
           Expanded(
-            flex: 2,
+            flex: 3,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -585,23 +585,26 @@ class _CartGridRow extends StatelessWidget {
                   icon: const Icon(Icons.remove, size: 16),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
-                    minWidth: 28,
-                    minHeight: 28,
+                    minWidth: 24,
+                    minHeight: 24,
                   ),
                 ),
-                Text(
-                  '${item.quantity}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(
+                    '${item.quantity}',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
                 ),
                 IconButton(
                   onPressed: () => onQuantityChanged(item.quantity + 1),
                   icon: const Icon(Icons.add, size: 16),
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
-                    minWidth: 28,
-                    minHeight: 28,
+                    minWidth: 24,
+                    minHeight: 24,
                   ),
                 ),
               ],
@@ -627,9 +630,9 @@ class _CartGridRow extends StatelessWidget {
 
           // 최종 금액 (우측 정렬)
           Expanded(
-            flex: 3,
+            flex: 4,
             child: Padding(
-              padding: const EdgeInsets.only(right: 12), // 스크롤바 공간 확보
+              padding: const EdgeInsets.only(right: 12),
               child: Text(
                 formatPrice(item.finalPrice),
                 textAlign: TextAlign.right,

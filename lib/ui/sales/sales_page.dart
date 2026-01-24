@@ -1,5 +1,5 @@
-import 'dart:typed_data';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import '../../core/models/cart.dart';
 import '../../core/models/cart_item.dart';
@@ -26,15 +26,21 @@ import '../../core/storage/settings_storage.dart';
 import '../../data/remote/pos_suspended_api.dart';
 import 'widgets/split_payment_dialog.dart';
 import '../../data/local/models/payment_model.dart';
-import '../../data/remote/pos_sales_api.dart'; // Ensure API is imported if needed
+import '../../data/remote/pos_sales_api.dart';
+import '../../data/remote/table_management_api.dart';
+import '../../data/remote/api_client.dart';
 
 class SalesPage extends StatefulWidget {
   const SalesPage({
     super.key,
     required this.database,
+    this.tableId,
+    this.tableName,
   });
 
   final AppDatabase database;
+  final String? tableId;
+  final String? tableName;
 
   @override
   State<SalesPage> createState() => _SalesPageState();
@@ -49,6 +55,9 @@ class _SalesPageState extends State<SalesPage> {
   Cart _cart = Cart();
   Set<String> _selectedManualDiscountIds = {};
   MemberModel? _selectedMember;
+  Map<String, dynamic>? _selectedTableOrder;
+  int _guestCount = 0;
+  DateTime? _orderStartTime;
   bool _isLoading = true;
 
   @override
@@ -65,6 +74,44 @@ class _SalesPageState extends State<SalesPage> {
       final products = await widget.database.getProducts();
       final discounts = await widget.database.getDiscounts();
       
+      // If tableId is provided, load existing active order from server
+      if (widget.tableId != null) {
+        final auth = AuthStorage();
+        final token = await auth.getAccessToken();
+        final session = await auth.getSessionInfo();
+        if (token != null && session['storeId'] != null) {
+          final apiClient = ApiClient(accessToken: token);
+          final response = await http.get(
+            apiClient.buildUri('/tables/active-orders', {'storeId': session['storeId']!}),
+            headers: apiClient.headers,
+          );
+          if (response.statusCode == 200) {
+            final List<dynamic> allOrders = jsonDecode(response.body);
+            final tableOrder = allOrders.firstWhere((o) => o['tableId'] == widget.tableId, orElse: () => null);
+            if (tableOrder != null) {
+              _selectedTableOrder = tableOrder;
+              _guestCount = tableOrder['guestCount'] ?? 0;
+              _orderStartTime = tableOrder['createdAt'] != null ? DateTime.parse(tableOrder['createdAt']) : null;
+              
+              final List<dynamic> itemsData = tableOrder['items'];
+              final productMap = {for (var p in products) p.id: p};
+              final List<CartItem> cartItems = [];
+              for (var item in itemsData) {
+                final p = productMap[item['productId']];
+                if (p != null) {
+                  cartItems.add(CartItem(
+                    product: p,
+                    quantity: item['qty'],
+                    selectedOptions: (item['options'] as List?)?.map((o) => ProductOptionModel.fromMap(o)).toList() ?? [],
+                  ));
+                }
+              }
+              _cart = Cart(items: cartItems);
+            }
+          }
+        }
+      }
+
       if (mounted) {
         setState(() {
           _categories = categories;
@@ -199,11 +246,15 @@ class _SalesPageState extends State<SalesPage> {
   }
 
   void _onHomePressed() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => HomePage(database: widget.database),
-      ),
-    );
+    if (widget.tableId != null) {
+      Navigator.of(context).pop();
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => HomePage(database: widget.database),
+        ),
+      );
+    }
   }
 
   Future<void> _onDiscount() async {
@@ -421,7 +472,6 @@ class _SalesPageState extends State<SalesPage> {
     }
   }
 
-  // New method to handle split payment dialog
   Future<void> _onSplitCheckout() async {
     if (_cart.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('결제할 상품이 없습니다')));
@@ -435,6 +485,49 @@ class _SalesPageState extends State<SalesPage> {
 
     if (payments != null && payments.isNotEmpty) {
       await _processPayment(payments);
+    }
+  }
+
+  Future<void> _onOrder() async {
+    if (_cart.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('주문할 상품이 없습니다.')));
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final auth = AuthStorage();
+      final session = await auth.getSessionInfo();
+      final token = await auth.getAccessToken();
+      
+      if (token == null || session['storeId'] == null) throw Exception('인증 정보가 없습니다.');
+
+      final api = TableManagementApi(ApiClient(accessToken: token));
+      
+      final payload = {
+        'tableId': widget.tableId,
+        'storeId': session['storeId'],
+        'sessionId': session['sessionId'],
+        'employeeId': session['employeeId'],
+        'items': _cart.items.map((item) => {
+          'productId': item.product.id,
+          'qty': item.quantity,
+          'price': item.unitPrice,
+          'options': item.selectedOptions.map((o) => o.toMap()).toList(),
+        }).toList(),
+      };
+
+      await api.createOrUpdateOrder(payload);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('주문이 등록되었습니다.')));
+        Navigator.of(context).pop(); // Return to table layout
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('주문 등록 실패: $e')));
+      }
     }
   }
 
@@ -595,9 +688,14 @@ class _SalesPageState extends State<SalesPage> {
         children: [
           // 1. 상단 타이틀바
           TitleBar(
-            title: '판매',
+            title: widget.tableId != null ? '테이블 주문 - ${widget.tableName}' : '판매',
             onHomePressed: _onHomePressed,
+            leadingIcon: widget.tableId != null ? Icons.grid_view : Icons.home,
+            leadingTooltip: widget.tableId != null ? '테이블로' : '홈으로',
           ),
+
+          // 테이블 정보 바 (테이블 모드일 때만 표시)
+          if (widget.tableId != null) _buildTableInfoBar(),
 
           // 검색 바
           ProductSearchBar(
@@ -680,6 +778,7 @@ class _SalesPageState extends State<SalesPage> {
                         onCancel: _onCancel,
                         onHold: _onHold,
                         onCheckout: _onSplitCheckout,
+                        onOrder: widget.tableId != null ? _onOrder : null,
                         isCheckoutEnabled: !_cart.isEmpty,
                       ),
                     ],
@@ -687,6 +786,92 @@ class _SalesPageState extends State<SalesPage> {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildTableInfoBar() {
+    final String duration = _orderStartTime != null 
+      ? _formatDuration(DateTime.now().difference(_orderStartTime!))
+      : '신규 주문';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: AppTheme.border.withOpacity(0.5))),
+      ),
+      child: Row(
+        children: [
+          // 인원수 표시
+          _InfoBadge(
+            icon: Icons.people_outline,
+            label: '인원',
+            value: '$_guestCount명',
+            color: AppTheme.primary,
+          ),
+          const SizedBox(width: 16),
+          // 경과 시간
+          _InfoBadge(
+            icon: Icons.access_time,
+            label: '주문시간',
+            value: duration,
+            color: AppTheme.warning,
+          ),
+          const Spacer(),
+          // 담당 직원 (예시)
+          const Text(
+            '담당: 홍길동', // TODO: 실제 로그인한 직원이 있다면 연동
+            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDuration(Duration d) {
+    if (d.inHours > 0) {
+      return '${d.inHours}시간 ${d.inMinutes.remainder(60)}분';
+    }
+    return '${d.inMinutes}분';
+  }
+}
+
+class _InfoBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _InfoBadge({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            '$label: ',
+            style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+          ),
+          Text(
+            value,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),

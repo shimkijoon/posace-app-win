@@ -9,4 +9,11 @@ class ApiClient {
     final base = AppConfig.apiBaseUrl;
     return Uri.parse('$base$path').replace(queryParameters: query);
   }
+
+  Map<String, String> get headers {
+    return {
+      'Content-Type': 'application/json',
+      if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+    };
+  }
 }

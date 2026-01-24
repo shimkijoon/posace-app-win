@@ -9,6 +9,7 @@ class FunctionButtons extends StatelessWidget {
     required this.onCancel,
     required this.onHold,
     required this.onCheckout,
+    this.onOrder,
     required this.isCheckoutEnabled,
   });
 
@@ -17,6 +18,7 @@ class FunctionButtons extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onHold;
   final VoidCallback onCheckout;
+  final VoidCallback? onOrder;
   final bool isCheckoutEnabled;
 
   @override
@@ -60,10 +62,10 @@ class FunctionButtons extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: _FunctionButton(
-              label: '거래보류',
-              icon: Icons.pause_circle_outline,
+              label: onOrder != null ? '주문완료' : '거래보류',
+              icon: onOrder != null ? Icons.check_circle_outline : Icons.pause_circle_outline,
               color: AppTheme.warning,
-              onTap: onHold,
+              onTap: onOrder ?? onHold,
             ),
           ),
           const SizedBox(width: 8),

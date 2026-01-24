@@ -7,10 +7,14 @@ class TitleBar extends StatelessWidget {
     super.key,
     required this.title,
     required this.onHomePressed,
+    this.leadingIcon = Icons.home,
+    this.leadingTooltip = '홈으로',
   });
 
   final String title;
   final VoidCallback onHomePressed;
+  final IconData leadingIcon;
+  final String leadingTooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -34,13 +38,13 @@ class TitleBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // 좌측: 홈 버튼 + 타이틀
+          // 좌측: 홈/뒤로가기 버튼 + 타이틀
           Row(
             children: [
               IconButton(
                 onPressed: onHomePressed,
-                icon: const Icon(Icons.home, color: Colors.white),
-                tooltip: '홈으로',
+                icon: Icon(leadingIcon, color: Colors.white),
+                tooltip: leadingTooltip,
               ),
               const SizedBox(width: 12),
               Text(

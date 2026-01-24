@@ -21,9 +21,10 @@ class _SettingsPageState extends State<SettingsPage> {
   final List<int> _baudRates = [9600, 19200, 38400, 57600, 115200];
 
   String? _receiptPort;
-  int _receiptBaud = 9600;
+  int _receiptBaudInt = 9600; // Renamed from _receiptBaud
   String? _kitchenPort;
   int _kitchenBaud = 9600;
+  bool _usePosSession = true; // New state variable
 
   bool _isLoading = true;
 
@@ -40,22 +41,26 @@ class _SettingsPageState extends State<SettingsPage> {
     final rBaud = await _settingsStorage.getReceiptPrinterBaud();
     final kPort = await _settingsStorage.getKitchenPrinterPort();
     final kBaud = await _settingsStorage.getKitchenPrinterBaud();
+    final useSession = await _settingsStorage.getUsePosSession(); // Load new setting
     
     setState(() {
       _availablePorts = ports;
       _receiptPort = (rPort != null && ports.contains(rPort)) ? rPort : null;
-      _receiptBaud = rBaud;
+      _receiptBaudInt = rBaud; // Use _receiptBaudInt
       _kitchenPort = (kPort != null && ports.contains(kPort)) ? kPort : null;
       _kitchenBaud = kBaud;
+      _usePosSession = useSession; // Set new state
       _isLoading = false;
     });
   }
 
   Future<void> _saveSettings() async {
+    await _settingsStorage.setUsePosSession(_usePosSession); // Save new setting
+
     if (_receiptPort != null) {
       await _settingsStorage.setReceiptPrinterPort(_receiptPort!);
-      await _settingsStorage.setReceiptPrinterBaud(_receiptBaud);
-      _printerService.connect(_receiptPort!, baudRate: _receiptBaud);
+      await _settingsStorage.setReceiptPrinterBaud(_receiptBaudInt); // Use _receiptBaudInt
+      _printerService.connect(_receiptPort!, baudRate: _receiptBaudInt); // Use _receiptBaudInt
     }
     
     if (_kitchenPort != null) {
@@ -73,7 +78,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _testPrint(String type) async {
     String? port = type == 'receipt' ? _receiptPort : _kitchenPort;
-    int baud = type == 'receipt' ? _receiptBaud : _kitchenBaud;
+    int baud = type == 'receipt' ? _receiptBaudInt : _kitchenBaud;
     final title = type == 'receipt' ? 'Receipt Printer' : 'Kitchen Printer';
 
     if (port == null) {
@@ -132,12 +137,24 @@ class _SettingsPageState extends State<SettingsPage> {
               : ListView(
                   padding: const EdgeInsets.all(24),
                   children: [
+                    _buildSection(
+                      title: '일반 설정',
+                      children: [
+                        SwitchListTile(
+                          title: const Text('영업 시작/마감 기능 사용'),
+                          subtitle: const Text('비활성화 시 세션 오픈 없이 바로 판매가 가능합니다.'),
+                          value: _usePosSession,
+                          onChanged: (val) => setState(() => _usePosSession = val),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
                     _buildPrinterSection(
                       title: '영수증 프린터 설정',
                       portValue: _receiptPort,
-                      baudValue: _receiptBaud,
+                      baudValue: _receiptBaudInt, // Fix variable name
                       onPortChanged: (val) => setState(() => _receiptPort = val),
-                      onBaudChanged: (val) => setState(() => _receiptBaud = val ?? 9600),
+                      onBaudChanged: (val) => setState(() => _receiptBaudInt = val ?? 9600),
                       onTestPrint: () => _testPrint('receipt'),
                     ),
                     const SizedBox(height: 24),
@@ -161,6 +178,23 @@ class _SettingsPageState extends State<SettingsPage> {
                   ],
                 ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSection({required String title, required List<Widget> children}) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ),
+          const Divider(height: 1),
+          ...children,
         ],
       ),
     );
