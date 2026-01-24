@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../data/local/app_database.dart';
 import '../data/local/models.dart';
 import '../data/remote/pos_master_api.dart';
@@ -58,6 +60,14 @@ class SyncService {
         storePhone: response.store.phone,
       );
 
+      // 회원 동기화 추가
+      int membersCount = 0;
+      try {
+        membersCount = await syncMembers(storeId: storeId);
+      } catch (e) {
+        print('[POS] Member sync failed: $e');
+      }
+
       return SyncResult(
         success: true,
         categoriesCount: response.categories.length,
@@ -65,6 +75,7 @@ class SyncService {
         discountsCount: response.discounts.length,
         taxesCount: response.taxes.length,
         tableLayoutsCount: response.tableLayouts.length,
+        membersCount: membersCount,
         serverTime: response.serverTime,
       );
     } catch (e) {
@@ -73,6 +84,43 @@ class SyncService {
         error: e.toString(),
       );
     }
+  }
+
+  Future<int> syncMembers({required String storeId}) async {
+    // API에 모든 멤버 조회 엔드포인트가 있다고 가정하고 구현
+    // 만약 현재 API에 없다면, 나중에 추가하거나 현재는 빈 값 반환
+    try {
+      final uri = masterApi.apiClient.buildUri('/customers/store/$storeId');
+      final accessToken = await authStorage.getAccessToken();
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        for (final item in data) {
+          final customer = item['customer'];
+          final member = MemberModel(
+            id: item['id'],
+            storeId: storeId,
+            name: customer['name'] ?? '고객',
+            phone: customer['phoneNumber'],
+            points: (item['pointsBalance'] as num?)?.toInt() ?? 0,
+            createdAt: DateTime.parse(item['createdAt']),
+            updatedAt: DateTime.parse(item['updatedAt']),
+          );
+          await database.upsertMember(member);
+        }
+        return data.length;
+      }
+    } catch (e) {
+      print('[POS] syncMembers error: $e');
+    }
+    return 0;
   }
 
   Future<int> flushSalesQueue() async {
@@ -129,6 +177,7 @@ class SyncResult {
   final int? discountsCount;
   final int? taxesCount;
   final int? tableLayoutsCount;
+  final int? membersCount;
   final String? serverTime;
   final String? error;
 
@@ -139,6 +188,7 @@ class SyncResult {
     this.discountsCount,
     this.taxesCount,
     this.tableLayoutsCount,
+    this.membersCount,
     this.serverTime,
     this.error,
   });

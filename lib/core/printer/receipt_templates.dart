@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:intl/intl.dart';
 import '../../data/local/models.dart';
 import 'esc_pos_encoder.dart';
@@ -88,15 +89,69 @@ class ReceiptTemplates {
         await encoder.text(line);
         encoder.lineFeed();
       }
+
+      // Discount lines for the item
+      if (item.discountsJson != null && item.discountsJson!.isNotEmpty) {
+        try {
+          final List<dynamic> itemDiscounts = jsonDecode(item.discountsJson!);
+          for (var d in itemDiscounts) {
+            final dName = d['name'] ?? '할인';
+            final dAmount = d['amount'] ?? 0;
+            if (dAmount > 0) {
+              String dLine = _padRight('  [할인] $dName', 26) + _padLeft('-${_currencyFormat.format(dAmount)}', 16);
+              await encoder.text(dLine);
+              encoder.lineFeed();
+            }
+          }
+        } catch (e) {
+          print('Error parsing item discounts: $e');
+        }
+      }
     }
     
     await encoder.dashLine();
     
     // Totals
     encoder.setStyles(bold: true);
-    String totalLabel = '총 금액:';
+    
+    // Subtotal
+    int subtotal = sale.totalAmount + sale.discountAmount;
+    String subtotalVal = _currencyFormat.format(subtotal);
+    String subtotalLine = _padRight('소계:', 42 - _getDisplayWidth(subtotalVal)) + subtotalVal;
+    await encoder.text(subtotalLine);
+    encoder.lineFeed();
+
+    // Discounts in Footer
+    if (sale.discountAmount > 0) {
+      encoder.setStyles(bold: false);
+      
+      // Cart level discounts
+      if (sale.cartDiscountsJson != null) {
+        try {
+          final List<dynamic> cartDiscounts = jsonDecode(sale.cartDiscountsJson!);
+          for (var d in cartDiscounts) {
+             final dName = d['name'] ?? '할인';
+             final dAmount = d['amount'] ?? 0;
+             if (dAmount > 0) {
+               String dVal = '-${_currencyFormat.format(dAmount)}';
+               String dLine = _padRight('  $dName:', 42 - _getDisplayWidth(dVal)) + dVal;
+               await encoder.text(dLine);
+               encoder.lineFeed();
+             }
+          }
+        } catch (_) {}
+      }
+
+      // Total Discount
+      String discVal = '-${_currencyFormat.format(sale.discountAmount)}';
+      String discLine = _padRight('총 할인액:', 42 - _getDisplayWidth(discVal)) + discVal;
+      await encoder.text(discLine);
+      encoder.lineFeed();
+    }
+
+    encoder.setStyles(bold: true);
+    String totalLabel = '총 결제액:';
     String totalVal = _currencyFormat.format(sale.totalAmount);
-    // Align total price to right edge
     String totalLine = _padRight(totalLabel, 42 - _getDisplayWidth(totalVal)) + totalVal;
     await encoder.text(totalLine);
     encoder.lineFeed(2);
@@ -154,13 +209,47 @@ class ReceiptTemplates {
         await encoder.text(line);
         encoder.lineFeed();
       }
+
+      // Discount lines for the item
+      if (item.discountsJson != null && item.discountsJson!.isNotEmpty) {
+        try {
+          final List<dynamic> itemDiscounts = jsonDecode(item.discountsJson!);
+          for (var d in itemDiscounts) {
+            final dName = d['name'] ?? '할인';
+            final dAmount = d['amount'] ?? 0;
+            if (dAmount > 0) {
+              String dLine = _padRight('  [할인] $dName', 26) + _padLeft('+${_currencyFormat.format(dAmount)}', 16);
+              await encoder.text(dLine);
+              encoder.lineFeed();
+            }
+          }
+        } catch (_) {}
+      }
     }
     
     await encoder.dashLine();
     
     // Totals
     encoder.setStyles(bold: true);
-    String totalLabel = '취소 금액:';
+    
+    // Subtotal
+    int subtotal = sale.totalAmount + sale.discountAmount;
+    String subtotalVal = _currencyFormat.format(-subtotal);
+    String subtotalLine = _padRight('취소 소계:', 42 - _getDisplayWidth(subtotalVal)) + subtotalVal;
+    await encoder.text(subtotalLine);
+    encoder.lineFeed();
+
+    // Discount reversal
+    if (sale.discountAmount > 0) {
+      encoder.setStyles(bold: false);
+      String discVal = '+${_currencyFormat.format(sale.discountAmount)}';
+      String discLine = _padRight('  할인 취소액:', 42 - _getDisplayWidth(discVal)) + discVal;
+      await encoder.text(discLine);
+      encoder.lineFeed();
+    }
+
+    encoder.setStyles(bold: true);
+    String totalLabel = '취소 확정액:';
     String totalVal = _currencyFormat.format(-sale.totalAmount);
     String totalLine = _padRight(totalLabel, 42 - _getDisplayWidth(totalVal)) + totalVal;
     await encoder.text(totalLine);

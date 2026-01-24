@@ -115,6 +115,13 @@ class _CartGridState extends State<CartGrid> {
     );
   }
 
+  TextStyle get _headerStyle => const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.bold,
+        color: AppTheme.textSecondary,
+        letterSpacing: 1.0,
+      );
+
   String _formatPrice(int price) {
     return '₩${price.toString().replaceAllMapped(
           RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
@@ -126,7 +133,7 @@ class _CartGridState extends State<CartGrid> {
   Widget build(BuildContext context) {
     final cart = widget.cart;
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.surface,
         border: Border(
           right: BorderSide(color: AppTheme.border, width: 1),
@@ -134,332 +141,276 @@ class _CartGridState extends State<CartGrid> {
       ),
       child: Column(
         children: [
-          // 컬럼 헤더 + 스크롤 버튼
-          Stack(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppTheme.background,
-                  border: Border(
-                    bottom: BorderSide(color: AppTheme.border, width: 1),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 6, // 상품명
-                      child: Text(
-                        '상품명',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textPrimary,
-                            ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2, // 바코드
-                      child: Text(
-                        '바코드',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textPrimary,
-                            ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2, // 단가
-                      child: Text(
-                        '단가',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textPrimary,
-                            ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 3, // 수량 (공간 추가 확보)
-                      child: Text(
-                        '수량',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textPrimary,
-                            ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 2, // 할인
-                      child: Text(
-                        '할인',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textPrimary,
-                            ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 4, // 금액 (공간 추가 확보)
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Text(
-                          '금액',
-                          textAlign: TextAlign.right,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.textPrimary,
-                              ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // 스크롤 버튼 (스크롤 가능할 때만 표시)
-              Builder(
-                builder: (context) {
-                  final hasScrollableContent = _scrollController.hasClients &&
-                      _scrollController.position.maxScrollExtent > 0;
-                  if (!hasScrollableContent) {
-                    return const SizedBox.shrink();
-                  }
-                  return Positioned(
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _ScrollButton(
-                          icon: Icons.keyboard_arrow_up,
-                          onTap: _scrollUp,
-                          enabled: _canScrollUp,
-                        ),
-                        const SizedBox(width: 4),
-                        _ScrollButton(
-                          icon: Icons.keyboard_arrow_down,
-                          onTap: _scrollDown,
-                          enabled: _canScrollDown,
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ],
+          // Toast-style Header for Cart Columns
+          Container(
+            padding: const EdgeInsets.only(left: 16, right: 64, top: 8, bottom: 8), // Adjusted right padding (48 + 16)
+            color: AppTheme.background,
+            child: Row(
+              children: [
+                Expanded(flex: 5, child: Text('NAME', style: _headerStyle)),
+                Expanded(flex: 2, child: Text('QTY', style: _headerStyle, textAlign: TextAlign.center)),
+                Expanded(flex: 2, child: Text('PRICE', style: _headerStyle, textAlign: TextAlign.center)),
+                Expanded(flex: 3, child: Text('TOTAL', style: _headerStyle, textAlign: TextAlign.right)),
+              ],
+            ),
           ),
+          const Divider(),
 
-          // 장바구니 아이템 리스트 (10row)
+          // 장바구니 아이템 리스트
           Expanded(
             child: cart.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.shopping_cart_outlined,
-                          size: 48,
-                          color: AppTheme.textSecondary.withOpacity(0.5),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          '장바구니가 비어있습니다',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.textSecondary,
-                              ),
-                        ),
-                      ],
-                    ),
-                  )
-                : NotificationListener<ScrollNotification>(
-                    onNotification: (notification) {
-                      _updateScrollButtons();
-                      return false;
-                    },
-                    child: Scrollbar(
-                      controller: _scrollController,
-                      thumbVisibility: true, // 항상 표시
-                      trackVisibility: true,
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        padding: EdgeInsets.zero,
-                        itemCount: cart.items.length,
-                        itemBuilder: (context, index) {
-                          final item = cart.items[index];
-                          final isSelected = _selectedItemId == item.product.id;
-                          return _CartGridRow(
-                            item: item,
-                            isSelected: isSelected,
-                            onTap: () {
-                              setState(() {
-                                _selectedItemId = isSelected ? null : item.product.id;
-                              });
-                            },
-                            onQuantityChanged: (quantity) =>
-                                widget.onQuantityChanged(item.product.id, quantity),
-                            onRemove: () {
-                              widget.onItemRemove(item.product.id);
-                              setState(() {
-                                if (_selectedItemId == item.product.id) {
-                                  _selectedItemId = null;
-                                }
-                              });
-                            },
-                            formatPrice: _formatPrice,
-                          );
+                ? _buildEmptyCart(context)
+                : Stack(
+                    children: [
+                      NotificationListener<ScrollNotification>(
+                        onNotification: (notification) {
+                          _updateScrollButtons();
+                          return false;
                         },
+                        child: ListView.separated(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.only(top: 8, bottom: 8, left: 0, right: 48), // Reduced right padding from 60 to 48
+                          itemCount: cart.items.length,
+                          separatorBuilder: (_, __) => const Divider(indent: 16, endIndent: 16),
+                          itemBuilder: (context, index) {
+                            final item = cart.items[index];
+                            final isSelected = _selectedItemId == item.product.id;
+                            return _CartGridRow(
+                              item: item,
+                              isSelected: isSelected,
+                              onTap: () {
+                                setState(() {
+                                  _selectedItemId = isSelected ? null : item.product.id;
+                                });
+                              },
+                              onQuantityChanged: (quantity) =>
+                                  widget.onQuantityChanged(item.product.id, quantity),
+                              onRemove: () {
+                                widget.onItemRemove(item.product.id);
+                                setState(() {
+                                  if (_selectedItemId == item.product.id) {
+                                    _selectedItemId = null;
+                                  }
+                                });
+                              },
+                              formatPrice: _formatPrice,
+                            );
+                          },
+                        ),
                       ),
-                    ),
+                      // Up/Down Scroll Buttons
+                      Positioned(
+                        right: 4,
+                        top: 0,
+                        bottom: 0,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _ScrollCircleButton(
+                              icon: Icons.keyboard_arrow_up,
+                              onPressed: _scrollUp,
+                              enabled: _canScrollUp,
+                            ),
+                            const SizedBox(height: 8),
+                            _ScrollCircleButton(
+                              icon: Icons.keyboard_arrow_down,
+                              onPressed: _scrollDown,
+                              enabled: _canScrollDown,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
           ),
 
-          // 장바구니 할인 (고정 푸터)
-          if (cart.cartDiscounts.isNotEmpty)
-            Container(
-              decoration: BoxDecoration(
-                color: AppTheme.error.withOpacity(0.02),
-                border: Border(
-                  top: BorderSide(color: AppTheme.border.withOpacity(0.5), width: 1),
-                ),
-              ),
-              child: Column(
-                children: cart.cartDiscounts.map((discount) => _CartGridDiscountFooterRow(
-                  discount: discount,
-                  formatPrice: _formatPrice,
-                )).toList(),
-              ),
-            ),
-
           // 하단 합계 정보
+          _buildSummaryArea(context, cart),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyCart(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: AppTheme.background,
-              border: Border(
-                top: BorderSide(color: AppTheme.border, width: 1),
-              ),
+              shape: BoxShape.circle,
             ),
-            child: Column(
-              children: [
-                // 소계
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '소계',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    Text(
-                      _formatPrice(cart.subtotal),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
+            child: Icon(
+              Icons.shopping_basket_outlined,
+              size: 48,
+              color: AppTheme.textSecondary.withOpacity(0.3),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '장바구니가 비어있습니다',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textSecondary,
                 ),
-                const SizedBox(height: 8),
-                
-                // 할인
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '할인',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    Text(
-                      '-${_formatPrice(cart.totalDiscountAmount)}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.error,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                
-                // 세금 (별도세)
-                if (cart.totalTax > 0) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '세금 (별도)',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      Text(
-                        _formatPrice(cart.totalTax),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
+          ),
+        ],
+      ),
+    );
+  }
 
-                // 포함세 정보 (참고용)
-                if (cart.totalInclusiveTax > 0) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '부가세 (포함)',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                      ),
-                      Text(
-                        _formatPrice(cart.totalInclusiveTax),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                
-                // 총액
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surface,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTheme.primary, width: 2),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 12),
-                        child: Text(
-                          '총액',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Text(
-                          _formatPrice(cart.total),
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primary,
-                              ),
-                        ),
-                      ),
-                    ],
+  Widget _buildSummaryArea(BuildContext context, Cart cart) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        border: const Border(top: BorderSide(color: AppTheme.border, width: 2)),
+      ),
+      child: Column(
+        children: [
+          _buildSummaryRow('소계', _formatPrice(cart.subtotal)),
+          
+          // 할인 내역 상세 표시
+          ..._buildDiscountBreakdown(cart),
+          
+          if (cart.totalTax > 0)
+            _buildSummaryRow('세금', _formatPrice(cart.totalTax)),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.primary.withOpacity(0.1)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '총 결제액',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  _formatPrice(cart.total),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primary,
                   ),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  List<Widget> _buildDiscountBreakdown(Cart cart) {
+    List<Widget> rows = [];
+    
+    // 1. 개별 상품/카테고리 할인 수집
+    final Map<String, int> discountGroups = {};
+    for (final item in cart.items) {
+      for (final discount in item.appliedDiscounts) {
+        final key = '${discount.name} (${discount.type == 'PRODUCT' ? '상품' : '분류'})';
+        int amount = 0;
+        if (discount.method == 'PERCENTAGE') {
+          amount = (item.baseAndOptionsPrice * (discount.rateOrAmount / 100)).round() * item.quantity;
+        } else {
+          amount = discount.rateOrAmount * item.quantity;
+        }
+        discountGroups[key] = (discountGroups[key] ?? 0) + amount;
+      }
+    }
+    
+    // 2. 장바구니 할인 추가
+    for (final discount in cart.cartDiscounts) {
+      int amount = 0;
+      if (discount.method == 'PERCENTAGE') {
+        amount = (cart.subtotal * (discount.rateOrAmount / 100)).round();
+      } else {
+        amount = discount.rateOrAmount;
+      }
+      discountGroups[discount.name] = (discountGroups[discount.name] ?? 0) + amount;
+    }
+    
+    if (discountGroups.isEmpty) {
+      rows.add(_buildSummaryRow('할인 금액', _formatPrice(0)));
+    } else {
+      discountGroups.forEach((name, amount) {
+        rows.add(_buildSummaryRow(
+          name, 
+          '-${_formatPrice(amount)}', 
+          color: AppTheme.error,
+          isSmall: true,
+        ));
+      });
+      rows.add(_buildSummaryRow(
+        '총 할인', 
+        '-${_formatPrice(cart.totalDiscountAmount)}', 
+        color: AppTheme.error,
+        isLarge: true,
+      ));
+    }
+    
+    return rows;
+  }
+
+  Widget _buildSummaryRow(String label, String value, {Color? color, bool isLarge = false, bool isSmall = false}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isSmall ? 2.0 : 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(
+            color: isSmall ? AppTheme.textSecondary.withOpacity(0.7) : AppTheme.textSecondary, 
+            fontSize: isLarge ? 14 : (isSmall ? 11 : 12),
+          )),
+          Text(value, style: TextStyle(
+            fontWeight: isLarge ? FontWeight.bold : FontWeight.w500, 
+            color: color ?? AppTheme.textPrimary,
+            fontSize: isLarge ? 16 : (isSmall ? 12 : 14),
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScrollCircleButton extends StatelessWidget {
+  const _ScrollCircleButton({
+    required this.icon,
+    required this.onPressed,
+    required this.enabled,
+  });
+
+  final IconData icon;
+  final VoidCallback onPressed;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: enabled ? Colors.white : Colors.white.withOpacity(0.5),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: IconButton(
+        onPressed: enabled ? onPressed : null,
+        icon: Icon(icon, color: enabled ? AppTheme.primary : Colors.grey[300]),
+        style: IconButton.styleFrom(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(36, 36),
+        ),
       ),
     );
   }
@@ -484,168 +435,107 @@ class _CartGridRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primary.withOpacity(0.1) : Colors.transparent,
-            border: Border(
-              bottom: BorderSide(color: AppTheme.border.withOpacity(0.5), width: 1),
-            ),
-          ),
-          child: Row(
-        children: [
-          // 상품명
-          Expanded(
-            flex: 6,
-            child: Row(
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        color: isSelected ? AppTheme.primary.withOpacity(0.05) : Colors.transparent,
+        child: Column(
+          children: [
+            Row(
               children: [
-                // X 버튼 (선택되었을 때만 표시)
-                if (isSelected)
-                  IconButton(
-                    onPressed: onRemove,
-                    icon: const Icon(Icons.close, size: 18),
-                    color: AppTheme.error,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 28,
-                      minHeight: 28,
-                    ),
-                  )
-                else
-                  const SizedBox(width: 28),
-                const SizedBox(width: 8),
                 Expanded(
+                  flex: 5,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         item.product.name,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                              color: isSelected ? AppTheme.primary : null,
-                            ),
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (item.selectedOptions.isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.only(top: 2.0),
+                          padding: const EdgeInsets.only(top: 2),
                           child: Text(
                             item.selectedOptions.map((o) => '+ ${o.name}').join(', '),
-                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 10,
-                                ),
+                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                          ),
+                        ),
+                      if (item.discountAmount > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            '할인: -${formatPrice(item.discountAmount)}',
+                            style: const TextStyle(color: AppTheme.error, fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                         ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // 바코드
-          Expanded(
-            flex: 2,
-            child: Text(
-              item.product.barcode ?? '-',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.textSecondary,
-                    fontFeatures: [const FontFeature.tabularFigures()],
-                  ),
-            ),
-          ),
-
-          // 단가
-          Expanded(
-            flex: 2,
-            child: Text(
-              formatPrice(item.unitPrice),
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-
-          // 수량
-          Expanded(
-            flex: 3,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(
-                  onPressed: item.quantity > 1
-                      ? () => onQuantityChanged(item.quantity - 1)
-                      : null,
-                  icon: const Icon(Icons.remove, size: 16),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 24,
-                    minHeight: 24,
+                Expanded(
+                  flex: 2,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('${item.quantity}', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                Expanded(
+                  flex: 2,
+                  child: Text(formatPrice(item.unitPrice), textAlign: TextAlign.center, style: const TextStyle(fontSize: 13)),
+                ),
+                Expanded(
+                  flex: 3,
                   child: Text(
-                    '${item.quantity}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => onQuantityChanged(item.quantity + 1),
-                  icon: const Icon(Icons.add, size: 16),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 24,
-                    minHeight: 24,
+                    formatPrice(item.finalPrice),
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary),
                   ),
                 ),
               ],
             ),
-          ),
-
-          // 할인금액
-          Expanded(
-            flex: 2,
-            child: Text(
-              item.discountAmount > 0
-                  ? '-${formatPrice(item.discountAmount)}'
-                  : '-',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: item.discountAmount > 0
-                        ? AppTheme.error
-                        : AppTheme.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-            ),
-          ),
-
-          // 최종 금액 (우측 정렬)
-          Expanded(
-            flex: 4,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Text(
-                formatPrice(item.finalPrice),
-                textAlign: TextAlign.right,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primary,
+            if (isSelected) ...[
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppTheme.background,
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    child: Row(
+                      children: [
+                        _buildQtyBtn(Icons.remove, item.quantity > 1 ? () => onQuantityChanged(item.quantity - 1) : null),
+                        _buildQtyBtn(Icons.add, () => onQuantityChanged(item.quantity + 1)),
+                      ],
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: onRemove,
+                    icon: const Icon(Icons.delete_outline, size: 16),
+                    label: const Text('삭제'),
+                    style: TextButton.styleFrom(foregroundColor: AppTheme.error, padding: EdgeInsets.zero),
+                  ),
+                ],
               ),
-            ),
-          ),
-        ],
-          ),
+            ],
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildQtyBtn(IconData icon, VoidCallback? onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        child: Icon(icon, size: 18, color: onTap == null ? Colors.grey[300] : AppTheme.textPrimary),
       ),
     );
   }

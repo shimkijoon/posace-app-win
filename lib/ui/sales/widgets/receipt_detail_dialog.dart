@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../data/local/app_database.dart';
@@ -224,19 +225,52 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
                           final qtyStr = item.qty.toString();
                           final priceStr = currencyFormat.format(item.price * item.qty);
 
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: DefaultTextStyle(
-                              style: const TextStyle(fontFamily: 'monospace', color: Colors.black, fontSize: 12),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(flex: 20, child: Text(name, overflow: TextOverflow.visible)),
-                                  Expanded(flex: 6, child: Text(qtyStr, textAlign: TextAlign.right)),
-                                  Expanded(flex: 16, child: Text(priceStr, textAlign: TextAlign.right)),
-                                ],
+                          List<Widget> itemRows = [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: DefaultTextStyle(
+                                style: const TextStyle(fontFamily: 'monospace', color: Colors.black, fontSize: 12),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(flex: 20, child: Text(name, overflow: TextOverflow.visible)),
+                                    Expanded(flex: 6, child: Text(qtyStr, textAlign: TextAlign.right)),
+                                    Expanded(flex: 16, child: Text(priceStr, textAlign: TextAlign.right)),
+                                  ],
+                                ),
                               ),
-                            ),
+                            )
+                          ];
+
+                          if (item.discountsJson != null && item.discountsJson!.isNotEmpty) {
+                            try {
+                              final List<dynamic> itemDiscounts = jsonDecode(item.discountsJson!);
+                              for (var d in itemDiscounts) {
+                                final dName = d['name'] ?? '할인';
+                                final dAmount = d['amount'] ?? 0;
+                                if (dAmount > 0) {
+                                  itemRows.add(
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 8.0, bottom: 2.0),
+                                      child: DefaultTextStyle(
+                                        style: const TextStyle(fontFamily: 'monospace', color: AppTheme.error, fontSize: 11),
+                                        child: Row(
+                                          children: [
+                                            Expanded(flex: 26, child: Text('  [할인] $dName')),
+                                            Expanded(flex: 16, child: Text('-${currencyFormat.format(dAmount)}', textAlign: TextAlign.right)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (_) {}
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: itemRows,
                           );
                         }),
                         
@@ -246,10 +280,29 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
                             style: TextStyle(color: Colors.grey, letterSpacing: 1), textAlign: TextAlign.center),
                         ),
                         
+                        _buildReceiptText('소계', currencyFormat.format(widget.sale.totalAmount + widget.sale.discountAmount)),
+                        
+                        if (widget.sale.discountAmount > 0) ...[
+                           if (widget.sale.cartDiscountsJson != null) ...(() {
+                             try {
+                               final List<dynamic> cartDiscounts = jsonDecode(widget.sale.cartDiscountsJson!);
+                               return cartDiscounts.map((d) {
+                                 final dName = d['name'] ?? '할인';
+                                 final dAmount = d['amount'] ?? 0;
+                                 return _buildReceiptText('  $dName', '-${currencyFormat.format(dAmount)}', valueColor: AppTheme.error);
+                               }).toList();
+                             } catch (_) { return <Widget>[]; }
+                           })(),
+                           _buildReceiptText('총 할인액', '-${currencyFormat.format(widget.sale.discountAmount)}', 
+                             valueColor: AppTheme.error, isBold: true),
+                        ],
+
+                        const SizedBox(height: 8),
+
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('총 금액', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const Text('총 결제액', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                             Text(currencyFormat.format(widget.sale.totalAmount), 
                               style: TextStyle(
                                 fontWeight: FontWeight.bold, 
@@ -324,14 +377,14 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
     );
   }
 
-  Widget _buildReceiptText(String label, String value, {Color? valueColor}) {
+  Widget _buildReceiptText(String label, String value, {Color? valueColor, bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-          Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: valueColor, fontFamily: 'monospace')),
+          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600], fontWeight: isBold ? FontWeight.bold : null)),
+          Text(value, style: TextStyle(fontSize: 12, fontWeight: isBold ? FontWeight.bold : FontWeight.w500, color: valueColor, fontFamily: 'monospace')),
         ],
       ),
     );

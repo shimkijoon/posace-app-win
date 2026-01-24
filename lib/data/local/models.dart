@@ -1,3 +1,4 @@
+import 'dart:convert';
 import './models/taxes_models.dart';
 import './models/options_models.dart';
 import './models/bundle_models.dart';
@@ -17,6 +18,7 @@ class CategoryModel {
   final String storeId;
   final String name;
   final int sortOrder;
+  final bool allowProductDiscount;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +27,7 @@ class CategoryModel {
     required this.storeId,
     required this.name,
     required this.sortOrder,
+    this.allowProductDiscount = true,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -35,6 +38,7 @@ class CategoryModel {
       'storeId': storeId,
       'name': name,
       'sortOrder': sortOrder,
+      'allowProductDiscount': allowProductDiscount ? 1 : 0,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -46,6 +50,7 @@ class CategoryModel {
       storeId: map['storeId'] as String,
       name: map['name'] as String,
       sortOrder: map['sortOrder'] as int,
+      allowProductDiscount: map['allowProductDiscount'] == 1 || map['allowProductDiscount'] == true,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
     );
@@ -155,9 +160,13 @@ class DiscountModel {
   final String? targetId;
   final String name;
   final int rateOrAmount;
+  final int priority;
+  final List<String> productIds;
+  final List<String> categoryIds;
   final DateTime? startsAt;
   final DateTime? endsAt;
   final String status;
+  final String method; // PERCENTAGE, AMOUNT
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -168,9 +177,13 @@ class DiscountModel {
     this.targetId,
     required this.name,
     required this.rateOrAmount,
+    this.priority = 0,
+    this.productIds = const [],
+    this.categoryIds = const [],
     this.startsAt,
     this.endsAt,
     required this.status,
+    required this.method,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -183,9 +196,13 @@ class DiscountModel {
       'targetId': targetId,
       'name': name,
       'rateOrAmount': rateOrAmount,
+      'priority': priority,
+      'productIds': json.encode(productIds),
+      'categoryIds': json.encode(categoryIds),
       'startsAt': startsAt?.toIso8601String(),
       'endsAt': endsAt?.toIso8601String(),
       'status': status,
+      'method': method,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -205,12 +222,33 @@ class DiscountModel {
       targetId: map['targetId'] as String?,
       name: map['name'] as String,
       rateOrAmount: rateOrAmount,
+      priority: map['priority'] as int? ?? 0,
+      productIds: _parseIds(map['productIds'] ?? map['products']),
+      categoryIds: _parseIds(map['categoryIds'] ?? map['categories']),
       startsAt: map['startsAt'] != null ? DateTime.parse(map['startsAt'] as String) : null,
       endsAt: map['endsAt'] != null ? DateTime.parse(map['endsAt'] as String) : null,
       status: map['status'] as String,
+      method: map['method'] as String? ?? 'PERCENTAGE',
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
     );
+  }
+
+  static List<String> _parseIds(dynamic value) {
+    if (value == null) return [];
+    if (value is String) {
+      try {
+        final decoded = json.decode(value);
+        if (decoded is List) return decoded.map((e) => e.toString()).toList();
+      } catch (_) {}
+    }
+    if (value is List) {
+      return value.map((e) {
+        if (e is Map) return e['id']?.toString() ?? '';
+        return e.toString();
+      }).where((id) => id.isNotEmpty).toList();
+    }
+    return [];
   }
 }
 
@@ -274,6 +312,8 @@ class SaleModel {
   final DateTime? syncedAt;
 
   final int taxAmount;
+  final int discountAmount; // Total discount amount
+  final String? cartDiscountsJson; // JSON array of items {name, amount}
   final int memberPointsEarned;
 
   final List<SalePaymentModel> payments; // Added
@@ -293,6 +333,8 @@ class SaleModel {
     required this.createdAt,
     this.syncedAt,
     this.taxAmount = 0,
+    this.discountAmount = 0,
+    this.cartDiscountsJson,
     this.memberPointsEarned = 0,
     this.payments = const [],
   });
@@ -313,6 +355,8 @@ class SaleModel {
       'createdAt': createdAt.toIso8601String(),
       'syncedAt': syncedAt?.toIso8601String(),
       'taxAmount': taxAmount,
+      'discountAmount': discountAmount,
+      'cartDiscountsJson': cartDiscountsJson,
       'memberPointsEarned': memberPointsEarned,
     };
   }
@@ -333,6 +377,8 @@ class SaleModel {
       createdAt: DateTime.parse(map['createdAt'] as String),
       syncedAt: map['syncedAt'] != null ? DateTime.parse(map['syncedAt'] as String) : null,
       taxAmount: map['taxAmount'] as int? ?? 0,
+      discountAmount: map['discountAmount'] as int? ?? 0,
+      cartDiscountsJson: map['cartDiscountsJson'] as String?,
       memberPointsEarned: map['memberPointsEarned'] as int? ?? 0,
       payments: payments,
     );
@@ -346,6 +392,7 @@ class SaleItemModel {
   final int qty;
   final int price;
   final int discountAmount;
+  final String? discountsJson; // JSON array of {name, amount}
 
   SaleItemModel({
     required this.id,
@@ -354,6 +401,7 @@ class SaleItemModel {
     required this.qty,
     required this.price,
     required this.discountAmount,
+    this.discountsJson,
   });
 
   Map<String, dynamic> toMap() {
@@ -364,6 +412,7 @@ class SaleItemModel {
       'qty': qty,
       'price': price,
       'discountAmount': discountAmount,
+      'discountsJson': discountsJson,
     };
   }
 
@@ -375,6 +424,7 @@ class SaleItemModel {
       qty: map['qty'] as int,
       price: map['price'] as int,
       discountAmount: map['discountAmount'] as int,
+      discountsJson: map['discountsJson'] as String?,
     );
   }
 }

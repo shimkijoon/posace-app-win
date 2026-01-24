@@ -56,10 +56,38 @@ class _HomePageState extends State<HomePage> {
       _usePosSession = useSession;
     });
     
-    // 자동 동기화 (최초 로그인 시)
+    // 자동 동기화 (최초 로그인 또는 당일 최초 실행 시)
     if (session['storeId'] != null) {
-      _syncMaster(auto: true);
+      final lastSync = await _settingsStorage.getLastSyncAt();
+      final now = DateTime.now();
+      
+      // 당일 동기화 기록이 없거나, 날짜가 바뀌었으면 실행
+      if (lastSync == null || 
+          lastSync.year != now.year || 
+          lastSync.month != now.month || 
+          lastSync.day != now.day) {
+        _syncMaster(auto: true);
+      }
     }
+
+    _startScheduledSyncTimer();
+  }
+
+  void _startScheduledSyncTimer() {
+    // 1분마다 체크하여 스케줄된 시간에 동기화 수행
+    Stream.periodic(const Duration(minutes: 1)).listen((_) async {
+      if (_syncing) return;
+      
+      final scheduledTimes = await _settingsStorage.getScheduledSyncTimes();
+      final now = DateTime.now();
+      final currentTime = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+      
+      if (scheduledTimes.contains(currentTime)) {
+        if (mounted && _session['storeId'] != null) {
+          _syncMaster(auto: true);
+        }
+      }
+    });
   }
 
   Future<void> _loadDataCounts() async {
@@ -130,6 +158,7 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) return;
 
       if (result.success) {
+        await _settingsStorage.setLastSyncAt(DateTime.now());
         setState(() {
           _syncStatus = '동기화 완료';
           _categoriesCount = result.categoriesCount ?? 0;
@@ -307,6 +336,9 @@ class _HomePageState extends State<HomePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('영업이 시작되었습니다.')),
       );
+
+      // 개점 시 동기화 수행
+      _syncMaster(auto: true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('세션 시작 실패: $e'), backgroundColor: Colors.red),
@@ -379,6 +411,9 @@ class _HomePageState extends State<HomePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('영업이 마감되었습니다.')),
       );
+
+      // 마감 시 동기화 수행
+      _syncMaster(auto: true);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('세션 종료 실패: $e'), backgroundColor: Colors.red),
@@ -391,272 +426,318 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('POSAce Windows'),
+        title: const Text('POSAce Windows', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
-          TextButton(
-            onPressed: _logout,
-            child: const Text('로그아웃'),
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: TextButton.icon(
+              onPressed: _logout,
+              icon: const Icon(Icons.logout, size: 18),
+              label: const Text('로그아웃'),
+              style: TextButton.styleFrom(foregroundColor: AppTheme.textSecondary),
+            ),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'POSAce Windows Client',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 24),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1000),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '오늘의 매장 현황',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                
+                // 매장 정보 & 영업 상태 Row
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '매장 정보',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    Expanded(
+                      flex: 3,
+                      child: _buildInfoCard(
+                        title: '매장 정보',
+                        icon: Icons.store,
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          _buildInfoRow('Store ID', _session['storeId'] ?? '-'),
+                          _buildInfoRow('지점명', _session['name'] ?? '본점'),
+                          const Divider(height: 16),
+                          _buildInfoRow('담당 직원', _currentEmployeeName ?? '미지정', isBold: true),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    Text('Store ID: ${_session['storeId'] ?? '-'}'),
-                    // Text('POS ID: ${_session['posId'] ?? '-'}'),
-                    const Divider(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _usePosSession 
-                                ? '상태: ${_isSessionActive ? "영업 중 (Session Open)" : "영업 종료 (Session Closed)"}'
-                                : '상태: 영업 관리 미사용',
-                              style: TextStyle(
-                                color: (_usePosSession && !_isSessionActive) ? Colors.red : Colors.green, 
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: _buildInfoCard(
+                        title: '영업 상태',
+                        icon: Icons.access_time_filled,
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          const SizedBox(height: 4),
+                          Center(
+                            child: Column(
+                              children: [
+                                Text(
+                                  _usePosSession 
+                                    ? (_isSessionActive ? "영업 중" : "영업 종료")
+                                    : "영업 미사용",
+                                  style: TextStyle(
+                                    color: (_usePosSession && !_isSessionActive) ? AppTheme.error : AppTheme.success, 
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                if (_usePosSession)
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
+                                      onPressed: _isSessionActive ? _handleCloseSession : (_productsCount > 0 ? _handleOpenSession : null),
+                                      icon: Icon(_isSessionActive ? Icons.logout : Icons.login, size: 18),
+                                      label: Text(_isSessionActive ? '영업 마감' : '영업 시작'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _isSessionActive ? AppTheme.error : AppTheme.success,
+                                        padding: const EdgeInsets.symmetric(vertical: 12),
+                                      ),
+                                    ),
+                                  ),
+                              ],
                             ),
-                            if (_currentEmployeeName != null)
-                              Text('담당 직원: $_currentEmployeeName', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        if (_usePosSession)
-                          _isSessionActive
-                          ? ElevatedButton.icon(
-                              onPressed: _handleCloseSession,
-                              icon: const Icon(Icons.logout),
-                              label: const Text('영업 마감'),
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                            )
-                          : ElevatedButton.icon(
-                              onPressed: _productsCount > 0 ? _handleOpenSession : null, 
-                              // Only allow opening session if we have data, to encourage sync first
-                              icon: const Icon(Icons.login),
-                              label: const Text('영업 시작'),
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                            ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                
+                const SizedBox(height: 20),
+                
+                // 마스터 데이터 동기화 섹션
+                const Text(
+                  '관리 도구',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                _buildInfoCard(
+                  title: '데이터 동기화',
+                  icon: Icons.sync,
+                  padding: const EdgeInsets.all(16),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton.icon(
+                        onPressed: _syncing ? null : _resetData,
+                        icon: const Icon(Icons.refresh, color: AppTheme.error, size: 16),
+                        label: const Text('초기화', style: TextStyle(color: AppTheme.error, fontSize: 13)),
+                      ),
+                      const SizedBox(width: 4),
+                      ElevatedButton.icon(
+                        onPressed: _syncing ? null : () => _syncMaster(),
+                        icon: _syncing
+                            ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.sync, size: 16),
+                        label: const Text('동기화', style: TextStyle(fontSize: 13)),
+                        style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+                      ),
+                    ],
+                  ),
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          '마스터 데이터',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        Row(
-                          children: [
-                            TextButton.icon(
-                              onPressed: _syncing ? null : _resetData,
-                              icon: const Icon(Icons.delete_forever, color: Colors.red),
-                              label: const Text('데이터 초기화', style: TextStyle(color: Colors.red)),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton.icon(
-                              onPressed: _syncing ? null : () => _syncMaster(),
-                              icon: _syncing
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : const Icon(Icons.sync),
-                              label: const Text('동기화'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
                     if (_syncStatus != null) ...[
-                      const SizedBox(height: 8),
                       Text(
                         _syncStatus!,
                         style: TextStyle(
-                          color: _syncStatus!.contains('완료')
-                              ? Colors.green
-                              : _syncStatus!.contains('실패') || _syncStatus!.contains('오류')
-                                  ? Colors.red
-                                  : Colors.grey,
+                          color: _syncStatus!.contains('완료') ? AppTheme.success : (_syncStatus!.contains('실패') || _syncStatus!.contains('오류') ? AppTheme.error : AppTheme.textSecondary),
+                          fontSize: 12,
                         ),
                       ),
+                      const SizedBox(height: 12),
                     ],
-                    const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildStatCard('카테고리', _categoriesCount),
-                        _buildStatCard('상품', _productsCount),
-                        _buildStatCard('할인', _discountsCount),
-                        _buildStatCard('미전송 매출', _unsyncedSalesCount, highlight: _unsyncedSalesCount > 0),
+                        _buildStatItem('카테고리', _categoriesCount, Icons.category_outlined),
+                        _buildStatItem('상품', _productsCount, Icons.inventory_2_outlined),
+                        _buildStatItem('할인', _discountsCount, Icons.local_offer_outlined),
+                        _buildStatItem('미전송 매출', _unsyncedSalesCount, Icons.cloud_upload_outlined, highlight: _unsyncedSalesCount > 0),
                       ],
                     ),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // 매출 조회 버튼
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => SalesInquiryPage(database: widget.database),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.history, size: 24),
-                label: const Text(
-                  '매출 조회',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // 환경설정 버튼
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const SettingsPage(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.settings, size: 24),
-                label: const Text(
-                  '환경설정',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // 판매 시작 버튼
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _productsCount > 0 && (!_usePosSession || _isSessionActive)
-                        ? () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => SalesPage(database: widget.database),
-                              ),
-                            );
-                          }
-                        : null,
-                    icon: const Icon(Icons.point_of_sale, size: 24),
-                    label: const Text(
-                      '판매 시작',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                
+                const SizedBox(height: 20),
+                
+                // 실행 버튼 Row (More compact)
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMainActionButton(
+                        onPressed: _productsCount > 0 && (!_usePosSession || _isSessionActive)
+                            ? () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SalesPage(database: widget.database)))
+                            : null,
+                        icon: Icons.receipt_long,
+                        label: '판매 시작',
+                        color: AppTheme.primary,
+                        height: 100,
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _productsCount > 0 && (!_usePosSession || _isSessionActive)
-                        ? () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => TableLayoutPage(database: widget.database),
-                              ),
-                            );
-                          }
-                        : null,
-                    icon: const Icon(Icons.table_restaurant, size: 24),
-                    label: const Text(
-                      '테이블 주문',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepOrange, // Different color to distinguish
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildMainActionButton(
+                        onPressed: _productsCount > 0 && (!_usePosSession || _isSessionActive)
+                            ? () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TableLayoutPage(database: widget.database)))
+                            : null,
+                        icon: Icons.table_restaurant,
+                        label: '테이블 주문',
+                        color: const Color(0xFF6366F1),
+                        height: 100,
                       ),
                     ),
-                  ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSecondaryActionButton(
+                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SalesInquiryPage(database: widget.database))),
+                        icon: Icons.history,
+                        label: '매출 내역 조회',
+                        height: 60,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildSecondaryActionButton(
+                        onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage())),
+                        icon: Icons.settings,
+                        label: '포스 설정',
+                        height: 60,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard({required String title, required IconData icon, List<Widget>? children, Widget? trailing, EdgeInsets? padding}) {
+    return Card(
+      child: Padding(
+        padding: padding ?? const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, color: AppTheme.primary, size: 18),
+                    const SizedBox(width: 8),
+                    Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                if (trailing != null) trailing,
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (children != null) ...children,
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatCard(String label, int count, {bool highlight = false}) {
+  Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          Text(value, style: TextStyle(fontWeight: isBold ? FontWeight.bold : FontWeight.w500, color: AppTheme.textPrimary, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, int count, IconData icon, {bool highlight = false}) {
     return Column(
       children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: highlight ? AppTheme.error.withOpacity(0.1) : AppTheme.background,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: highlight ? AppTheme.error : AppTheme.textSecondary, size: 18),
+        ),
+        const SizedBox(height: 4),
         Text(
           count.toString(),
           style: TextStyle(
-            fontSize: 24, 
+            fontSize: 18, 
             fontWeight: FontWeight.bold,
-            color: highlight ? Colors.orange : null,
+            color: highlight ? AppTheme.error : AppTheme.textPrimary,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
         ),
       ],
+    );
+  }
+
+  Widget _buildMainActionButton({required VoidCallback? onPressed, required IconData icon, required String label, required Color color, double height = 120}) {
+    return SizedBox(
+      height: height,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          disabledBackgroundColor: AppTheme.border,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 28, color: Colors.white),
+            const SizedBox(width: 12),
+            Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSecondaryActionButton({required VoidCallback onPressed, required IconData icon, required String label, double height = 80}) {
+    return SizedBox(
+      height: height,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, size: 20),
+        label: Text(label, style: const TextStyle(fontSize: 14)),
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          side: const BorderSide(color: AppTheme.border, width: 1.5),
+          backgroundColor: AppTheme.surface,
+        ),
+      ),
     );
   }
 }

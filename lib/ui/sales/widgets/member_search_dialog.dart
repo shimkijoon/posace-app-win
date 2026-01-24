@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/storage/auth_storage.dart';
 import '../../../../data/local/app_database.dart';
 import '../../../../data/local/models.dart';
+import '../../../../data/remote/api_client.dart';
+import '../../../../data/remote/pos_customer_api.dart';
+import './member_registration_dialog.dart';
 
 class MemberSearchDialog extends StatefulWidget {
   const MemberSearchDialog({
@@ -25,11 +29,46 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
     if (query.isEmpty) return;
 
     setState(() => _isLoading = true);
+    
+    // 1. Local Search
     final results = await widget.database.searchMembersByPhone(query);
+    
+    // 2. Online Search (if local not enough or always to be sure)
+    if (results.isEmpty) {
+      try {
+        final authStorage = AuthStorage();
+        final session = await authStorage.getSessionInfo();
+        final accessToken = await authStorage.getAccessToken();
+        final storeId = session['storeId'];
+        
+        if (storeId != null && accessToken != null) {
+          final apiClient = ApiClient(accessToken: accessToken);
+          final customerApi = PosCustomerApi(apiClient);
+          final member = await customerApi.searchOnlineMember(storeId, query);
+          
+          await widget.database.upsertMember(member);
+          results.add(member);
+        }
+      } catch (e) {
+        print('Online search failed: $e');
+      }
+    }
+
     setState(() {
       _results = results;
       _isLoading = false;
     });
+  }
+
+  Future<void> _openRegistration() async {
+    final result = await showDialog<MemberModel>(
+      context: context,
+      builder: (context) => MemberRegistrationDialog(database: widget.database),
+    );
+
+    if (result != null && mounted) {
+      Navigator.pop(context, result);
+    }
   }
 
   @override
@@ -131,10 +170,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
               ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
-              onPressed: () {
-                // TODO: 회원 신규 등록 기능 (다음 고도화 시)
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('회원 신규 등록은 현재 백오피스에서 가능합니다.')));
-              },
+              onPressed: _openRegistration,
               icon: const Icon(Icons.person_add_outlined),
               label: const Text('신규 회원 등록'),
               style: OutlinedButton.styleFrom(

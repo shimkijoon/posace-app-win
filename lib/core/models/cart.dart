@@ -33,7 +33,13 @@ class Cart {
     int totalDiscount = 0;
     for (final discount in cartDiscounts) {
       if (discount.type == 'CART') {
-        totalDiscount += discount.rateOrAmount;
+        if (discount.method == 'PERCENTAGE') {
+          // 장바구니 전체 퍼센트 할인
+          totalDiscount += (subtotal * (discount.rateOrAmount / 100)).round();
+        } else {
+          // 장바구니 전체 정액 할인
+          totalDiscount += discount.rateOrAmount;
+        }
       }
     }
     return totalDiscount;
@@ -151,39 +157,61 @@ class Cart {
     return Cart(items: [], cartDiscounts: []);
   }
 
-  Cart applyDiscounts(List<DiscountModel> discounts) {
+  Cart applyDiscounts(List<DiscountModel> discounts, List<CategoryModel> categories) {
     final now = DateTime.now();
 
-    // 유효한 할인만 필터링하고 중복 제거 (ID 기준)
-    final Map<String, DiscountModel> uniqueDiscounts = {};
+    // 1. 유효한 할인만 필터링 (ID 기준 중복 제거)
+    final Map<String, DiscountModel> activeDiscountsMap = {};
     for (final d in discounts) {
       if (d.status != 'ACTIVE') continue;
       if (d.startsAt != null && d.startsAt!.isAfter(now)) continue;
       if (d.endsAt != null && d.endsAt!.isBefore(now)) continue;
-      
-      // 이미 같은 이름과 금액의 장바구니 할인이 있다면 중복으로 간주 (데이터 베이스 동기화 꼬임 방지)
-      final key = '${d.type}_${d.name}_${d.rateOrAmount}';
-      if (d.type == 'CART') {
-        if (!uniqueDiscounts.containsKey(key)) {
-          uniqueDiscounts[key] = d;
-        }
-      } else {
-        // 상품 할인은 ID 기반 중복 제거가 안전
-        uniqueDiscounts[d.id] = d;
-      }
+      activeDiscountsMap[d.id] = d;
     }
 
-    final activeDiscounts = uniqueDiscounts.values.toList();
-
+    final activeDiscounts = activeDiscountsMap.values.toList();
     final productDiscounts = activeDiscounts.where((d) => d.type == 'PRODUCT').toList();
-    final cartDiscounts = activeDiscounts.where((d) => d.type == 'CART').toList();
+    final categoryDiscounts = activeDiscounts.where((d) => d.type == 'CATEGORY').toList();
+    final cartDiscountsList = activeDiscounts.where((d) => d.type == 'CART').toList();
 
+    // 2. 상품별 할인 적용
     final updatedItems = items.map((item) {
-      final applicableDiscounts = productDiscounts.where((d) => d.targetId == item.product.id).toList();
+      final itemCategoryDiscounts = categoryDiscounts.where((d) => d.categoryIds.contains(item.product.categoryId)).toList();
+      final itemProductDiscounts = productDiscounts.where((d) => d.productIds.contains(item.product.id) || d.targetId == item.product.id).toList();
 
-      return item.copyWith(appliedDiscounts: applicableDiscounts);
+      // 최고 우선순위 카테고리 할인 선택
+      DiscountModel? bestCategoryDiscount;
+      if (itemCategoryDiscounts.isNotEmpty) {
+        bestCategoryDiscount = itemCategoryDiscounts.reduce((a, b) => a.priority >= b.priority ? a : b);
+      }
+
+      // 최고 우선순위 상품 할인 선택
+      DiscountModel? bestProductDiscount;
+      if (itemProductDiscounts.isNotEmpty) {
+        bestProductDiscount = itemProductDiscounts.reduce((a, b) => a.priority >= b.priority ? a : b);
+      }
+
+      List<DiscountModel> applied = [];
+      
+      if (bestCategoryDiscount != null) {
+        applied.add(bestCategoryDiscount);
+        
+        // 카테고리 설정 확인 (상품 할인 중복 허용 여부)
+        final category = categories.firstWhere((c) => c.id == item.product.categoryId, 
+          orElse: () => CategoryModel(id: '', storeId: '', name: '', sortOrder: 0, createdAt: DateTime.now(), updatedAt: DateTime.now()));
+        
+        if (category.allowProductDiscount && bestProductDiscount != null) {
+          applied.add(bestProductDiscount);
+        }
+      } else if (bestProductDiscount != null) {
+        // 카테고리 할인이 없으면 상품 할인 적용
+        applied.add(bestProductDiscount);
+      }
+
+      return item.copyWith(appliedDiscounts: applied);
     }).toList();
 
-    return Cart(items: updatedItems, cartDiscounts: cartDiscounts);
+    // 3. 장바구니 할인은 중복 가능? (일단 기존 로직 유지하되 ID 기준 필터링됨)
+    return Cart(items: updatedItems, cartDiscounts: cartDiscountsList);
   }
 }

@@ -157,16 +157,21 @@ class _ProductCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // 상품명
-                      Text(
-                        product.name,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: isOutOfStock
-                                  ? AppTheme.textSecondary
-                                  : AppTheme.textPrimary,
-                            ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      // 상품명 (2줄 높이 고정으로 레이아웃 일관성 유지)
+                      SizedBox(
+                        height: 36, // 약 2줄 분량의 높이
+                        child: Text(
+                          product.name,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: isOutOfStock
+                                    ? AppTheme.textSecondary
+                                    : AppTheme.textPrimary,
+                              ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       
                       // 가격 및 재고

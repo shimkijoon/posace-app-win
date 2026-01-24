@@ -9,7 +9,7 @@ import 'models/bundle_models.dart';
 
 class AppDatabase {
   static const _databaseName = 'posace.db';
-  static const _databaseVersion = 8;
+  static const _databaseVersion = 12;
 
   Database? _database;
 
@@ -45,7 +45,8 @@ class AppDatabase {
         name TEXT NOT NULL,
         sortOrder INTEGER NOT NULL,
         createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
+        updatedAt TEXT NOT NULL,
+        allowProductDiscount INTEGER NOT NULL DEFAULT 1
       )
     ''');
 
@@ -129,7 +130,11 @@ class AppDatabase {
         endsAt TEXT,
         status TEXT NOT NULL,
         createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
+        updatedAt TEXT NOT NULL,
+        priority INTEGER NOT NULL DEFAULT 0,
+        productIds TEXT,
+        categoryIds TEXT,
+        method TEXT NOT NULL DEFAULT 'PERCENTAGE'
       )
     ''');
 
@@ -162,6 +167,8 @@ class AppDatabase {
         totalAmount INTEGER NOT NULL,
         paidAmount INTEGER NOT NULL,
         taxAmount INTEGER NOT NULL DEFAULT 0,
+        discountAmount INTEGER NOT NULL DEFAULT 0,
+        cartDiscountsJson TEXT,
         memberPointsEarned INTEGER NOT NULL DEFAULT 0,
         paymentMethod TEXT NOT NULL,
         status TEXT NOT NULL,
@@ -178,6 +185,7 @@ class AppDatabase {
         qty INTEGER NOT NULL,
         price INTEGER NOT NULL,
         discountAmount INTEGER NOT NULL,
+        discountsJson TEXT,
         FOREIGN KEY (saleId) REFERENCES sales (id) ON DELETE CASCADE
       )
     ''');
@@ -554,6 +562,40 @@ class AppDatabase {
           FOREIGN KEY (orderId) REFERENCES table_orders (id) ON DELETE CASCADE
         )
       ''');
+    }
+
+    if (oldVersion < 9) {
+      try {
+        await db.execute('ALTER TABLE categories ADD COLUMN allowProductDiscount INTEGER NOT NULL DEFAULT 1');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE discounts ADD COLUMN priority INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE discounts ADD COLUMN productIds TEXT');
+      } catch (_) {}
+      try {
+        await db.execute('ALTER TABLE discounts ADD COLUMN categoryIds TEXT');
+      } catch (_) {}
+    }
+
+    if (oldVersion < 10) {
+      try {
+        await db.execute("ALTER TABLE discounts ADD COLUMN method TEXT NOT NULL DEFAULT 'PERCENTAGE'");
+      } catch (_) {}
+    }
+
+    if (oldVersion < 11) {
+      try {
+        await db.execute("ALTER TABLE sale_items ADD COLUMN discountsJson TEXT");
+      } catch (_) {}
+    }
+
+    if (oldVersion < 12) {
+      try {
+        await db.execute("ALTER TABLE sales ADD COLUMN discountAmount INTEGER NOT NULL DEFAULT 0");
+        await db.execute("ALTER TABLE sales ADD COLUMN cartDiscountsJson TEXT");
+      } catch (_) {}
     }
   }
 

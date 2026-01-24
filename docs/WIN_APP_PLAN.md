@@ -150,6 +150,16 @@
 - 장바구니 고액(10,000원 이상) 결제 시 레이아웃 오버플로우 수정
 - 메인 화면에 '데이터 초기화' 버튼 추가 (동기화 꼬임 방지용)
 
+2026-01-24:
+- 영수증 출력 기능 고도화:
+  - 상품별 할인 상세 내역(할인명, 금액) 표시 추가
+  - 영수증 하단에 장바구니 전체 할인 내역 요약 추가
+  - 소계(Subtotal) 및 총 할인액(Total Discount) 명시
+- 로컬 DB v11, v12 마이그레이션:
+  - `sale_items.discountsJson`: 상품별 적용 할인 목록 저장
+  - `sales.discountAmount`, `sales.cartDiscountsJson`: 전체 할인 정보 저장
+- 영수증 상세 조회(ReceiptDetailDialog) UI 개선 및 i18n 보완
+
 ## 11) 로컬 실행 방법 (전체 스택)
 
 ### 1) DB (Postgres)

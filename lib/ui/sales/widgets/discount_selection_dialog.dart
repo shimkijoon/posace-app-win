@@ -84,9 +84,9 @@ class DiscountSelectionDialog extends StatelessWidget {
                           Navigator.pop(context, newSet);
                         },
                         title: Text(d.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(d.rateOrAmount > 100 
-                          ? currencyFormat.format(d.rateOrAmount) // Assuming > 100 is amount
-                          : '${d.rateOrAmount}% 할인'),           // Assuming <= 100 is rate
+                        subtitle: Text(d.method == 'PERCENTAGE'
+                          ? '${d.rateOrAmount}% 할인'
+                          : currencyFormat.format(d.rateOrAmount)),
                         trailing: Icon(
                           isSelected ? Icons.check_circle : Icons.circle_outlined,
                           color: isSelected ? AppTheme.primary : Colors.grey,

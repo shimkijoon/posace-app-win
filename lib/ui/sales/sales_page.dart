@@ -134,15 +134,15 @@ class _SalesPageState extends State<SalesPage> {
 
   void _updateCartDiscounts() {
     // 1. Filter discounts to apply
-    // Automatically apply PRODUCT discounts, but only apply selected CART discounts
+    // Automatically apply PRODUCT and CATEGORY discounts, but only apply selected CART discounts
     final discountsToApply = _discounts.where((d) {
-      if (d.type == 'PRODUCT') return true;
+      if (d.type == 'PRODUCT' || d.type == 'CATEGORY') return true;
       if (d.type == 'CART') return _selectedManualDiscountIds.contains(d.id);
       return false;
     }).toList();
 
     setState(() {
-      _cart = _cart.applyDiscounts(discountsToApply);
+      _cart = _cart.applyDiscounts(discountsToApply, _categories);
     });
   }
 
@@ -571,6 +571,16 @@ class _SalesPageState extends State<SalesPage> {
         status: 'COMPLETED',
         createdAt: DateTime.now(),
         memberPointsEarned: pointsToEarn,
+        discountAmount: _cart.totalDiscountAmount,
+        cartDiscountsJson: jsonEncode(_cart.cartDiscounts.map((d) {
+          int amount = 0;
+          if (d.method == 'PERCENTAGE') {
+            amount = (_cart.subtotal * (d.rateOrAmount / 100)).round();
+          } else {
+            amount = d.rateOrAmount;
+          }
+          return {'name': d.name, 'amount': amount};
+        }).toList()),
         payments: finalPayments,
       );
 
@@ -581,6 +591,15 @@ class _SalesPageState extends State<SalesPage> {
         qty: item.quantity,
         price: item.unitPrice,
         discountAmount: item.discountAmount,
+        discountsJson: jsonEncode(item.appliedDiscounts.map((d) {
+          int amount = 0;
+          if (d.method == 'PERCENTAGE') {
+            amount = (item.baseAndOptionsPrice * (d.rateOrAmount / 100)).round() * item.quantity;
+          } else {
+            amount = d.rateOrAmount * item.quantity;
+          }
+          return {'name': d.name, 'amount': amount};
+        }).toList()),
       )).toList();
 
       await widget.database.insertSale(sale, items);
@@ -751,6 +770,37 @@ class _SalesPageState extends State<SalesPage> {
                           onItemRemove: _onCartItemRemove,
                         ),
                       ),
+                      // Toast-style Big Pay Button
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        color: AppTheme.surface,
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 80,
+                          child: ElevatedButton(
+                            onPressed: !_cart.isEmpty ? _onSplitCheckout : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 4,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text(
+                                  '결제하기',
+                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  '|   ₩${_cart.total.toString().replaceAllMapped(RegExp(r"(\d)(?=(\d{3})+(?!\d))"), (match) => "${match[1]},")}',
+                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: Colors.white70),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -771,15 +821,13 @@ class _SalesPageState extends State<SalesPage> {
                         ),
                       ),
 
-                      // 우측 하단: 기능 버튼 + 결제 버튼
+                      // 우측 하단: 기능 버튼
                       FunctionButtons(
                         onDiscount: _onDiscount,
                         onMember: _onMember,
                         onCancel: _onCancel,
                         onHold: _onHold,
-                        onCheckout: _onSplitCheckout,
                         onOrder: widget.tableId != null ? _onOrder : null,
-                        isCheckoutEnabled: !_cart.isEmpty,
                       ),
                     ],
                   ),

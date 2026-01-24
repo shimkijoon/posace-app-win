@@ -34,9 +34,14 @@ class CartItem {
     if (appliedDiscounts.isEmpty) return 0;
     int totalDiscount = 0;
     for (final discount in appliedDiscounts) {
-      if (discount.type == 'PRODUCT' && discount.targetId == product.id) {
-        // 상품 할인
-        totalDiscount += discount.rateOrAmount * quantity;
+      if (discount.type == 'PRODUCT' || discount.type == 'CATEGORY') {
+        if (discount.method == 'PERCENTAGE') {
+          // 퍼센트 할인
+          totalDiscount += (baseAndOptionsPrice * (discount.rateOrAmount / 100)).round() * quantity;
+        } else {
+          // 정액 할인
+          totalDiscount += discount.rateOrAmount * quantity;
+        }
       }
     }
     return totalDiscount;

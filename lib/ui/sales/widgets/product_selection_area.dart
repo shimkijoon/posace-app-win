@@ -37,27 +37,23 @@ class _ProductSelectionAreaState extends State<ProductSelectionArea> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 카테고리 탭 (고정 + 좌우 스크롤 버튼)
+        // 카테고리 선택 영역 (Toast-style with Scroll Buttons)
         Container(
-          decoration: BoxDecoration(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: const BoxDecoration(
             color: AppTheme.surface,
-            border: Border(
-              bottom: BorderSide(color: AppTheme.border, width: 1),
-            ),
+            border: Border(bottom: BorderSide(color: AppTheme.border, width: 1)),
           ),
           child: Row(
             children: [
-              // 왼쪽 스크롤 버튼
               _ScrollIconButton(
                 icon: Icons.chevron_left,
                 onPressed: () => _scrollCategories(-200),
               ),
-              
               Expanded(
                 child: SingleChildScrollView(
                   controller: _categoryScrollController,
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                   child: Row(
                     children: [
                       _CategoryTab(
@@ -65,10 +61,9 @@ class _ProductSelectionAreaState extends State<ProductSelectionArea> {
                         isSelected: widget.selectedCategoryId == null,
                         onTap: () => widget.onCategorySelected(null),
                       ),
-                      const SizedBox(width: 8),
                       ...widget.categories.map((category) {
                         return Padding(
-                          padding: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.only(left: 8),
                           child: _CategoryTab(
                             label: category.name,
                             isSelected: widget.selectedCategoryId == category.id,
@@ -80,8 +75,6 @@ class _ProductSelectionAreaState extends State<ProductSelectionArea> {
                   ),
                 ),
               ),
-              
-              // 오른쪽 스크롤 버튼
               _ScrollIconButton(
                 icon: Icons.chevron_right,
                 onPressed: () => _scrollCategories(200),
@@ -90,48 +83,46 @@ class _ProductSelectionAreaState extends State<ProductSelectionArea> {
           ),
         ),
 
-        // 상품 카드 그리드 (4컬럼 2열 = 8개)
+        const SizedBox(height: 12), // 카테고리와 상품 영역 구분 마진
+
+        // 상품 카드 그리드
         Expanded(
           child: widget.products.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.inventory_2_outlined,
-                        size: 48,
-                        color: AppTheme.textSecondary,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '상품이 없습니다',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppTheme.textSecondary,
-                            ),
-                      ),
-                    ],
+              ? _buildEmptyState(context)
+              : GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.72, // Space for 2-line names and price
                   ),
-                )
-              : Container(
-                  padding: const EdgeInsets.all(12),
-                  child: GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4, // 4컬럼
-                      crossAxisSpacing: 8,
-                      mainAxisSpacing: 8,
-                      childAspectRatio: 0.9,
-                    ),
-                    itemCount: widget.products.length > 8 ? 8 : widget.products.length, // 최대 2열 (8개)
-                    itemBuilder: (context, index) {
-                      return _ProductCard(
-                        product: widget.products[index],
-                        onTap: () => widget.onProductTap(widget.products[index]),
-                      );
-                    },
-                  ),
+                  itemCount: widget.products.length,
+                  itemBuilder: (context, index) {
+                    return _ProductCard(
+                      product: widget.products[index],
+                      onTap: () => widget.onProductTap(widget.products[index]),
+                    );
+                  },
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inventory_2_outlined, size: 64, color: AppTheme.textSecondary.withOpacity(0.2)),
+          const SizedBox(height: 16),
+          Text(
+            '등록된 상품이 없습니다',
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -144,11 +135,17 @@ class _ScrollIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      onPressed: onPressed,
-      icon: Icon(icon, color: AppTheme.primary, size: 20),
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: IconButton(
+        onPressed: onPressed,
+        icon: Icon(icon, color: AppTheme.textPrimary, size: 20),
+        constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+      ),
     );
   }
 }
@@ -166,32 +163,30 @@ class _CategoryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: isSelected
-            ? LinearGradient(
-                colors: [AppTheme.primary, AppTheme.secondary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: isSelected ? null : AppTheme.background,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isSelected ? Colors.transparent : AppTheme.border,
-          width: 1,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        constraints: const BoxConstraints(minWidth: 90),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primary : AppTheme.background,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? AppTheme.primary : AppTheme.border,
+            width: 1.5,
+          ),
+          boxShadow: isSelected ? [
+            BoxShadow(color: AppTheme.primary.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))
+          ] : null,
         ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
         child: Text(
           label,
+          textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontWeight: FontWeight.bold,
             color: isSelected ? Colors.white : AppTheme.textPrimary,
           ),
         ),
@@ -221,108 +216,69 @@ class _ProductCard extends StatelessWidget {
     final isOutOfStock = product.stockEnabled &&
         (product.stockQuantity == null || product.stockQuantity! <= 0);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isOutOfStock ? null : onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: AppTheme.border,
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
+    return InkWell(
+      onTap: isOutOfStock ? null : onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: isOutOfStock ? AppTheme.background : AppTheme.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isOutOfStock ? AppTheme.border : AppTheme.primary.withOpacity(0.2),
+            width: 1,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 상품 이미지 영역
-              Expanded(
-                flex: 2,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppTheme.background,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(10),
-                      topRight: Radius.circular(10),
-                    ),
-                  ),
-                  child: Stack(
-                    children: [
-                      Center(
-                        child: Icon(
-                          Icons.shopping_bag_outlined,
-                          size: 32,
-                          color: AppTheme.textSecondary.withOpacity(0.3),
-                        ),
-                      ),
-                      if (isOutOfStock)
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(10),
-                              topRight: Radius.circular(10),
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '품절',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              flex: 2, // Icon area smaller
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withOpacity(0.05),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(7)),
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.fastfood,
+                    color: AppTheme.primary.withOpacity(0.1),
+                    size: 28,
                   ),
                 ),
               ),
-
-              // 상품 정보
-              Expanded(
-                flex: 3,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
+            ),
+            const Divider(height: 1),
+            Expanded(
+              flex: 5, // Text info area larger
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start, // Better for variable line counts
+                  children: [
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 32, // Fixed height for 2 lines of text
+                      child: Text(
                         product.name,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: isOutOfStock
-                                  ? AppTheme.textSecondary
-                                  : AppTheme.textPrimary,
-                            ),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, height: 1.2),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      Text(
-                        _formatPrice(product.price),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primary,
-                              ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      _formatPrice(product.price),
+                      style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.primary, fontSize: 14),
+                    ),
+                    const SizedBox(height: 4),
+                    if (product.stockEnabled && !isOutOfStock)
+                      Text('${product.stockQuantity} 남아있음', style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
+                    const SizedBox(height: 4),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

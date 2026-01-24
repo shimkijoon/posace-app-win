@@ -65,4 +65,29 @@ class SettingsStorage {
     // Default to true as it was the original behavior
     return prefs.getBool(_keyUsePosSession) ?? true;
   }
+
+  // Sync Management
+  static const _keyLastSyncAt = 'last_sync_at';
+  static const _keyScheduledSyncTimes = 'scheduled_sync_times';
+
+  Future<void> setLastSyncAt(DateTime value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyLastSyncAt, value.toIso8601String());
+  }
+
+  Future<DateTime?> getLastSyncAt() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_keyLastSyncAt);
+    return value != null ? DateTime.parse(value) : null;
+  }
+
+  Future<void> setScheduledSyncTimes(List<String> times) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_keyScheduledSyncTimes, times);
+  }
+
+  Future<List<String>> getScheduledSyncTimes() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_keyScheduledSyncTimes) ?? ['08:00', '14:00', '22:00'];
+  }
 }
