@@ -233,9 +233,11 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('POSAce Windows', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppTheme.surface,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        shape: const Border(bottom: BorderSide(color: AppTheme.border, width: 1)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
@@ -298,8 +300,9 @@ class _HomePageState extends State<HomePage> {
                                     : "영업 미사용",
                                   style: TextStyle(
                                     color: (_usePosSession && !_isSessionActive) ? AppTheme.error : AppTheme.success, 
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 22,
+                                    letterSpacing: -0.5,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -436,7 +439,7 @@ class _HomePageState extends State<HomePage> {
                               : null,
                           icon: Icons.table_restaurant,
                           label: '테이블 주문',
-                          color: const Color(0xFF6366F1),
+                          color: AppTheme.secondary,
                           height: double.infinity,
                         ),
                       ),
@@ -483,9 +486,9 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Row(
                   children: [
-                    Icon(icon, color: AppTheme.primary, size: 18),
+                    Icon(icon, color: AppTheme.primary, size: 20),
                     const SizedBox(width: 8),
-                    Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                    Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
                   ],
                 ),
                 if (trailing != null) trailing,
