@@ -35,6 +35,7 @@ void main() {
       storeId: storeId,
       categoryId: 'c1',
       name: 'Product 1 (Inclusive Tax)',
+      type: 'SINGLE',
       price: 11000,
       stockEnabled: false,
       isActive: true,
@@ -48,6 +49,7 @@ void main() {
       storeId: storeId,
       categoryId: 'c1',
       name: 'Product 2 (Exclusive Tax)',
+      type: 'SINGLE',
       price: 10000,
       stockEnabled: false,
       isActive: true,
@@ -106,13 +108,24 @@ void main() {
         targetId: 'p2',
         name: 'Promo',
         rateOrAmount: 1000,
+        method: 'AMOUNT',
         status: 'ACTIVE',
+        createdAt: now,
+        updatedAt: now,
+        productIds: ['p2'],
+      );
+
+      final category = CategoryModel(
+        id: 'c1',
+        storeId: storeId,
+        name: 'Category 1',
+        sortOrder: 0,
         createdAt: now,
         updatedAt: now,
       );
 
       var cart = Cart().addItem(product2, quantity: 2, selectedOptions: [option]);
-      cart = cart.applyDiscounts([discount]);
+      cart = cart.applyDiscounts([discount], [category]);
 
       // Subtotal: (10000 + 500) * 2 = 21000
       // Discount: 1000 * 2 = 2000

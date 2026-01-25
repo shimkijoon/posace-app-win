@@ -129,7 +129,7 @@ class CartSidebar extends StatelessWidget {
               child: Column(
                 children: [
                   // 할인 정보
-                  if (cart.cartDiscountAmount > 0) ...[
+                  if (cart.cartDiscountTotal > 0) ...[
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -138,7 +138,7 @@ class CartSidebar extends StatelessWidget {
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         Text(
-                          '-${_formatPrice(cart.cartDiscountAmount)}',
+                          '-${_formatPrice(cart.cartDiscountTotal)}',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: AppTheme.success,
                                 fontWeight: FontWeight.w600,
