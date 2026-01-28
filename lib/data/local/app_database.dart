@@ -9,7 +9,7 @@ import 'models/bundle_models.dart';
 
 class AppDatabase {
   static const _databaseName = 'posace.db';
-  static const _databaseVersion = 12;
+  static const _databaseVersion = 13;
 
   Database? _database;
 
@@ -46,7 +46,9 @@ class AppDatabase {
         sortOrder INTEGER NOT NULL,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
-        allowProductDiscount INTEGER NOT NULL DEFAULT 1
+        allowProductDiscount INTEGER NOT NULL DEFAULT 1,
+        kitchenStationId TEXT,
+        isKitchenPrintEnabled INTEGER NOT NULL DEFAULT 1
       )
     ''');
 
@@ -63,7 +65,9 @@ class AppDatabase {
         stockQuantity INTEGER,
         isActive INTEGER NOT NULL,
         createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
+        updatedAt TEXT NOT NULL,
+        kitchenStationId TEXT,
+        isKitchenPrintEnabled INTEGER NOT NULL DEFAULT 1
       )
     ''');
 
@@ -301,6 +305,19 @@ class AppDatabase {
         options TEXT,
         note TEXT,
         FOREIGN KEY (orderId) REFERENCES table_orders (id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE kitchen_stations (
+        id TEXT PRIMARY KEY,
+        storeId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        deviceType TEXT NOT NULL DEFAULT 'PRINTER',
+        deviceConfig TEXT,
+        isDefault INTEGER NOT NULL DEFAULT 0,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
       )
     ''');
   }
@@ -591,10 +608,25 @@ class AppDatabase {
       } catch (_) {}
     }
 
-    if (oldVersion < 12) {
+    if (oldVersion < 13) {
+      await db.execute('''
+        CREATE TABLE kitchen_stations (
+          id TEXT PRIMARY KEY,
+          storeId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          deviceType TEXT NOT NULL DEFAULT 'PRINTER',
+          deviceConfig TEXT,
+          isDefault INTEGER NOT NULL DEFAULT 0,
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT NOT NULL
+        )
+      ''');
+
       try {
-        await db.execute("ALTER TABLE sales ADD COLUMN discountAmount INTEGER NOT NULL DEFAULT 0");
-        await db.execute("ALTER TABLE sales ADD COLUMN cartDiscountsJson TEXT");
+        await db.execute('ALTER TABLE categories ADD COLUMN kitchenStationId TEXT');
+        await db.execute('ALTER TABLE categories ADD COLUMN isKitchenPrintEnabled INTEGER NOT NULL DEFAULT 1');
+        await db.execute('ALTER TABLE products ADD COLUMN kitchenStationId TEXT');
+        await db.execute('ALTER TABLE products ADD COLUMN isKitchenPrintEnabled INTEGER NOT NULL DEFAULT 1');
       } catch (_) {}
     }
   }
@@ -620,6 +652,7 @@ class AppDatabase {
     await db.delete('table_orders');
     await db.delete('restaurant_tables');
     await db.delete('table_layouts');
+    await db.delete('kitchen_stations');
     await db.delete('sync_metadata');
   }
 
@@ -1050,5 +1083,34 @@ class AppDatabase {
     }
     
     return weekData;
+  }
+
+  // Kitchen Stations
+  Future<void> upsertKitchenStations(List<KitchenStationModel> stations) async {
+    final db = await database;
+    final batch = db.batch();
+    for (final station in stations) {
+      batch.insert(
+        'kitchen_stations',
+        station.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<List<KitchenStationModel>> getKitchenStations() async {
+    final db = await database;
+    final maps = await db.query('kitchen_stations', orderBy: 'isDefault DESC, name ASC');
+    return maps.map((map) => KitchenStationModel.fromMap(map)).toList();
+  }
+
+  Future<KitchenStationModel?> getDefaultKitchenStation() async {
+    final db = await database;
+    final maps = await db.query('kitchen_stations', where: 'isDefault = 1', limit: 1);
+    if (maps.isNotEmpty) {
+      return KitchenStationModel.fromMap(maps.first);
+    }
+    return null;
   }
 }

@@ -47,6 +47,7 @@ class MasterDataResponse {
   final List<DiscountModel> discounts;
   final List<TaxModel> taxes;
   final List<TableLayoutData> tableLayouts;
+  final List<KitchenStationModel> kitchenStations;
 
   MasterDataResponse({
     required this.serverTime,
@@ -56,6 +57,7 @@ class MasterDataResponse {
     required this.discounts,
     required this.taxes,
     required this.tableLayouts,
+    required this.kitchenStations,
   });
 
   factory MasterDataResponse.fromJson(Map<String, dynamic> json) {
@@ -82,6 +84,9 @@ class MasterDataResponse {
             .toList(),
         tableLayouts: (json['tableLayouts'] as List? ?? [])
             .map((e) => TableLayoutData.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        kitchenStations: (json['kitchenStations'] as List? ?? [])
+            .map((e) => KitchenStationModel.fromMap(e as Map<String, dynamic>))
             .toList(),
       );
     } catch (e, stack) {

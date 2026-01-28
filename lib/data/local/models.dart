@@ -19,6 +19,8 @@ class CategoryModel {
   final String name;
   final int sortOrder;
   final bool allowProductDiscount;
+  final String? kitchenStationId;
+  final bool isKitchenPrintEnabled;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -28,6 +30,8 @@ class CategoryModel {
     required this.name,
     required this.sortOrder,
     this.allowProductDiscount = true,
+    this.kitchenStationId,
+    this.isKitchenPrintEnabled = true,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -39,6 +43,8 @@ class CategoryModel {
       'name': name,
       'sortOrder': sortOrder,
       'allowProductDiscount': allowProductDiscount ? 1 : 0,
+      'kitchenStationId': kitchenStationId,
+      'isKitchenPrintEnabled': isKitchenPrintEnabled ? 1 : 0,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -51,6 +57,8 @@ class CategoryModel {
       name: map['name'] as String,
       sortOrder: map['sortOrder'] as int,
       allowProductDiscount: map['allowProductDiscount'] == 1 || map['allowProductDiscount'] == true,
+      kitchenStationId: map['kitchenStationId'] as String?,
+      isKitchenPrintEnabled: map['isKitchenPrintEnabled'] == 1 || map['isKitchenPrintEnabled'] == true || map['isKitchenPrintEnabled'] == null,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
     );
@@ -71,6 +79,9 @@ class ProductModel {
   final DateTime createdAt;
   final DateTime updatedAt;
 
+  final String? kitchenStationId;
+  final bool isKitchenPrintEnabled;
+
   final List<TaxModel> taxes;
   final List<ProductOptionGroupModel> optionGroups;
   final List<BundleItemModel> bundleItems;
@@ -88,6 +99,8 @@ class ProductModel {
     required this.isActive,
     required this.createdAt,
     required this.updatedAt,
+    this.kitchenStationId,
+    this.isKitchenPrintEnabled = true,
     this.taxes = const [],
     this.optionGroups = const [],
     this.bundleItems = const [],
@@ -105,6 +118,8 @@ class ProductModel {
       'stockEnabled': stockEnabled ? 1 : 0,
       'stockQuantity': stockQuantity,
       'isActive': isActive ? 1 : 0,
+      'kitchenStationId': kitchenStationId,
+      'isKitchenPrintEnabled': isKitchenPrintEnabled ? 1 : 0,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -132,6 +147,8 @@ class ProductModel {
       isActive: map['isActive'] is bool
           ? map['isActive'] as bool
           : (map['isActive'] as int) == 1,
+      kitchenStationId: map['kitchenStationId'] as String?,
+      isKitchenPrintEnabled: map['isKitchenPrintEnabled'] == 1 || map['isKitchenPrintEnabled'] == true || map['isKitchenPrintEnabled'] == null,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
       taxes: map['taxes'] != null
@@ -425,6 +442,54 @@ class SaleItemModel {
       price: map['price'] as int,
       discountAmount: map['discountAmount'] as int,
       discountsJson: map['discountsJson'] as String?,
+    );
+  }
+}
+
+class KitchenStationModel {
+  final String id;
+  final String storeId;
+  final String name;
+  final String deviceType; // PRINTER, KDS, NONE
+  final String? deviceConfig; // JSON string
+  final bool isDefault;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  KitchenStationModel({
+    required this.id,
+    required this.storeId,
+    required this.name,
+    required this.deviceType,
+    this.deviceConfig,
+    this.isDefault = false,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'storeId': storeId,
+      'name': name,
+      'deviceType': deviceType,
+      'deviceConfig': deviceConfig,
+      'isDefault': isDefault ? 1 : 0,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+  factory KitchenStationModel.fromMap(Map<String, dynamic> map) {
+    return KitchenStationModel(
+      id: map['id'] as String,
+      storeId: map['storeId'] as String,
+      name: map['name'] as String,
+      deviceType: map['deviceType'] as String? ?? 'PRINTER',
+      deviceConfig: map['deviceConfig'] as String?,
+      isDefault: map['isDefault'] == 1 || map['isDefault'] == true,
+      createdAt: DateTime.parse(map['createdAt'] as String),
+      updatedAt: DateTime.parse(map['updatedAt'] as String),
     );
   }
 }

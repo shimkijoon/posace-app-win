@@ -45,6 +45,10 @@ class SyncService {
         response.tableLayouts.map((layout) => layout.toMap()).toList(),
       );
 
+      // 주방 스테이션 저장
+      print('[POS] Saving ${response.kitchenStations.length} kitchen stations');
+      await database.upsertKitchenStations(response.kitchenStations);
+
       // 동기화 시간 업데이트
       await database.setSyncMetadata('lastMasterSync', response.serverTime);
 

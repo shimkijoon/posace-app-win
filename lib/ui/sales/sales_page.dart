@@ -660,11 +660,13 @@ class _SalesPageState extends State<SalesPage> {
     try {
       final printerManager = PrinterManager();
       final auth = AuthStorage();
+      final db = AppDatabase();
       
       final productMap = {for (var p in _products) p.id: p};
+      final categoryMap = {for (var c in _categories) c.id: c};
       final storeInfo = await auth.getSessionInfo();
 
-      // 1. Receipt
+      // 1. Receipt (One copy to the main receipt printer)
       final receiptBytes = await ReceiptTemplates.saleReceipt(
         sale, items, productMap, 
         storeInfo: storeInfo, 
@@ -672,9 +674,64 @@ class _SalesPageState extends State<SalesPage> {
       );
       await printerManager.printReceipt(receiptBytes);
 
-      // 2. Kitchen Order
-      final kitchenBytes = await ReceiptTemplates.kitchenOrder(sale, items, productMap);
-      await printerManager.printKitchenOrder(kitchenBytes);
+      // 2. Kitchen Orders (Grouped by Kitchen Station)
+      final stations = await db.getKitchenStations();
+      KitchenStationModel? defaultStation;
+      if (stations.isNotEmpty) {
+        try {
+          defaultStation = stations.firstWhere((s) => s.isDefault);
+        } catch (_) {
+          defaultStation = stations.first;
+        }
+      }
+      
+      // Group items by stationId
+      final stationGroups = <String?, List<SaleItemModel>>{};
+      
+      for (final item in items) {
+        final product = productMap[item.productId];
+        if (product == null) continue;
+
+        // Check if kitchen printing is enabled for this product (Default to Category if not set)
+        bool isEnabled = product.isKitchenPrintEnabled;
+        final category = categoryMap[product.categoryId];
+        if (category != null && !category.isKitchenPrintEnabled) {
+          // If category level is disabled, product level normally follows but let's be safe
+          isEnabled = isEnabled && category.isKitchenPrintEnabled;
+        }
+
+        if (!isEnabled) {
+          print('SalesPage: Skipping kitchen print for ${product.name} (Disabled)');
+          continue;
+        }
+
+        // Determine target station
+        String? targetStationId = product.kitchenStationId ?? category?.kitchenStationId;
+        
+        if (targetStationId == null && defaultStation != null) {
+          targetStationId = defaultStation.id;
+        }
+
+        stationGroups.putIfAbsent(targetStationId, () => []).add(item);
+      }
+
+      // Print to each station
+      for (final entry in stationGroups.entries) {
+        final stationId = entry.key;
+        final groupItems = entry.value;
+        
+        KitchenStationModel? station;
+        if (stationId != null) {
+          try {
+            station = stations.firstWhere((s) => s.id == stationId);
+          } catch (_) {}
+        }
+        station ??= defaultStation;
+        
+        print('SalesPage: Printing kitchen order to station ${station?.name ?? "Default"} (${groupItems.length} items)');
+        final kitchenBytes = await ReceiptTemplates.kitchenOrder(sale, groupItems, productMap);
+        await printerManager.printKitchenOrder(kitchenBytes, station: station);
+      }
       
     } catch (e) {
       print('SalesPage: Printing error: $e');

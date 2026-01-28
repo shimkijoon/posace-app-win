@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import '../storage/settings_storage.dart';
+import '../../data/local/models.dart';
 import 'printer_driver.dart';
 import 'serial_printer_driver.dart';
 import 'network_printer_driver.dart';
@@ -15,28 +17,37 @@ class PrinterManager {
   Future<PrinterDriver?> _getReceiptDriver() async {
     final settings = SettingsStorage();
     final type = await settings.getReceiptPrinterType();
-    final id = await settings.getReceiptPrinterPort(); // We use 'port' field for IP/Name too
+    final id = await settings.getReceiptPrinterPort();
     final baud = await settings.getReceiptPrinterBaud();
 
     if (id == null || id.isEmpty) return null;
     
-    final key = 'receipt_${type.name}_$id';
+    return _getDriverFromConfig(type, id, baud, 'receipt');
+  }
+
+  Future<PrinterDriver?> _getDriverFromConfig(
+    PrinterConnectionType type, 
+    String connectionId, 
+    int baud, 
+    String prefix
+  ) async {
+    final key = '${prefix}_${type.name}_$connectionId';
     if (_drivers.containsKey(key)) return _drivers[key];
 
     PrinterDriver driver;
     switch (type) {
       case PrinterConnectionType.network:
-        final parts = id.split(':');
+        final parts = connectionId.split(':');
         final ip = parts[0];
         final port = parts.length > 1 ? int.tryParse(parts[1]) ?? 9100 : 9100;
         driver = NetworkPrinterDriver(ip: ip, port: port);
         break;
       case PrinterConnectionType.windows:
-        driver = WindowsPrinterDriver(printerName: id);
+        driver = WindowsPrinterDriver(printerName: connectionId);
         break;
       case PrinterConnectionType.serial:
       default:
-        driver = SerialPrinterDriver(portName: id, baudRate: baud);
+        driver = SerialPrinterDriver(portName: connectionId, baudRate: baud);
         break;
     }
 
@@ -85,10 +96,38 @@ class PrinterManager {
     return driver.printBytes(bytes);
   }
 
-  Future<bool> printKitchenOrder(Uint8List bytes) async {
-    final driver = await _getKitchenDriver();
+  Future<bool> printKitchenOrder(Uint8List bytes, {KitchenStationModel? station}) async {
+    PrinterDriver? driver;
+
+    if (station != null) {
+      if (station.deviceType == 'PRINTER' && station.deviceConfig != null) {
+        try {
+          final config = json.decode(station.deviceConfig!);
+          final typeStr = config['type'] as String? ?? 'serial';
+          final connectionId = config['connectionId'] as String?;
+          final baud = config['baud'] as int? ?? 9600;
+
+          if (connectionId != null && connectionId.isNotEmpty) {
+            final type = PrinterConnectionType.values.firstWhere(
+              (e) => e.name == typeStr,
+              orElse: () => PrinterConnectionType.serial,
+            );
+            driver = await _getDriverFromConfig(type, connectionId, baud, 'station_${station.id}');
+          }
+        } catch (e) {
+          print('PrinterManager: Error parsing station config for ${station.name}: $e');
+        }
+      } else if (station.deviceType == 'NONE') {
+        print('PrinterManager: Station ${station.name} is set to NONE. Skipping.');
+        return true;
+      }
+    } else {
+      // Fallback to legacy kitchen printer setting
+      driver = await _getKitchenDriver();
+    }
+
     if (driver == null) {
-      print('PrinterManager: No kitchen printer configured.');
+      print('PrinterManager: No printer driver resolved for kitchen order.');
       return false;
     }
     return driver.printBytes(bytes);
