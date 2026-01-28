@@ -1,10 +1,14 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum PrinterConnectionType { serial, network, windows }
+
 class SettingsStorage {
   static const _keyReceiptPrinterPort = 'receipt_printer_port';
   static const _keyReceiptPrinterBaud = 'receipt_printer_baud';
+  static const _keyReceiptPrinterType = 'receipt_printer_type';
   static const _keyKitchenPrinterPort = 'kitchen_printer_port';
   static const _keyKitchenPrinterBaud = 'kitchen_printer_baud';
+  static const _keyKitchenPrinterType = 'kitchen_printer_type';
 
   static final SettingsStorage _instance = SettingsStorage._internal();
   factory SettingsStorage() => _instance;
@@ -50,6 +54,35 @@ class SettingsStorage {
   Future<int> getKitchenPrinterBaud() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_keyKitchenPrinterBaud) ?? 9600;
+  }
+
+  // Connection Types
+  Future<void> setReceiptPrinterType(PrinterConnectionType type) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyReceiptPrinterType, type.name);
+  }
+
+  Future<PrinterConnectionType> getReceiptPrinterType() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_keyReceiptPrinterType);
+    return PrinterConnectionType.values.firstWhere(
+      (e) => e.name == value,
+      orElse: () => PrinterConnectionType.serial,
+    );
+  }
+
+  Future<void> setKitchenPrinterType(PrinterConnectionType type) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyKitchenPrinterType, type.name);
+  }
+
+  Future<PrinterConnectionType> getKitchenPrinterType() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value = prefs.getString(_keyKitchenPrinterType);
+    return PrinterConnectionType.values.firstWhere(
+      (e) => e.name == value,
+      orElse: () => PrinterConnectionType.serial,
+    );
   }
 
   // Session Management

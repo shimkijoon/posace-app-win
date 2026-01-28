@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../data/local/app_database.dart';
 import '../../../data/local/models.dart';
-import '../../../core/printer/serial_printer_service.dart';
+import '../../../core/printer/printer_manager.dart';
 import '../../../core/printer/receipt_templates.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/storage/settings_storage.dart';
@@ -58,31 +58,18 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
 
   Future<void> _reprint() async {
     print('ReceiptDetailDialog: Requesting reprint for sale ${widget.sale.id}');
-    final printer = SerialPrinterService();
-    final settings = SettingsStorage();
-
-    String? port = await settings.getReceiptPrinterPort();
-    int baud = await settings.getReceiptPrinterBaud();
-
-    if (port != null && !printer.isConnected(port)) {
-      print('ReceiptDetailDialog: Port $port not connected. Attempting connection...');
-      printer.connect(port, baudRate: baud);
-    }
-
-    if (port == null || !printer.isConnected(port)) {
-      print('ReceiptDetailDialog: Failed to connect to port $port for reprint.');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('영수증 프린터를 연결할 수 없습니다.')),
-      );
-      return;
-    }
+    final printerManager = PrinterManager();
 
     final bytes = widget.sale.status == 'CANCELLED'
         ? await ReceiptTemplates.cancelReceipt(widget.sale, _items, _productMap, storeInfo: _storeInfo)
         : await ReceiptTemplates.saleReceipt(widget.sale, _items, _productMap, storeInfo: _storeInfo, context: context);
     
-    print('ReceiptDetailDialog: Reprint receipt generated (status: ${widget.sale.status}), sending ${bytes.length} bytes to $port');
-    await printer.printBytes(port, bytes);
+    final success = await printerManager.printReceipt(bytes);
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('영수증 인쇄에 실패했습니다. 설정을 확인해 주세요.')),
+      );
+    }
   }
 
   String _localizePaymentMethod(String method) {
@@ -416,25 +403,9 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
       );
 
       // Print Cancellation Receipt
-      final settings = SettingsStorage();
-      final port = await settings.getReceiptPrinterPort();
-      final baud = await settings.getReceiptPrinterBaud();
-
-      if (port != null) {
-        print('ReceiptDetailDialog: Attempting to print cancellation receipt on $port');
-        final printer = SerialPrinterService();
-        if (!printer.isConnected(port)) {
-          printer.connect(port, baudRate: baud);
-        }
-        
-        if (printer.isConnected(port)) {
-          final bytes = await ReceiptTemplates.cancelReceipt(widget.sale, _items, _productMap, storeInfo: _storeInfo);
-          print('ReceiptDetailDialog: Cancellation receipt generated, sending ${bytes.length} bytes to $port');
-          await printer.printBytes(port, bytes);
-        } else {
-          print('ReceiptDetailDialog: Cancellation printer $port not connected.');
-        }
-      }
+      final printerManager = PrinterManager();
+      final bytes = await ReceiptTemplates.cancelReceipt(widget.sale, _items, _productMap, storeInfo: _storeInfo);
+      await printerManager.printReceipt(bytes);
 
       if (mounted) {
         Navigator.pop(context, true); // Return true to indicate change

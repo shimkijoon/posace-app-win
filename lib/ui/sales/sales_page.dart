@@ -18,6 +18,7 @@ import 'widgets/product_search_bar.dart';
 import 'widgets/option_selection_dialog.dart';
 import '../../data/local/models/options_models.dart';
 import '../../core/printer/serial_printer_service.dart';
+import '../../core/printer/printer_manager.dart';
 import '../../core/printer/receipt_templates.dart';
 import '../sales/sales_inquiry_page.dart';
 import 'widgets/discount_selection_dialog.dart';
@@ -657,48 +658,24 @@ class _SalesPageState extends State<SalesPage> {
   Future<void> _printReceipt(SaleModel sale, List<SaleItemModel> items) async {
     print('SalesPage: Requesting print for sale ${sale.id}');
     try {
-      final printer = SerialPrinterService();
-      final settings = SettingsStorage();
+      final printerManager = PrinterManager();
       final auth = AuthStorage();
       
       final productMap = {for (var p in _products) p.id: p};
       final storeInfo = await auth.getSessionInfo();
 
-      // 1. 영수증 출력
-      final rPort = await settings.getReceiptPrinterPort();
-      final rBaud = await settings.getReceiptPrinterBaud();
+      // 1. Receipt
+      final receiptBytes = await ReceiptTemplates.saleReceipt(
+        sale, items, productMap, 
+        storeInfo: storeInfo, 
+        context: context
+      );
+      await printerManager.printReceipt(receiptBytes);
+
+      // 2. Kitchen Order
+      final kitchenBytes = await ReceiptTemplates.kitchenOrder(sale, items, productMap);
+      await printerManager.printKitchenOrder(kitchenBytes);
       
-      if (rPort != null) {
-        print('SalesPage: Attempting to print receipt on $rPort');
-        if (!printer.isConnected(rPort)) {
-          printer.connect(rPort, baudRate: rBaud);
-        }
-        if (printer.isConnected(rPort)) {
-          final receiptBytes = await ReceiptTemplates.saleReceipt(sale, items, productMap, storeInfo: storeInfo, context: context);
-          print('SalesPage: Receipt generated, sending ${receiptBytes.length} bytes to $rPort');
-          await printer.printBytes(rPort, receiptBytes);
-        } else {
-          print('SalesPage: Receipt printer $rPort not connected.');
-        }
-      }
-
-      // 2. 주방주문서 출력
-      final kPort = await settings.getKitchenPrinterPort();
-      final kBaud = await settings.getKitchenPrinterBaud();
-
-      if (kPort != null) {
-        print('SalesPage: Attempting to print kitchen order on $kPort');
-        if (!printer.isConnected(kPort)) {
-          printer.connect(kPort, baudRate: kBaud);
-        }
-        if (printer.isConnected(kPort)) {
-          final kitchenBytes = await ReceiptTemplates.kitchenOrder(sale, items, productMap);
-          print('SalesPage: Kitchen order generated, sending ${kitchenBytes.length} bytes to $kPort');
-          await printer.printBytes(kPort, kitchenBytes);
-        } else {
-          print('SalesPage: Kitchen printer $kPort not connected.');
-        }
-      }
     } catch (e) {
       print('SalesPage: Printing error: $e');
     }

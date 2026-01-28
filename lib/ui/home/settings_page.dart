@@ -5,6 +5,9 @@ import '../../core/printer/serial_printer_service.dart';
 import '../../core/printer/esc_pos_encoder.dart';
 import '../../core/storage/settings_storage.dart';
 import '../../core/storage/auth_storage.dart';
+import '../../core/printer/printer_manager.dart';
+import '../../core/printer/network_printer_driver.dart';
+import '../../core/printer/windows_printer_driver.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/local/app_database.dart';
 import '../../data/remote/api_client.dart';
@@ -23,15 +26,19 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  final _printerService = SerialPrinterService();
   final _settingsStorage = SettingsStorage();
   final _authStorage = AuthStorage();
+  final _printerManager = PrinterManager();
   
   List<String> _availablePorts = [];
+  List<String> _winPrinters = [];
   final List<int> _baudRates = [9600, 19200, 38400, 57600, 115200];
 
+  PrinterConnectionType _receiptType = PrinterConnectionType.serial;
   String? _receiptPort;
   int _receiptBaudInt = 9600;
+
+  PrinterConnectionType _kitchenType = PrinterConnectionType.serial;
   String? _kitchenPort;
   int _kitchenBaud = 9600;
   bool _usePosSession = true;
@@ -51,21 +58,29 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadSettings() async {
-    final ports = _printerService.getAvailablePorts();
+    final ports = SerialPrinterService().getAvailablePorts();
+    final winPrinters = WindowsPrinterDriver.listPrinters();
     
+    final rType = await _settingsStorage.getReceiptPrinterType();
     final rPort = await _settingsStorage.getReceiptPrinterPort();
     final rBaud = await _settingsStorage.getReceiptPrinterBaud();
+
+    final kType = await _settingsStorage.getKitchenPrinterType();
     final kPort = await _settingsStorage.getKitchenPrinterPort();
     final kBaud = await _settingsStorage.getKitchenPrinterBaud();
-    final useSession = await _settingsStorage.getUsePosSession(); // Load new setting
+
+    final useSession = await _settingsStorage.getUsePosSession();
     
     setState(() {
       _availablePorts = ports;
-      _receiptPort = (rPort != null && ports.contains(rPort)) ? rPort : null;
-      _receiptBaudInt = rBaud; // Use _receiptBaudInt
-      _kitchenPort = (kPort != null && ports.contains(kPort)) ? kPort : null;
+      _winPrinters = winPrinters;
+      _receiptType = rType;
+      _receiptPort = rPort;
+      _receiptBaudInt = rBaud;
+      _kitchenType = kType;
+      _kitchenPort = kPort;
       _kitchenBaud = kBaud;
-      _usePosSession = useSession; // Set new state
+      _usePosSession = useSession;
       _isLoading = false;
     });
     
@@ -73,18 +88,18 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _saveSettings() async {
-    await _settingsStorage.setUsePosSession(_usePosSession); // Save new setting
+    await _settingsStorage.setUsePosSession(_usePosSession);
 
+    await _settingsStorage.setReceiptPrinterType(_receiptType);
     if (_receiptPort != null) {
       await _settingsStorage.setReceiptPrinterPort(_receiptPort!);
-      await _settingsStorage.setReceiptPrinterBaud(_receiptBaudInt); // Use _receiptBaudInt
-      _printerService.connect(_receiptPort!, baudRate: _receiptBaudInt); // Use _receiptBaudInt
+      await _settingsStorage.setReceiptPrinterBaud(_receiptBaudInt);
     }
     
+    await _settingsStorage.setKitchenPrinterType(_kitchenType);
     if (_kitchenPort != null) {
       await _settingsStorage.setKitchenPrinterPort(_kitchenPort!);
       await _settingsStorage.setKitchenPrinterBaud(_kitchenBaud);
-      _printerService.connect(_kitchenPort!, baudRate: _kitchenBaud);
     }
 
     if (mounted) {
@@ -95,47 +110,38 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _testPrint(String type) async {
-    String? port = type == 'receipt' ? _receiptPort : _kitchenPort;
-    int baud = type == 'receipt' ? _receiptBaudInt : _kitchenBaud;
     final title = type == 'receipt' ? 'Receipt Printer' : 'Kitchen Printer';
-
-    if (port == null) {
-      print('SettingsPage: Test print failed - No port selected for $title');
-      return;
-    }
     
-    print('SettingsPage: Starting test print for $title on $port');
-    if (!_printerService.isConnected(port)) {
-        print('SettingsPage: Port $port not connected. Attempting connection...');
-        _printerService.connect(port, baudRate: baud);
-    }
+    print('SettingsPage: Starting test print for $title');
+    
+    try {
+      final encoder = EscPosEncoder();
+      encoder.reset();
+      encoder.setAlign('center');
+      await encoder.text('*** $title ***', bold: true, doubleHeight: true, doubleWidth: true);
+      encoder.lineFeed(1);
+      await encoder.text('Test Print Successful!', align: 'center');
+      encoder.lineFeed();
+      await encoder.text('포스에이스 프린트 테스트', align: 'center');
+      encoder.lineFeed(2);
+      encoder.cut();
+      
+      final bytes = encoder.bytes;
+      bool success = false;
+      
+      if (type == 'receipt') {
+        success = await _printerManager.printReceipt(bytes);
+      } else {
+        success = await _printerManager.printKitchenOrder(bytes);
+      }
 
-    if (_printerService.isConnected(port)) {
-        try {
-            final encoder = EscPosEncoder();
-            encoder.reset();
-            encoder.setAlign('center');
-            await encoder.text('*** $title ***', bold: true, doubleHeight: true, doubleWidth: true);
-            encoder.lineFeed(1);
-            await encoder.text('Test Print Successful!', align: 'center');
-            encoder.lineFeed();
-            await encoder.text('포스에이스 프린트 테스트', align: 'center');
-            encoder.lineFeed(2);
-            encoder.cut();
-            
-            final bytes = encoder.bytes;
-            print('SettingsPage: Sending ${bytes.length} bytes to $port');
-            await _printerService.printBytes(port, bytes);
-        } catch (e) {
-            print('SettingsPage: Test print error: $e');
-        }
-    } else {
-        print('SettingsPage: Failed to connect to $port for test print.');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$title 연결에 실패했습니다.')),
-          );
-        }
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$title 인쇄에 실패했습니다. 설정을 확인해 주세요.')),
+        );
+      }
+    } catch (e) {
+      print('SettingsPage: Test print error: $e');
     }
   }
 
@@ -319,8 +325,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     const SizedBox(height: 24),
                     _buildPrinterSection(
                       title: AppLocalizations.of(context)!.translate('settings.receiptPrinter'),
+                      type: _receiptType,
                       portValue: _receiptPort,
-                      baudValue: _receiptBaudInt, // Fix variable name
+                      baudValue: _receiptBaudInt,
+                      onTypeChanged: (val) => setState(() => _receiptType = val!),
                       onPortChanged: (val) => setState(() => _receiptPort = val),
                       onBaudChanged: (val) => setState(() => _receiptBaudInt = val ?? 9600),
                       onTestPrint: () => _testPrint('receipt'),
@@ -328,8 +336,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     const SizedBox(height: 24),
                     _buildPrinterSection(
                       title: AppLocalizations.of(context)!.translate('settings.kitchenPrinter'),
+                      type: _kitchenType,
                       portValue: _kitchenPort,
                       baudValue: _kitchenBaud,
+                      onTypeChanged: (val) => setState(() => _kitchenType = val!),
                       onPortChanged: (val) => setState(() => _kitchenPort = val),
                       onBaudChanged: (val) => setState(() => _kitchenBaud = val ?? 9600),
                       onTestPrint: () => _testPrint('kitchen'),
@@ -427,8 +437,10 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Widget _buildPrinterSection({
     required String title,
+    required PrinterConnectionType type,
     required String? portValue,
     required int baudValue,
+    required ValueChanged<PrinterConnectionType?> onTypeChanged,
     required ValueChanged<String?> onPortChanged,
     required ValueChanged<int?> onBaudChanged,
     required VoidCallback onTestPrint,
@@ -440,26 +452,63 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                DropdownButton<PrinterConnectionType>(
+                  value: type,
+                  items: PrinterConnectionType.values.map((t) => DropdownMenuItem(
+                    value: t, 
+                    child: Text(t.name.toUpperCase())
+                  )).toList(),
+                  onChanged: onTypeChanged,
+                ),
+              ],
+            ),
           ),
           const Divider(height: 1),
-          ListTile(
-            title: Text(AppLocalizations.of(context)!.translate('settings.serialPort')),
-            trailing: DropdownButton<String>(
-              value: portValue,
-              items: _availablePorts.map((port) => DropdownMenuItem(value: port, child: Text(port))).toList(),
-              onChanged: onPortChanged,
-              hint: Text(AppLocalizations.of(context)!.translate('common.select') ?? '선택'),
+          if (type == PrinterConnectionType.serial) ...[
+            ListTile(
+              title: Text(AppLocalizations.of(context)!.translate('settings.serialPort')),
+              trailing: DropdownButton<String>(
+                value: portValue != null && _availablePorts.contains(portValue) ? portValue : null,
+                items: _availablePorts.map((port) => DropdownMenuItem(value: port, child: Text(port))).toList(),
+                onChanged: onPortChanged,
+                hint: Text(AppLocalizations.of(context)!.translate('common.select') ?? '선택'),
+              ),
             ),
-          ),
-          ListTile(
-            title: Text(AppLocalizations.of(context)!.translate('settings.baudRate')),
-            trailing: DropdownButton<int>(
-              value: baudValue,
-              items: _baudRates.map((baud) => DropdownMenuItem(value: baud, child: Text(baud.toString()))).toList(),
-              onChanged: onBaudChanged,
+            ListTile(
+              title: Text(AppLocalizations.of(context)!.translate('settings.baudRate')),
+              trailing: DropdownButton<int>(
+                value: baudValue,
+                items: _baudRates.map((baud) => DropdownMenuItem(value: baud, child: Text(baud.toString()))).toList(),
+                onChanged: onBaudChanged,
+              ),
             ),
-          ),
+          ] else if (type == PrinterConnectionType.network) ...[
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextFormField(
+                initialValue: portValue,
+                decoration: InputDecoration(
+                  labelText: 'IP Address (e.g. 192.168.0.100:9100)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onChanged: onPortChanged,
+              ),
+            ),
+          ] else if (type == PrinterConnectionType.windows) ...[
+            ListTile(
+              title: const Text('Windows Printer'),
+              trailing: DropdownButton<String>(
+                value: portValue != null && _winPrinters.contains(portValue) ? portValue : null,
+                items: _winPrinters.map((name) => DropdownMenuItem(value: name, child: Text(name))).toList(),
+                onChanged: onPortChanged,
+                hint: const Text('프린터 선택'),
+              ),
+            ),
+          ],
           Padding(
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(
