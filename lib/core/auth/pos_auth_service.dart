@@ -23,11 +23,14 @@ class PosAuthService {
       accessToken: accessToken,
       storeId: storeId,
       posId: posId,
+      uiLanguage: result['uiLanguage'] as String?,
     );
   }
 
   Future<Map<String, dynamic>> loginAsOwner(String email, String password, {String? deviceId}) async {
     final result = await _api.loginAsOwner(email, password, deviceId: deviceId);
+    
+    print('[PosAuthService] loginAsOwner response: $result');
     
     final bool autoSelected = result['autoSelected'] ?? false;
     
@@ -35,6 +38,9 @@ class PosAuthService {
       final accessToken = result['accessToken'] as String?;
       final storeId = result['storeId'] as String?;
       final posId = result['posId'] as String?;
+      final uiLanguage = result['uiLanguage'] as String?;
+
+      print('[PosAuthService] autoSelected path - uiLanguage from response: $uiLanguage');
 
       if (accessToken == null || storeId == null || posId == null) {
         throw Exception('응답 형식이 올바르지 않습니다.');
@@ -48,7 +54,10 @@ class PosAuthService {
         storeBizNo: result['businessNumber'],
         storeAddr: result['address'],
         storePhone: result['phone'],
+        uiLanguage: uiLanguage,
       );
+      
+      print('[PosAuthService] Saved uiLanguage: $uiLanguage');
       
       return {'success': true, 'autoSelected': true};
     } else {
@@ -61,7 +70,7 @@ class PosAuthService {
     }
   }
 
-  Future<void> selectPos({
+  Future<Map<String, dynamic>> selectPos({
     required String email,
     required String storeId,
     required String posId,
@@ -75,6 +84,10 @@ class PosAuthService {
     );
     
     final accessToken = result['accessToken'] as String?;
+    final uiLanguage = result['uiLanguage'] as String?;
+    
+    print('[PosAuthService] selectPos response - uiLanguage: $uiLanguage');
+    
     if (accessToken == null) {
       throw Exception('응답 형식이 올바르지 않습니다.');
     }
@@ -87,7 +100,12 @@ class PosAuthService {
       storeBizNo: result['businessNumber'],
       storeAddr: result['address'],
       storePhone: result['phone'],
+      uiLanguage: uiLanguage,
     );
+    
+    print('[PosAuthService] Saved uiLanguage: $uiLanguage');
+    
+    return result;
   }
 
   Future<bool> verifyToken() async {

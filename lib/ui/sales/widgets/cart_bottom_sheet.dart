@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/models/cart.dart';
 import '../../../core/models/cart_item.dart';
 import '../../../core/theme/app_theme.dart';
@@ -89,7 +90,7 @@ class CartBottomSheet extends StatelessWidget {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              '장바구니가 비어있습니다',
+                              AppLocalizations.of(context)!.cartEmpty,
                               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                     color: AppTheme.textSecondary,
                                   ),
@@ -132,7 +133,7 @@ class CartBottomSheet extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              '할인',
+                              AppLocalizations.of(context)!.discount,
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                             Text(
@@ -186,7 +187,7 @@ class CartBottomSheet extends StatelessWidget {
                               const Icon(Icons.payment, size: 20),
                               const SizedBox(width: 8),
                               Text(
-                                '결제하기',
+                                AppLocalizations.of(context)!.proceedToPayment,
                                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
@@ -351,7 +352,7 @@ class _CartItemCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                '할인: -${formatPrice(item.discountAmount)}',
+                '${AppLocalizations.of(context)!.discount}: -${formatPrice(item.discountAmount)}',
                 style: TextStyle(
                   fontSize: 12,
                   color: AppTheme.success,
@@ -366,7 +367,7 @@ class _CartItemCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              '소계: ${formatPrice(item.finalPrice)}',
+              '${AppLocalizations.of(context)!.translate('sales.subtotal')}: ${formatPrice(item.finalPrice)}',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),

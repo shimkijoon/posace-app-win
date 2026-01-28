@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/i18n/app_localizations.dart';
 
 class VirtualKeypad extends StatelessWidget {
   const VirtualKeypad({
@@ -49,7 +50,7 @@ class VirtualKeypad extends StatelessWidget {
                   backgroundColor: AppTheme.primary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
-                child: const Text('입력 완료', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                child: Text(AppLocalizations.of(context)!.translate('payment.inputComplete'), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ),
           ],

@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../core/storage/auth_storage.dart';
 import '../../core/storage/settings_storage.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../data/local/app_database.dart';
 import '../../data/remote/api_client.dart';
 import '../../data/remote/pos_master_api.dart';
@@ -98,20 +99,20 @@ class _HomePageState extends State<HomePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('영업 시작 (세션 열기)'),
+        title: Text(AppLocalizations.of(context)!.translate('home.startBusiness')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('영업 준비금(시재)을 입력하세요.'),
+            Text(AppLocalizations.of(context)!.translate('home.enterOpeningAmount')),
             const SizedBox(height: 8),
             TextField(
               controller: amountController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: '금액',
-                border: OutlineInputBorder(),
-                suffixText: '원',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.translate('session.amount'),
+                border: const OutlineInputBorder(),
+                suffixText: AppLocalizations.of(context)!.translate('session.won'),
               ),
             ),
           ],
@@ -119,11 +120,11 @@ class _HomePageState extends State<HomePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
+            child: Text(AppLocalizations.of(context)!.translate('common.cancel')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('영업 시작'),
+            child: Text(AppLocalizations.of(context)!.translate('home.startBusiness')),
           ),
         ],
       ),
@@ -150,13 +151,17 @@ class _HomePageState extends State<HomePage> {
 
       await _loadSession(); // Refresh UI state
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('영업이 시작되었습니다.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.translate('session.businessStarted') ?? '영업이 시작되었습니다.')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('세션 시작 실패: $e'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${AppLocalizations.of(context)!.translate('session.startFailed') ?? '세션 시작 실패'}: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -165,20 +170,20 @@ class _HomePageState extends State<HomePage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('영업 마감 (세션 종료)'),
+        title: Text(AppLocalizations.of(context)!.translate('session.closeBusiness')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('최종 시재(현금 잔액)를 입력하세요.'),
+            Text(AppLocalizations.of(context)!.enterClosingAmount),
             const SizedBox(height: 8),
             TextField(
               controller: amountController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: '금액',
-                border: OutlineInputBorder(),
-                suffixText: '원',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.translate('session.amount'),
+                border: const OutlineInputBorder(),
+                suffixText: AppLocalizations.of(context)!.translate('session.won'),
               ),
             ),
           ],
@@ -186,12 +191,12 @@ class _HomePageState extends State<HomePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
+            child: Text(AppLocalizations.of(context)!.translate('common.cancel')),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('영업 마감'),
+            child: Text(AppLocalizations.of(context)!.closeBusiness),
           ),
         ],
       ),
@@ -244,7 +249,7 @@ class _HomePageState extends State<HomePage> {
             child: TextButton.icon(
               onPressed: _logout,
               icon: const Icon(Icons.logout, size: 18),
-              label: const Text('로그아웃'),
+              label: Text(AppLocalizations.of(context)!.logout),
               style: TextButton.styleFrom(foregroundColor: AppTheme.textSecondary),
             ),
           ),
@@ -258,9 +263,9 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '오늘의 매장 현황',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  AppLocalizations.of(context)!.todayStoreStatus,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 
@@ -271,14 +276,14 @@ class _HomePageState extends State<HomePage> {
                     Expanded(
                       flex: 3,
                       child: _buildInfoCard(
-                        title: '매장 정보',
+                        title: AppLocalizations.of(context)!.storeInfo,
                         icon: Icons.store,
                         padding: const EdgeInsets.all(16),
                         children: [
-                          _buildInfoRow('매장명', _session['name'] ?? '-', isBold: true),
-                          _buildInfoRow('사업자번호', _session['businessNumber'] ?? '-'),
-                          _buildInfoRow('전화번호', _session['phone'] ?? '-'),
-                          _buildInfoRow('주소', _session['address'] ?? '-'),
+                          _buildInfoRow(AppLocalizations.of(context)!.storeName, _session['name'] ?? '-', isBold: true),
+                          _buildInfoRow(AppLocalizations.of(context)!.businessNumber, _session['businessNumber'] ?? '-'),
+                          _buildInfoRow(AppLocalizations.of(context)!.phone, _session['phone'] ?? '-'),
+                          _buildInfoRow(AppLocalizations.of(context)!.address, _session['address'] ?? '-'),
                         ],
                       ),
                     ),
@@ -286,7 +291,7 @@ class _HomePageState extends State<HomePage> {
                     Expanded(
                       flex: 2,
                       child: _buildInfoCard(
-                        title: '영업 상태',
+                        title: AppLocalizations.of(context)!.operatingStatus,
                         icon: Icons.access_time_filled,
                         padding: const EdgeInsets.all(16),
                         children: [
@@ -296,8 +301,8 @@ class _HomePageState extends State<HomePage> {
                               children: [
                                 Text(
                                   _usePosSession 
-                                    ? (_isSessionActive ? "영업 중" : "영업 종료")
-                                    : "영업 미사용",
+                                    ? (_isSessionActive ? AppLocalizations.of(context)!.operating : AppLocalizations.of(context)!.closed)
+                                    : AppLocalizations.of(context)!.translate('home.sessionNotUsed'),
                                   style: TextStyle(
                                     color: (_usePosSession && !_isSessionActive) ? AppTheme.error : AppTheme.success, 
                                     fontWeight: FontWeight.w900,
@@ -312,7 +317,7 @@ class _HomePageState extends State<HomePage> {
                                     child: ElevatedButton.icon(
                                       onPressed: _isSessionActive ? _handleCloseSession : _handleOpenSession,
                                       icon: Icon(_isSessionActive ? Icons.logout : Icons.login, size: 16),
-                                      label: Text(_isSessionActive ? '영업 마감' : '영업 시작', style: const TextStyle(fontSize: 13)),
+                                      label: Text(_isSessionActive ? AppLocalizations.of(context)!.closeBusiness : AppLocalizations.of(context)!.translate('home.startBusiness'), style: const TextStyle(fontSize: 13)),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: _isSessionActive ? AppTheme.error : AppTheme.success,
                                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -331,13 +336,13 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 12),
                 
                 // 마스터 데이터 동기화 섹션
-                const Text(
-                  '관리 도구',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  AppLocalizations.of(context)!.managementTools,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 _buildInfoCard(
-                  title: '주간 매출 추이',
+                  title: AppLocalizations.of(context)!.weeklySalesTrend,
                   icon: Icons.show_chart,
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -425,7 +430,7 @@ class _HomePageState extends State<HomePage> {
                               ? () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SalesPage(database: widget.database)))
                               : null,
                           icon: Icons.receipt_long,
-                          label: '판매 시작',
+                          label: AppLocalizations.of(context)!.startSale,
                           color: AppTheme.primary,
                           height: double.infinity,
                         ),
@@ -438,7 +443,7 @@ class _HomePageState extends State<HomePage> {
                               ? () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TableLayoutPage(database: widget.database)))
                               : null,
                           icon: Icons.table_restaurant,
-                          label: '테이블 주문',
+                          label: AppLocalizations.of(context)!.tableOrder,
                           color: AppTheme.secondary,
                           height: double.infinity,
                         ),
@@ -449,7 +454,7 @@ class _HomePageState extends State<HomePage> {
                         child: _buildSecondaryActionButton(
                           onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SalesInquiryPage(database: widget.database))),
                           icon: Icons.history,
-                          label: '매출 내역\n조회',
+                          label: AppLocalizations.of(context)!.salesHistory,
                           height: double.infinity,
                         ),
                       ),
@@ -459,7 +464,7 @@ class _HomePageState extends State<HomePage> {
                         child: _buildSecondaryActionButton(
                           onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SettingsPage(database: widget.database))),
                           icon: Icons.settings,
-                          label: '포스 설정',
+                          label: AppLocalizations.of(context)!.posSettings,
                           height: double.infinity,
                         ),
                       ),

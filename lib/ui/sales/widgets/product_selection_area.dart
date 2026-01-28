@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/local/models.dart';
 
@@ -57,7 +58,7 @@ class _ProductSelectionAreaState extends State<ProductSelectionArea> {
                   child: Row(
                     children: [
                       _CategoryTab(
-                        label: '전체',
+                        label: AppLocalizations.of(context)!.all,
                         isSelected: widget.selectedCategoryId == null,
                         onTap: () => widget.onCategorySelected(null),
                       ),
@@ -272,7 +273,7 @@ class _ProductCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     if (product.stockEnabled && !isOutOfStock)
-                      Text('${product.stockQuantity} 남아있음', style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
+                      Text('${product.stockQuantity} ${AppLocalizations.of(context)!.translate('sales.remaining')}', style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
                     const SizedBox(height: 4),
                   ],
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../data/local/models/payment_model.dart';
 import '../../widgets/virtual_keypad.dart';
 
@@ -52,7 +53,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('분할 결제'),
+      title: Text(AppLocalizations.of(context)!.translate('payment.splitPayment')),
       content: SizedBox(
         width: 500,
         child: Column(
@@ -67,10 +68,10 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
               ),
               child: Column(
                 children: [
-                  _buildSummaryRow('총 결제 금액', widget.totalAmount, isTotal: true),
+                  _buildSummaryRow(AppLocalizations.of(context)!.translate('payment.totalPaymentAmount'), widget.totalAmount, isTotal: true),
                   const Divider(),
-                  _buildSummaryRow('결제된 금액', widget.totalAmount - _remainingAmount),
-                  _buildSummaryRow('남은 금액', _remainingAmount, highlight: _remainingAmount > 0),
+                  _buildSummaryRow(AppLocalizations.of(context)!.translate('payment.paidAmount'), widget.totalAmount - _remainingAmount),
+                  _buildSummaryRow(AppLocalizations.of(context)!.translate('payment.remainingAmount'), _remainingAmount, highlight: _remainingAmount > 0),
                 ],
               ),
             ),
@@ -78,9 +79,9 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
             
             // Payments List
             if (_payments.isNotEmpty) ...[
-              const Align(
+              Align(
                 alignment: Alignment.centerLeft,
-                child: Text('결제 내역', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(AppLocalizations.of(context)!.translate('payment.paymentHistory'), style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 8),
               ConstrainedBox(
@@ -92,11 +93,11 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
                     final p = _payments[index];
                     return ListTile(
                       dense: true,
-                      title: Text('${p.method} 결제'),
+                      title: Text('${p.method} ${AppLocalizations.of(context)!.translate('payment.payment')}'),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('${p.amount}원', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Text('${p.amount}${AppLocalizations.of(context)!.translate('session.won')}', style: const TextStyle(fontWeight: FontWeight.bold)),
                           IconButton(
                             icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
                             onPressed: () => _removePayment(index),
@@ -114,13 +115,13 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
             
             // Payment Actions
             if (_remainingAmount > 0) ...[
-              const Text('결제 수단 선택'),
+              Text(AppLocalizations.of(context)!.translate('payment.selectPaymentMethod')),
               const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
                     child: _buildPaymentButton(
-                      '현금 전액',
+                      AppLocalizations.of(context)!.translate('payment.cashFull'),
                       Icons.money,
                       Colors.green,
                       () => _addPayment('CASH', _remainingAmount),
@@ -129,7 +130,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _buildPaymentButton(
-                      '카드 전액',
+                      AppLocalizations.of(context)!.translate('payment.cardFull'),
                       Icons.credit_card,
                       Colors.blue,
                       () => _addPayment('CARD', _remainingAmount),
@@ -143,14 +144,14 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => _showManualAmountDialog('CASH'),
-                      child: const Text('현금 직접 입력'),
+                      child: Text(AppLocalizations.of(context)!.translate('payment.cashManual')),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => _showManualAmountDialog('CARD'),
-                      child: const Text('카드 직접 입력'),
+                      child: Text(AppLocalizations.of(context)!.translate('payment.cardManual')),
                     ),
                   ),
                 ],
@@ -162,7 +163,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('취소'),
+          child: Text(AppLocalizations.of(context)!.translate('common.cancel')),
         ),
         ElevatedButton(
           onPressed: _remainingAmount == 0 ? () => Navigator.pop(context, _payments) : null,
@@ -170,7 +171,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
             backgroundColor: AppTheme.primary,
             foregroundColor: Colors.white,
           ),
-          child: const Text('결제 완료'),
+          child: Text(AppLocalizations.of(context)!.translate('payment.paymentComplete')),
         ),
       ],
     );
@@ -187,7 +188,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
             fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
           )),
           Text(
-            '${amount}원',
+            '$amount${AppLocalizations.of(context)!.translate('session.won')}',
             style: TextStyle(
               fontSize: isTotal ? 18 : 14,
               fontWeight: FontWeight.bold,
@@ -222,7 +223,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: Text('$method 금액 입력'),
+            title: Text('$method ${AppLocalizations.of(context)!.translate('payment.amountInput')}'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -234,7 +235,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '$currentInput원',
+                    '$currentInput${AppLocalizations.of(context)!.translate('session.won')}',
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.right,
                   ),

@@ -8,6 +8,7 @@ class AuthStorage {
   static const _storeBizNoKey = 'pos_store_biz_no';
   static const _storeAddrKey = 'pos_store_addr';
   static const _storePhoneKey = 'pos_store_phone';
+  static const _uiLanguageKey = 'pos_ui_language';
   static const _employeeIdKey = 'pos_employee_id';
   static const _sessionIdKey = 'pos_session_id';
 
@@ -24,6 +25,7 @@ class AuthStorage {
     String? storeBizNo,
     String? storeAddr,
     String? storePhone,
+    String? uiLanguage,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_accessTokenKey, accessToken);
@@ -33,6 +35,7 @@ class AuthStorage {
     if (storeBizNo != null) await prefs.setString(_storeBizNoKey, storeBizNo);
     if (storeAddr != null) await prefs.setString(_storeAddrKey, storeAddr);
     if (storePhone != null) await prefs.setString(_storePhoneKey, storePhone);
+    if (uiLanguage != null) await prefs.setString(_uiLanguageKey, uiLanguage);
   }
 
   Future<Map<String, String?>> getSessionInfo() async {
@@ -45,9 +48,15 @@ class AuthStorage {
       'businessNumber': prefs.getString(_storeBizNoKey),
       'address': prefs.getString(_storeAddrKey),
       'phone': prefs.getString(_storePhoneKey),
+      'uiLanguage': prefs.getString(_uiLanguageKey),
       'employeeId': prefs.getString(_employeeIdKey),
       'sessionId': prefs.getString(_sessionIdKey),
     };
+  }
+
+  Future<String?> getUiLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_uiLanguageKey);
   }
 
   Future<void> saveEmployee(String? employeeId) async {
@@ -77,5 +86,6 @@ class AuthStorage {
     await prefs.remove(_storeBizNoKey);
     await prefs.remove(_storeAddrKey);
     await prefs.remove(_storePhoneKey);
+    await prefs.remove(_uiLanguageKey);
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/i18n/app_localizations.dart';
 import '../../../../core/storage/auth_storage.dart';
 import '../../../../data/local/app_database.dart';
 import '../../../../data/local/models.dart';
@@ -119,7 +120,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('검색'),
+                  child: Text(AppLocalizations.of(context)!.translate('common.search')),
                 ),
               ],
             ),
@@ -152,7 +153,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            const Text('보유 포인트', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                            Text(AppLocalizations.of(context)!.translate('sales.points'), style: const TextStyle(fontSize: 10, color: Colors.grey)),
                             Text('${member.points}P', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary)),
                           ],
                         ),
@@ -162,17 +163,17 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
                 ),
               )
             else if (_searchController.text.isNotEmpty)
-              const Center(
+              Center(
                 child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text('검색 결과가 없습니다.', style: TextStyle(color: Colors.grey)),
+                  padding: const EdgeInsets.all(32),
+                  child: Text(AppLocalizations.of(context)!.translate('sales.noSearchResults'), style: const TextStyle(color: Colors.grey)),
                 ),
               ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: _openRegistration,
               icon: const Icon(Icons.person_add_outlined),
-              label: const Text('신규 회원 등록'),
+              label: Text(AppLocalizations.of(context)!.translate('sales.registerNewMember')),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

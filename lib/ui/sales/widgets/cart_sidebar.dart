@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/models/cart.dart';
 import '../../../core/models/cart_item.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/app_localizations.dart';
 
 typedef ValueChanged2<T1, T2> = void Function(T1 value1, T2 value2);
 
@@ -55,7 +56,7 @@ class CartSidebar extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '장바구니',
+                  AppLocalizations.of(context)!.cart,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -65,7 +66,7 @@ class CartSidebar extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onClear,
                     icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text('비우기'),
+                    label: Text(AppLocalizations.of(context)!.clear),
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.white.withOpacity(0.9),
                       padding: const EdgeInsets.symmetric(
@@ -92,7 +93,7 @@ class CartSidebar extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          '장바구니가 비어있습니다',
+                          AppLocalizations.of(context)!.cartEmpty,
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 color: AppTheme.textSecondary,
                               ),
@@ -134,7 +135,7 @@ class CartSidebar extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '할인',
+                          AppLocalizations.of(context)!.discount,
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         Text(
@@ -154,7 +155,7 @@ class CartSidebar extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '총액',
+                        AppLocalizations.of(context)!.translate('sales.totalAmount'),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -189,7 +190,7 @@ class CartSidebar extends StatelessWidget {
                           const Icon(Icons.payment, size: 20),
                           const SizedBox(width: 8),
                           Text(
-                            '결제하기',
+                            AppLocalizations.of(context)!.proceedToPayment,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -352,7 +353,7 @@ class _CartItemCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                '할인: -${formatPrice(item.discountAmount)}',
+                '${AppLocalizations.of(context)!.discount}: -${formatPrice(item.discountAmount)}',
                 style: TextStyle(
                   fontSize: 12,
                   color: AppTheme.success,
@@ -367,7 +368,7 @@ class _CartItemCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: Text(
-              '소계: ${formatPrice(item.finalPrice)}',
+              '${AppLocalizations.of(context)!.translate('sales.subtotal')}: ${formatPrice(item.finalPrice)}',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),

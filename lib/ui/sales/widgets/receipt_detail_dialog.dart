@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../data/local/app_database.dart';
 import '../../../data/local/models.dart';
 import '../../../core/printer/serial_printer_service.dart';
@@ -78,7 +79,7 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
 
     final bytes = widget.sale.status == 'CANCELLED'
         ? await ReceiptTemplates.cancelReceipt(widget.sale, _items, _productMap, storeInfo: _storeInfo)
-        : await ReceiptTemplates.saleReceipt(widget.sale, _items, _productMap, storeInfo: _storeInfo);
+        : await ReceiptTemplates.saleReceipt(widget.sale, _items, _productMap, storeInfo: _storeInfo, context: context);
     
     print('ReceiptDetailDialog: Reprint receipt generated (status: ${widget.sale.status}), sending ${bytes.length} bytes to $port');
     await printer.printBytes(port, bytes);
@@ -204,13 +205,13 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
                         ),
                         
                         // Header for items
-                        const DefaultTextStyle(
-                          style: TextStyle(fontFamily: 'monospace', color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold),
+                        DefaultTextStyle(
+                          style: const TextStyle(fontFamily: 'monospace', color: Colors.black, fontSize: 12, fontWeight: FontWeight.bold),
                           child: Row(
                             children: [
-                              Expanded(flex: 20, child: Text('상품명')),
-                              Expanded(flex: 6, child: Text('수량', textAlign: TextAlign.right)),
-                              Expanded(flex: 16, child: Text('금액', textAlign: TextAlign.right)),
+                              Expanded(flex: 20, child: Text(AppLocalizations.of(context)!.translate('sales.productName'))),
+                              Expanded(flex: 6, child: Text(AppLocalizations.of(context)!.translate('sales.qty'), textAlign: TextAlign.right)),
+                              Expanded(flex: 16, child: Text(AppLocalizations.of(context)!.translate('sales.amount'), textAlign: TextAlign.right)),
                             ],
                           ),
                         ),
@@ -280,7 +281,7 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
                             style: TextStyle(color: Colors.grey, letterSpacing: 1), textAlign: TextAlign.center),
                         ),
                         
-                        _buildReceiptText('소계', currencyFormat.format(widget.sale.totalAmount + widget.sale.discountAmount)),
+                        _buildReceiptText(AppLocalizations.of(context)!.translate('sales.subtotal'), currencyFormat.format(widget.sale.totalAmount + widget.sale.discountAmount)),
                         
                         if (widget.sale.discountAmount > 0) ...[
                            if (widget.sale.cartDiscountsJson != null) ...(() {
@@ -293,7 +294,7 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
                                }).toList();
                              } catch (_) { return <Widget>[]; }
                            })(),
-                           _buildReceiptText('총 할인액', '-${currencyFormat.format(widget.sale.discountAmount)}', 
+                           _buildReceiptText(AppLocalizations.of(context)!.translate('sales.totalDiscount'), '-${currencyFormat.format(widget.sale.discountAmount)}', 
                              valueColor: AppTheme.error, isBold: true),
                         ],
 
@@ -302,7 +303,7 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('총 결제액', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Text(AppLocalizations.of(context)!.totalPayment, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                             Text(currencyFormat.format(widget.sale.totalAmount), 
                               style: TextStyle(
                                 fontWeight: FontWeight.bold, 
@@ -342,7 +343,7 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
                               elevation: 0,
                             ),
                             icon: const Icon(Icons.print, size: 18),
-                            label: const Text('영수증 재출력', style: TextStyle(fontWeight: FontWeight.bold)),
+                            label: Text(AppLocalizations.of(context)!.translate('receiptDialog.reprint'), style: const TextStyle(fontWeight: FontWeight.bold, inherit: false)),
                           ),
                         ),
                       ],
@@ -361,7 +362,7 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                               icon: const Icon(Icons.cancel_outlined, size: 18),
-                              label: const Text('결제 취소', style: TextStyle(fontWeight: FontWeight.bold)),
+                              label: Text(AppLocalizations.of(context)!.translate('receiptDialog.cancelPayment'), style: const TextStyle(fontWeight: FontWeight.bold, inherit: false)),
                             ),
                           ),
                         ],
@@ -394,11 +395,11 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('주문 취소'),
-        content: const Text('현재 주문을 취소하시겠습니까? (취소 영수증이 출력됩니다)'),
+        title: Text(AppLocalizations.of(context)!.translate('receiptDialog.cancelPayment')),
+        content: Text(AppLocalizations.of(context)!.translate('receiptDialog.cancelConfirm')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('아니오')),
-          TextButton(onPressed: () => Navigator.pop(context, true), style: TextButton.styleFrom(foregroundColor: AppTheme.error), child: const Text('예, 취소합니다')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(AppLocalizations.of(context)!.translate('common.no'))),
+          TextButton(onPressed: () => Navigator.pop(context, true), style: TextButton.styleFrom(foregroundColor: AppTheme.error), child: Text(AppLocalizations.of(context)!.translate('common.yes'))),
         ],
       ),
     );

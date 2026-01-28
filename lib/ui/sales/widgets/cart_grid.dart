@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/models/cart.dart';
 import '../../../core/models/cart_item.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../data/local/models.dart';
 
 typedef ValueChanged2<T1, T2> = void Function(T1 value1, T2 value2);
@@ -147,10 +148,10 @@ class _CartGridState extends State<CartGrid> {
             color: AppTheme.background,
             child: Row(
               children: [
-                Expanded(flex: 5, child: Text('NAME', style: _headerStyle)),
-                Expanded(flex: 2, child: Text('QTY', style: _headerStyle, textAlign: TextAlign.center)),
-                Expanded(flex: 2, child: Text('PRICE', style: _headerStyle, textAlign: TextAlign.center)),
-                Expanded(flex: 3, child: Text('TOTAL', style: _headerStyle, textAlign: TextAlign.right)),
+                Expanded(flex: 5, child: Text(AppLocalizations.of(context)!.name, style: _headerStyle)),
+                Expanded(flex: 2, child: Text(AppLocalizations.of(context)!.qty, style: _headerStyle, textAlign: TextAlign.center)),
+                Expanded(flex: 2, child: Text(AppLocalizations.of(context)!.price, style: _headerStyle, textAlign: TextAlign.center)),
+                Expanded(flex: 3, child: Text(AppLocalizations.of(context)!.total, style: _headerStyle, textAlign: TextAlign.right)),
               ],
             ),
           ),
@@ -250,7 +251,7 @@ class _CartGridState extends State<CartGrid> {
           ),
           const SizedBox(height: 16),
           Text(
-            '장바구니가 비어있습니다',
+            AppLocalizations.of(context)!.cartEmpty,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppTheme.textSecondary,
                 ),
@@ -269,13 +270,13 @@ class _CartGridState extends State<CartGrid> {
       ),
       child: Column(
         children: [
-          _buildSummaryRow('소계', _formatPrice(cart.subtotal)),
+          _buildSummaryRow(AppLocalizations.of(context)!.translate('sales.subtotal'), _formatPrice(cart.subtotal)),
           
           // 할인 내역 상세 표시
           ..._buildDiscountBreakdown(cart),
           
           if (cart.totalTax > 0)
-            _buildSummaryRow('세금', _formatPrice(cart.totalTax)),
+            _buildSummaryRow(AppLocalizations.of(context)!.translate('sales.tax'), _formatPrice(cart.totalTax)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
@@ -287,9 +288,9 @@ class _CartGridState extends State<CartGrid> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  '총 결제액',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  AppLocalizations.of(context)!.totalPayment,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   _formatPrice(cart.total),
@@ -337,7 +338,7 @@ class _CartGridState extends State<CartGrid> {
     }
     
     if (discountGroups.isEmpty) {
-      rows.add(_buildSummaryRow('할인 금액', _formatPrice(0)));
+      rows.add(_buildSummaryRow(AppLocalizations.of(context)!.discountAmount, _formatPrice(0)));
     } else {
       discountGroups.forEach((name, amount) {
         rows.add(_buildSummaryRow(

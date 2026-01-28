@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/app_localizations.dart';
 
 class ProductSearchBar extends StatelessWidget {
   const ProductSearchBar({
@@ -42,8 +43,8 @@ class ProductSearchBar extends StatelessWidget {
                       controller: TextEditingController(text: searchQuery)
                         ..selection = TextSelection.collapsed(offset: searchQuery.length),
                       onChanged: onSearchChanged,
-                      decoration: const InputDecoration(
-                        hintText: '상품명 또는 바코드를 입력하세요',
+                      decoration: InputDecoration(
+                        hintText: AppLocalizations.of(context)!.searchProduct,
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,

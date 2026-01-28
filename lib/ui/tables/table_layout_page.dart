@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/storage/auth_storage.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/local/app_database.dart';
@@ -89,13 +90,13 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
       body: Column(
         children: [
           TitleBar(
-            title: '테이블 주문',
+            title: AppLocalizations.of(context)!.tableOrder,
             onHomePressed: () => Navigator.pop(context),
           ),
           _buildSubHeader(),
           Expanded(
             child: _layouts.isEmpty
-                ? const Center(child: Text('설정된 테이블 레이아웃이 없습니다.'))
+                ? Center(child: Text(AppLocalizations.of(context)!.translate('tables.noLayouts') ?? '설정된 테이블 레이아웃이 없습니다.'))
                 : _buildLayoutView(),
           ),
         ],
@@ -176,12 +177,12 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _buildStatusIndicator(Colors.grey, '빈 테이블'),
+          _buildStatusIndicator(Colors.grey, AppLocalizations.of(context)!.translate('tables.empty')),
           const SizedBox(width: 16),
-          _buildStatusIndicator(AppTheme.warning, '주문 중'),
+          _buildStatusIndicator(AppTheme.warning, AppLocalizations.of(context)!.translate('tables.ordering')),
           const SizedBox(width: 16),
           Text(
-            '총 $total개',
+            '${AppLocalizations.of(context)!.translate('tables.total')} $total${AppLocalizations.of(context)!.translate('tables.count')}',
             style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
           ),
         ],
@@ -368,7 +369,7 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        hasOrder ? '${activeOrder['totalAmount'] ?? 0}원' : '비어있음',
+                        hasOrder ? '${activeOrder['totalAmount'] ?? 0}${AppLocalizations.of(context)!.translate('session.won')}' : AppLocalizations.of(context)!.translate('tables.empty'),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,

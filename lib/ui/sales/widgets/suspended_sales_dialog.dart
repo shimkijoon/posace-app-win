@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/i18n/app_localizations.dart';
 import '../../../../data/local/app_database.dart';
 import '../../../../core/storage/auth_storage.dart';
 import '../../../../data/remote/pos_suspended_api.dart';
@@ -49,7 +50,7 @@ class _SuspendedSalesDialogState extends State<SuspendedSalesDialog> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('보류 주문 로드 실패: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppLocalizations.of(context)!.translate('sales.suspendedOrderLoadFailed')}: $e')));
       }
     }
   }
@@ -68,7 +69,7 @@ class _SuspendedSalesDialogState extends State<SuspendedSalesDialog> {
       _loadSuspendedSales();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('보류 주문 삭제 실패: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppLocalizations.of(context)!.translate('sales.suspendedOrderDeleteFailed')}: $e')));
       }
     }
   }
@@ -106,10 +107,10 @@ class _SuspendedSalesDialogState extends State<SuspendedSalesDialog> {
             if (_isLoading)
               const Center(child: CircularProgressIndicator())
             else if (_suspendedSales.isEmpty)
-              const Center(
+              Center(
                 child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text('보류된 거래가 없습니다.', style: TextStyle(color: Colors.grey)),
+                  padding: const EdgeInsets.all(32),
+                  child: Text(AppLocalizations.of(context)!.translate('sales.noSuspendedOrders'), style: const TextStyle(color: Colors.grey)),
                 ),
               )
             else
@@ -140,7 +141,7 @@ class _SuspendedSalesDialogState extends State<SuspendedSalesDialog> {
                           children: [
                             TextButton(
                               onPressed: () => Navigator.pop(context, sale['id']),
-                              child: const Text('가져오기'),
+                              child: Text(AppLocalizations.of(context)!.translate('sales.retrieve')),
                             ),
                             IconButton(
                               onPressed: () => _deleteSale(sale['id']),

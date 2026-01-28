@@ -1,7 +1,10 @@
 import 'dart:typed_data';
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
 import '../../data/local/models.dart';
+import '../i18n/app_localizations.dart';
+import '../storage/auth_storage.dart';
 import 'esc_pos_encoder.dart';
 
 class ReceiptTemplates {
@@ -33,13 +36,49 @@ class ReceiptTemplates {
     return ' ' * (width - currentWidth) + text;
   }
 
-  static Future<Uint8List> saleReceipt(SaleModel sale, List<SaleItemModel> items, Map<String, ProductModel> productMap, {Map<String, String?> storeInfo = const {}}) async {
+  static Future<Uint8List> saleReceipt(SaleModel sale, List<SaleItemModel> items, Map<String, ProductModel> productMap, {Map<String, String?> storeInfo = const {}, BuildContext? context}) async {
     print('ReceiptTemplates: Generating sale receipt for sale ${sale.id}');
     final storeName = storeInfo['name'] ?? 'POSAce Store';
     final bizNo = storeInfo['businessNumber'] ?? '-';
     final address = storeInfo['address']?.replaceAll('||', ' ') ?? '-';
     final phone = storeInfo['phone'] ?? '-';
 
+    // Get translations if context is available
+    String businessNumberLabel = '사업자번호';
+    String addressLabel = '주소';
+    String phoneLabel = '전화';
+    String dateTimeLabel = '일시';
+    String transactionLabel = '거래 NO';
+    String productNameLabel = '상품명';
+    String qtyLabel = '수량';
+    String amountLabel = '금액';
+    String discountLabel = '할인';
+    String subtotalLabel = '소계';
+    String totalLabel = '합계';
+    String paymentMethodLabel = '결제수단';
+    String changeLabel = '거스름돈';
+    String thankYouMessage = '이용해 주셔서 감사합니다';
+    
+    if (context != null) {
+      final localizations = AppLocalizations.of(context);
+      if (localizations != null) {
+        businessNumberLabel = localizations.businessNumber;
+        addressLabel = localizations.address;
+        phoneLabel = localizations.phone;
+        dateTimeLabel = localizations.translate('receipt.dateTime');
+        transactionLabel = localizations.translate('receipt.transactionNumber');
+        productNameLabel = localizations.translate('sales.productName');
+        qtyLabel = localizations.translate('sales.qty');
+        amountLabel = localizations.translate('receipt.amount');
+        discountLabel = localizations.discount;
+        subtotalLabel = localizations.subtotal;
+        totalLabel = localizations.translate('sales.total');
+        paymentMethodLabel = localizations.translate('receipt.paymentMethod');
+        changeLabel = localizations.translate('receipt.change');
+        thankYouMessage = localizations.translate('receipt.thankYouMessage');
+      }
+    }
+    
     final encoder = EscPosEncoder();
     encoder.reset();
     
@@ -48,22 +87,22 @@ class ReceiptTemplates {
     await encoder.text(storeName, bold: true, doubleHeight: true, doubleWidth: true);
     encoder.lineFeed(1);
     encoder.setAlign('center');
-    await encoder.text('사업자번호: $bizNo');
+    await encoder.text('$businessNumberLabel: $bizNo');
     encoder.lineFeed();
-    await encoder.text('주소: $address');
+    await encoder.text('$addressLabel: $address');
     encoder.lineFeed();
-    await encoder.text('전화: $phone');
+    await encoder.text('$phoneLabel: $phone');
     encoder.lineFeed(2);
     
     encoder.setAlign('left');
-    await encoder.text('일시: ${_dateFormat.format(sale.createdAt)}');
+    await encoder.text('$dateTimeLabel: ${_dateFormat.format(sale.createdAt)}');
     encoder.lineFeed();
-    await encoder.text('거래 NO: ${sale.id.substring(0, 8)}');
+    await encoder.text('$transactionLabel: ${sale.id.substring(0, 8)}');
     encoder.lineFeed();
     await encoder.dashLine();
     
     // Items Header (Name: 20, Qty: 6, Amt: 16 -> Total 42)
-    String header = _padRight('상품명', 20) + _padLeft('수량', 6) + _padLeft('금액', 16);
+    String header = _padRight(productNameLabel, 20) + _padLeft(qtyLabel, 6) + _padLeft(amountLabel, 16);
     await encoder.text(header);
     encoder.lineFeed();
     await encoder.dashLine();
@@ -95,10 +134,10 @@ class ReceiptTemplates {
         try {
           final List<dynamic> itemDiscounts = jsonDecode(item.discountsJson!);
           for (var d in itemDiscounts) {
-            final dName = d['name'] ?? '할인';
+            final dName = d['name'] ?? discountLabel;
             final dAmount = d['amount'] ?? 0;
             if (dAmount > 0) {
-              String dLine = _padRight('  [할인] $dName', 26) + _padLeft('-${_currencyFormat.format(dAmount)}', 16);
+              String dLine = _padRight('  [$discountLabel] $dName', 26) + _padLeft('-${_currencyFormat.format(dAmount)}', 16);
               await encoder.text(dLine);
               encoder.lineFeed();
             }
@@ -117,7 +156,7 @@ class ReceiptTemplates {
     // Subtotal
     int subtotal = sale.totalAmount + sale.discountAmount;
     String subtotalVal = _currencyFormat.format(subtotal);
-    String subtotalLine = _padRight('소계:', 42 - _getDisplayWidth(subtotalVal)) + subtotalVal;
+    String subtotalLine = _padRight('$subtotalLabel:', 42 - _getDisplayWidth(subtotalVal)) + subtotalVal;
     await encoder.text(subtotalLine);
     encoder.lineFeed();
 
@@ -130,7 +169,7 @@ class ReceiptTemplates {
         try {
           final List<dynamic> cartDiscounts = jsonDecode(sale.cartDiscountsJson!);
           for (var d in cartDiscounts) {
-             final dName = d['name'] ?? '할인';
+             final dName = d['name'] ?? discountLabel;
              final dAmount = d['amount'] ?? 0;
              if (dAmount > 0) {
                String dVal = '-${_currencyFormat.format(dAmount)}';
@@ -144,21 +183,21 @@ class ReceiptTemplates {
 
       // Total Discount
       String discVal = '-${_currencyFormat.format(sale.discountAmount)}';
-      String discLine = _padRight('총 할인액:', 42 - _getDisplayWidth(discVal)) + discVal;
+      String discLine = _padRight('${discountLabel}:', 42 - _getDisplayWidth(discVal)) + discVal;
       await encoder.text(discLine);
       encoder.lineFeed();
     }
 
     encoder.setStyles(bold: true);
-    String totalLabel = '총 결제액:';
+    String totalLabelText = '$totalLabel:';
     String totalVal = _currencyFormat.format(sale.totalAmount);
-    String totalLine = _padRight(totalLabel, 42 - _getDisplayWidth(totalVal)) + totalVal;
+    String totalLine = _padRight(totalLabelText, 42 - _getDisplayWidth(totalVal)) + totalVal;
     await encoder.text(totalLine);
     encoder.lineFeed(2);
     
     // Payment
     encoder.setStyles(bold: false);
-    await encoder.text('결제수단: ${sale.paymentMethod}');
+    await encoder.text('$paymentMethodLabel: ${sale.paymentMethod}');
     encoder.lineFeed(2);
     
     encoder.cut();

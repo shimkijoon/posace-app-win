@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/models/cart.dart';
 import '../../core/models/cart_item.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../data/local/app_database.dart';
 import '../../data/local/models.dart';
 import 'package:uuid/uuid.dart';
@@ -126,7 +127,7 @@ class _SalesPageState extends State<SalesPage> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('데이터 로드 실패: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)!.translate('sales.dataLoadFailed')}: $e')),
         );
       }
     }
@@ -237,7 +238,7 @@ class _SalesPageState extends State<SalesPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('상품을 찾을 수 없습니다: $barcode'),
+            content: Text('${AppLocalizations.of(context)!.translate('sales.productNotFound')}: $barcode'),
             backgroundColor: AppTheme.error,
           ),
         );
@@ -259,9 +260,11 @@ class _SalesPageState extends State<SalesPage> {
 
   Future<void> _onDiscount() async {
     if (_cart.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('할인을 적용할 상품이 없습니다')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.translate('sales.noItemsToDiscount'))),
+        );
+      }
       return;
     }
 
@@ -299,21 +302,23 @@ class _SalesPageState extends State<SalesPage> {
 
   void _onCancel() {
     if (_cart.isEmpty && _selectedMember == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('취소할 내역이 없습니다')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.translate('sales.nothingToCancel'))),
+        );
+      }
       return;
     }
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('거래 취소'),
-        content: const Text('현재 거래 및 선택된 회원 정보를 취소하시겠습니까?'),
+        title: Text(AppLocalizations.of(context)!.translate('sales.cancelTransaction')),
+        content: Text(AppLocalizations.of(context)!.translate('sales.cancelTransactionConfirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('아니오'),
+            child: Text(AppLocalizations.of(context)!.translate('common.no')),
           ),
           TextButton(
             onPressed: () {
@@ -324,13 +329,13 @@ class _SalesPageState extends State<SalesPage> {
               });
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('거래가 취소되었습니다')),
+                SnackBar(content: Text(AppLocalizations.of(context)!.translate('sales.transactionCancelled'))),
               );
             },
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.error,
             ),
-            child: const Text('예'),
+            child: Text(AppLocalizations.of(context)!.translate('common.yes')),
           ),
         ],
       ),
@@ -363,11 +368,11 @@ class _SalesPageState extends State<SalesPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('거래 보류'),
-        content: const Text('현재 거래를 보류하시겠습니까? (다른 POS에서도 확인 가능)'),
+        title: Text(AppLocalizations.of(context)!.translate('sales.holdTransaction')),
+        content: Text(AppLocalizations.of(context)!.translate('sales.holdTransactionConfirm')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('아니오')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('예')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(AppLocalizations.of(context)!.translate('common.no'))),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(AppLocalizations.of(context)!.translate('common.yes'))),
         ],
       ),
     );
@@ -409,12 +414,12 @@ class _SalesPageState extends State<SalesPage> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('거래가 서버에 보류되었습니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.translate('sales.transactionHeld'))));
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('거래 보류 실패: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppLocalizations.of(context)!.translate('sales.holdTransactionFailed')}: $e')));
       }
     }
   }
@@ -467,14 +472,16 @@ class _SalesPageState extends State<SalesPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('보류 거래 호출 실패: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppLocalizations.of(context)!.translate('sales.recallHeldFailed')}: $e')));
       }
     }
   }
 
   Future<void> _onSplitCheckout() async {
     if (_cart.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('결제할 상품이 없습니다')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.translate('sales.noItemsToCheckout') ?? '결제할 상품이 없습니다')));
+      }
       return;
     }
 
@@ -490,7 +497,9 @@ class _SalesPageState extends State<SalesPage> {
 
   Future<void> _onOrder() async {
     if (_cart.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('주문할 상품이 없습니다.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.translate('sales.noItemsToOrder'))));
+      }
       return;
     }
 
@@ -520,13 +529,13 @@ class _SalesPageState extends State<SalesPage> {
       await api.createOrUpdateOrder(payload);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('주문이 등록되었습니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.translate('sales.orderRegistered'))));
         Navigator.of(context).pop(); // Return to table layout
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('주문 등록 실패: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${AppLocalizations.of(context)!.translate('sales.orderRegistrationFailed')}: $e')));
       }
     }
   }
@@ -623,19 +632,21 @@ class _SalesPageState extends State<SalesPage> {
 
         _printReceipt(sale, items);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('결제가 완료되었습니다'),
-            backgroundColor: AppTheme.success,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.translate('sales.paymentCompleted') ?? '결제가 완료되었습니다'),
+              backgroundColor: AppTheme.success,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('결제 처리 중 오류 발생: $e'),
+            content: Text('${AppLocalizations.of(context)!.translate('sales.paymentError') ?? '결제 처리 중 오류 발생'}: $e'),
             backgroundColor: AppTheme.error,
           ),
         );
@@ -663,7 +674,7 @@ class _SalesPageState extends State<SalesPage> {
           printer.connect(rPort, baudRate: rBaud);
         }
         if (printer.isConnected(rPort)) {
-          final receiptBytes = await ReceiptTemplates.saleReceipt(sale, items, productMap, storeInfo: storeInfo);
+          final receiptBytes = await ReceiptTemplates.saleReceipt(sale, items, productMap, storeInfo: storeInfo, context: context);
           print('SalesPage: Receipt generated, sending ${receiptBytes.length} bytes to $rPort');
           await printer.printBytes(rPort, receiptBytes);
         } else {
@@ -707,10 +718,14 @@ class _SalesPageState extends State<SalesPage> {
         children: [
           // 1. 상단 타이틀바
           TitleBar(
-            title: widget.tableId != null ? '테이블 주문 - ${widget.tableName}' : '판매',
+            title: widget.tableId != null 
+                ? '${AppLocalizations.of(context)!.tableOrder} - ${widget.tableName}' 
+                : AppLocalizations.of(context)!.sales,
             onHomePressed: _onHomePressed,
             leadingIcon: widget.tableId != null ? Icons.grid_view : Icons.home,
-            leadingTooltip: widget.tableId != null ? '테이블로' : '홈으로',
+            leadingTooltip: widget.tableId != null 
+                ? AppLocalizations.of(context)!.translate('sales.backToTable')
+                : AppLocalizations.of(context)!.translate('common.backToHome'),
           ),
 
           // 테이블 정보 바 (테이블 모드일 때만 표시)
@@ -787,9 +802,9 @@ class _SalesPageState extends State<SalesPage> {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Text(
-                                  '결제하기',
-                                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                                Text(
+                                  AppLocalizations.of(context)!.proceedToPayment,
+                                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                                 ),
                                 const SizedBox(width: 12),
                                 Text(

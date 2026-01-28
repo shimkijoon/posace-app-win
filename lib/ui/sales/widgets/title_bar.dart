@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/app_config.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/app_localizations.dart';
 
 class TitleBar extends StatelessWidget {
   const TitleBar({
@@ -8,13 +9,14 @@ class TitleBar extends StatelessWidget {
     required this.title,
     required this.onHomePressed,
     this.leadingIcon = Icons.home,
-    this.leadingTooltip = '홈으로',
-  });
+    String? leadingTooltip,
+  }) : _leadingTooltip = leadingTooltip;
+
+  final String? _leadingTooltip;
 
   final String title;
   final VoidCallback onHomePressed;
   final IconData leadingIcon;
-  final String leadingTooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +38,7 @@ class TitleBar extends StatelessWidget {
               IconButton(
                 onPressed: onHomePressed,
                 icon: Icon(leadingIcon, color: AppTheme.primary),
-                tooltip: leadingTooltip,
+                tooltip: _leadingTooltip ?? AppLocalizations.of(context)!.translate('common.backToHome'),
                 style: IconButton.styleFrom(
                   backgroundColor: AppTheme.primary.withOpacity(0.05),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

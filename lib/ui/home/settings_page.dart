@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/printer/serial_printer_service.dart';
 import '../../core/printer/esc_pos_encoder.dart';
 import '../../core/storage/settings_storage.dart';
@@ -295,7 +296,7 @@ class _SettingsPageState extends State<SettingsPage> {
       body: Column(
         children: [
           TitleBar(
-            title: '환경설정',
+            title: AppLocalizations.of(context)!.translate('settings.title'),
             onHomePressed: () => Navigator.pop(context),
           ),
           Expanded(
@@ -305,11 +306,11 @@ class _SettingsPageState extends State<SettingsPage> {
                   padding: const EdgeInsets.all(24),
                   children: [
                     _buildSection(
-                      title: '일반 설정',
+                      title: AppLocalizations.of(context)!.translate('settings.general'),
                       children: [
                         SwitchListTile(
-                          title: const Text('영업 시작/마감 기능 사용'),
-                          subtitle: const Text('비활성화 시 세션 오픈 없이 바로 판매가 가능합니다.'),
+                          title: Text(AppLocalizations.of(context)!.translate('settings.sessionFeature')),
+                          subtitle: Text(AppLocalizations.of(context)!.translate('settings.sessionFeatureDesc')),
                           value: _usePosSession,
                           onChanged: (val) => setState(() => _usePosSession = val),
                         ),
@@ -317,7 +318,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 24),
                     _buildPrinterSection(
-                      title: '영수증 프린터 설정',
+                      title: AppLocalizations.of(context)!.translate('settings.receiptPrinter'),
                       portValue: _receiptPort,
                       baudValue: _receiptBaudInt, // Fix variable name
                       onPortChanged: (val) => setState(() => _receiptPort = val),
@@ -326,7 +327,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     const SizedBox(height: 24),
                     _buildPrinterSection(
-                      title: '주방 프린터 설정',
+                      title: AppLocalizations.of(context)!.translate('settings.kitchenPrinter'),
                       portValue: _kitchenPort,
                       baudValue: _kitchenBaud,
                       onPortChanged: (val) => setState(() => _kitchenPort = val),
@@ -443,16 +444,16 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const Divider(height: 1),
           ListTile(
-            title: const Text('시리얼 포트 (COM)'),
+            title: Text(AppLocalizations.of(context)!.translate('settings.serialPort')),
             trailing: DropdownButton<String>(
               value: portValue,
               items: _availablePorts.map((port) => DropdownMenuItem(value: port, child: Text(port))).toList(),
               onChanged: onPortChanged,
-              hint: const Text('포트 선택'),
+              hint: Text(AppLocalizations.of(context)!.translate('common.select') ?? '선택'),
             ),
           ),
           ListTile(
-            title: const Text('통신 속도 (Baud Rate)'),
+            title: Text(AppLocalizations.of(context)!.translate('settings.baudRate')),
             trailing: DropdownButton<int>(
               value: baudValue,
               items: _baudRates.map((baud) => DropdownMenuItem(value: baud, child: Text(baud.toString()))).toList(),
@@ -463,7 +464,7 @@ class _SettingsPageState extends State<SettingsPage> {
             padding: const EdgeInsets.all(16),
             child: ElevatedButton(
               onPressed: onTestPrint,
-              child: const Text('테스트 인쇄'),
+              child: Text(AppLocalizations.of(context)!.translate('settings.testPrint')),
             ),
           ),
         ],

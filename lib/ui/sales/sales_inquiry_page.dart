@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../data/local/app_database.dart';
 import '../../data/local/models.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -126,9 +127,9 @@ class _SalesInquiryPageState extends State<SalesInquiryPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryItem('총 매출', currencyFormat.format(totalAmount), AppTheme.primary),
-          _buildSummaryItem('결제 건수', '$completedCount건', AppTheme.success),
-          _buildSummaryItem('취소 건수', '$cancelledCount건', AppTheme.error),
+          _buildSummaryItem(AppLocalizations.of(context)!.translate('salesInquiry.totalSales'), currencyFormat.format(totalAmount), AppTheme.primary),
+          _buildSummaryItem(AppLocalizations.of(context)!.translate('salesInquiry.paymentCount'), '$completedCount${AppLocalizations.of(context)!.translate('tables.count')}', AppTheme.success),
+          _buildSummaryItem(AppLocalizations.of(context)!.translate('salesInquiry.cancelCount'), '$cancelledCount${AppLocalizations.of(context)!.translate('tables.count')}', AppTheme.error),
         ],
       ),
     );
@@ -146,8 +147,8 @@ class _SalesInquiryPageState extends State<SalesInquiryPage> {
 
   String _localizePaymentMethod(String method) {
     switch (method.toUpperCase()) {
-      case 'CARD': return '카드';
-      case 'CASH': return '현금';
+      case 'CARD': return AppLocalizations.of(context)!.translate('salesInquiry.card');
+      case 'CASH': return AppLocalizations.of(context)!.translate('salesInquiry.cash');
       default: return method;
     }
   }
@@ -162,7 +163,7 @@ class _SalesInquiryPageState extends State<SalesInquiryPage> {
       body: Column(
         children: [
           TitleBar(
-            title: '매출 조회',
+            title: AppLocalizations.of(context)!.translate('salesInquiry.title'),
             onHomePressed: () => Navigator.pop(context),
           ),
           

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../data/local/models.dart';
 
 class CategoryTabs extends StatelessWidget {
@@ -25,7 +26,7 @@ class CategoryTabs extends StatelessWidget {
           children: [
             // 전체 카테고리 버튼
             _CategoryTab(
-              label: '전체',
+              label: AppLocalizations.of(context)!.all,
               isSelected: selectedCategoryId == null,
               onTap: () => onCategorySelected(null),
             ),

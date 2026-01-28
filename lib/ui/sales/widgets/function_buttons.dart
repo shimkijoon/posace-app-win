@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/app_localizations.dart';
 
 class FunctionButtons extends StatelessWidget {
   const FunctionButtons({
@@ -31,7 +32,7 @@ class FunctionButtons extends StatelessWidget {
         children: [
           Expanded(
             child: _FunctionButton(
-              label: '할인',
+              label: AppLocalizations.of(context)!.discount,
               icon: Icons.local_offer_outlined,
               color: AppTheme.textSecondary,
               onTap: onDiscount,
@@ -40,7 +41,7 @@ class FunctionButtons extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: _FunctionButton(
-              label: '회원',
+              label: AppLocalizations.of(context)!.member,
               icon: Icons.person_outline,
               color: AppTheme.textSecondary,
               onTap: onMember,
@@ -49,7 +50,7 @@ class FunctionButtons extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: _FunctionButton(
-              label: '거래취소',
+              label: AppLocalizations.of(context)!.cancelTransaction,
               icon: Icons.delete_outline,
               color: AppTheme.error,
               onTap: onCancel,
@@ -59,7 +60,7 @@ class FunctionButtons extends StatelessWidget {
           if (onOrder != null)
             Expanded(
               child: _FunctionButton(
-                label: '주문등록',
+                label: AppLocalizations.of(context)!.translate('sales.registerOrder'),
                 icon: Icons.send,
                 color: const Color(0xFF1B64DA), // Toast Blue
                 onTap: onOrder!,
@@ -69,7 +70,7 @@ class FunctionButtons extends StatelessWidget {
           else
             Expanded(
               child: _FunctionButton(
-                label: '거래보류',
+                label: AppLocalizations.of(context)!.holdTransaction,
                 icon: Icons.pause_circle_outline,
                 color: AppTheme.warning,
                 onTap: onHold,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/i18n/app_localizations.dart';
 import '../../../../data/local/models.dart';
 
 class DiscountSelectionDialog extends StatelessWidget {
@@ -44,10 +45,10 @@ class DiscountSelectionDialog extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             if (cartDiscounts.isEmpty)
-              const Center(
+              Center(
                 child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text('사용 가능한 장바구니 할인이 없습니다.', style: TextStyle(color: Colors.grey)),
+                  padding: const EdgeInsets.all(32),
+                  child: Text(AppLocalizations.of(context)!.translate('sales.noCartDiscounts'), style: const TextStyle(color: Colors.grey)),
                 ),
               )
             else
@@ -107,7 +108,7 @@ class DiscountSelectionDialog extends StatelessWidget {
                       side: const BorderSide(color: AppTheme.error),
                       foregroundColor: AppTheme.error,
                     ),
-                    child: const Text('할인 모두 취소'),
+                    child: Text(AppLocalizations.of(context)!.translate('sales.removeAllDiscounts')),
                   ),
                 ),
               ],
