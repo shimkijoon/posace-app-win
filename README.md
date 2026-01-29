@@ -7,7 +7,12 @@ Flutter 기반 Windows POS 클라이언트 애플리케이션.
 ### 프로덕션 배포 설정
 - **도메인 적용**: API 기본 URL을 `https://api.posace.com/api/v1`로 변경
 - **MSIX 빌드 구성**: Windows 설치 패키지 자동 생성 기능 추가
-- **버전**: 1.0.0+1
+- **버전 업데이트**: 1.0.0+1 → 1.0.1+2
+- **GitHub Actions CI/CD**: 자동 빌드 및 릴리즈 워크플로우 추가
+  - 태그 푸시 시 자동으로 MSIX 빌드
+  - GitHub Releases에 자동 배포
+  - 최신 버전 다운로드: `releases/latest/download/posace_app_win.msix`
+- **프로덕션 보안 강화**: 테스트 계정 선택 UI를 디버그 모드에서만 표시 (`kDebugMode`)
 
 ### 앱 종료 개선
 - **종료 확인 팝업 추가**: 창 닫기(X 버튼) 클릭 시 종료 확인 다이얼로그 표시
