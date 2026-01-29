@@ -117,4 +117,4 @@ msix_config:
   msix_version: 1.0.1.0
   logo_path: assets/app_icon.png
   capabilities: internetClient, privateNetworkClientServer
-  install_certificate: true
+  install_certificate: false
