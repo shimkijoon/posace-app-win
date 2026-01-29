@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/i18n/app_localizations.dart';
 import '../../core/printer/serial_printer_service.dart';
 import '../../core/printer/esc_pos_encoder.dart';
+import '../../core/printer/receipt_templates.dart';
 import '../../core/storage/settings_storage.dart';
 import '../../core/storage/auth_storage.dart';
 import '../../core/printer/printer_manager.dart';
@@ -135,18 +136,47 @@ class _SettingsPageState extends State<SettingsPage> {
     print('SettingsPage: Starting test print for $title');
     
     try {
-      final encoder = EscPosEncoder();
-      encoder.reset();
-      encoder.setAlign('center');
-      await encoder.text('*** $title ***', bold: true, doubleHeight: true, doubleWidth: true);
-      encoder.lineFeed(1);
-      await encoder.text('Test Print Successful!', align: 'center');
-      encoder.lineFeed();
-      await encoder.text('포스에이스 프린트 테스트', align: 'center');
-      encoder.lineFeed(2);
-      encoder.cut();
+      // 샘플 데이터 생성
+      final sampleSale = _createSampleSale();
+      final sampleItems = _createSampleItems();
+      final sampleProducts = _createSampleProducts();
       
-      final bytes = encoder.bytes;
+      // 백오피스 설정 가져오기
+      final sessionInfo = await _authStorage.getSessionInfo();
+      final storeInfo = {
+        'storeName': sessionInfo['storeName'] ?? '포스에이스 테스트 매장',
+        'storeAddress': sessionInfo['storeAddress'] ?? '서울특별시 강남구 테헤란로 123',
+        'storePhone': sessionInfo['storePhone'] ?? '02-1234-5678',
+        'businessNumber': sessionInfo['businessNumber'] ?? '123-45-67890',
+      };
+      
+      // 매장 설정 가져오기 (없으면 null)
+      StoreSettingsModel? storeSettings;
+      try {
+        // TODO: 로컬 DB에서 매장 설정 가져오기
+        // final storeSettings = await widget.database.getStoreSettings();
+      } catch (e) {
+        print('Store settings not available: $e');
+      }
+      
+      // 영수증 또는 주방주문서 생성
+      final bytes = type == 'receipt'
+        ? await ReceiptTemplates.saleReceipt(
+            sampleSale,
+            sampleItems,
+            sampleProducts,
+            storeInfo: storeInfo,
+            settings: storeSettings,
+            context: context,
+          )
+        : await ReceiptTemplates.kitchenOrder(
+            sampleSale,
+            sampleItems,
+            sampleProducts,
+            itemOptions: _createSampleOptions(sampleItems),
+            context: context,
+          );
+      
       bool success = false;
       
       if (type == 'receipt') {
@@ -162,10 +192,138 @@ class _SettingsPageState extends State<SettingsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(msg)),
         );
+      } else if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$title 테스트 인쇄 완료')),
+        );
       }
     } catch (e) {
       print('SettingsPage: Test print error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('테스트 인쇄 중 오류 발생: $e')),
+        );
+      }
     }
+  }
+  
+  SaleModel _createSampleSale() {
+    return SaleModel(
+      id: 'test-${DateTime.now().millisecondsSinceEpoch}',
+      storeId: 'test-store',
+      posId: 'test-pos',
+      sessionId: 'test-session',
+      employeeId: 'test-employee',
+      totalAmount: 23100,
+      paidAmount: 23100,
+      paymentMethod: 'CASH',
+      status: 'COMPLETED',
+      createdAt: DateTime.now(),
+      taxAmount: 2100,
+      discountAmount: 2000,
+    );
+  }
+  
+  List<SaleItemModel> _createSampleItems() {
+    return [
+      SaleItemModel(
+        id: 'item-1',
+        saleId: 'test-sale',
+        productId: 'prod-1',
+        qty: 2,
+        price: 4500,
+        discountAmount: 0,
+      ),
+      SaleItemModel(
+        id: 'item-2',
+        saleId: 'test-sale',
+        productId: 'prod-2',
+        qty: 1,
+        price: 5000,
+        discountAmount: 0,
+      ),
+      SaleItemModel(
+        id: 'item-3',
+        saleId: 'test-sale',
+        productId: 'prod-3',
+        qty: 1,
+        price: 7000,
+        discountAmount: 2000,
+      ),
+    ];
+  }
+  
+  Map<String, ProductModel> _createSampleProducts() {
+    return {
+      'prod-1': ProductModel(
+        id: 'prod-1',
+        storeId: 'test-store',
+        categoryId: 'cat-1',
+        name: '아메리카노',
+        type: 'SINGLE',
+        price: 4500,
+        stockEnabled: false,
+        isActive: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+      'prod-2': ProductModel(
+        id: 'prod-2',
+        storeId: 'test-store',
+        categoryId: 'cat-1',
+        name: '카페라떼',
+        type: 'SINGLE',
+        price: 5000,
+        stockEnabled: false,
+        isActive: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+      'prod-3': ProductModel(
+        id: 'prod-3',
+        storeId: 'test-store',
+        categoryId: 'cat-2',
+        name: '치즈케이크',
+        type: 'SINGLE',
+        price: 7000,
+        stockEnabled: false,
+        isActive: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    };
+  }
+  
+  Map<String, List<ProductOptionModel>> _createSampleOptions(List<SaleItemModel> items) {
+    // 샘플 옵션: 아메리카노에 휘핑크림과 샷 추가
+    return {
+      items[0].id: [
+        ProductOptionModel(
+          id: 'opt-1',
+          groupId: 'group-1',
+          name: '휘핑크림 추가',
+          priceAdjustment: 500,
+          sortOrder: 1,
+        ),
+        ProductOptionModel(
+          id: 'opt-2',
+          groupId: 'group-2',
+          name: '샷 추가',
+          priceAdjustment: 500,
+          sortOrder: 2,
+        ),
+      ],
+      // 카페라떼에 시럽 추가
+      items[1].id: [
+        ProductOptionModel(
+          id: 'opt-3',
+          groupId: 'group-3',
+          name: '바닐라 시럽',
+          priceAdjustment: 500,
+          sortOrder: 1,
+        ),
+      ],
+    };
   }
 
   void _addKitchenStation() {
@@ -387,7 +545,13 @@ class _SettingsPageState extends State<SettingsPage> {
                     _buildSection(
                       title: AppLocalizations.of(context)!.translate('settings.kitchenPrinter') ?? '주방 스테이션 관리',
                       children: [
-                        ..._kitchenStations.map((station) => _buildKitchenStationCard(station)).toList(),
+                        // 주방이 1개일 때는 항상 펼쳐진 Card, 여러 개일 때는 ExpansionTile
+                        ..._kitchenStations.map((station) {
+                          final isSingleKitchen = _kitchenStations.length == 1;
+                          return isSingleKitchen 
+                            ? _buildExpandedKitchenCard(station)
+                            : _buildKitchenStationCard(station);
+                        }).toList(),
                         Padding(
                           padding: const EdgeInsets.all(16),
                           child: OutlinedButton.icon(
@@ -492,6 +656,144 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Widget _buildExpandedKitchenCard(KitchenStationModel station) {
+    Map<String, dynamic> config = {};
+    if (station.deviceConfig != null) {
+      try { config = json.decode(station.deviceConfig!); } catch (_) {}
+    }
+
+    final typeStr = config['type'] as String? ?? 'serial';
+    final type = PrinterConnectionType.values.firstWhere((e) => e.name == typeStr, orElse: () => PrinterConnectionType.serial);
+    final connectionId = config['connectionId'] as String?;
+    final baud = config['baud'] as int? ?? 9600;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: station.isDefault ? BorderSide(color: AppTheme.primary.withOpacity(0.5), width: 2) : BorderSide.none,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    station.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+                if (station.isDefault)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text('기본', style: TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              station.deviceType == 'NONE' 
+                ? '장치 없음' 
+                : '${type == PrinterConnectionType.windows ? "WINDOWS PRINTER" : type.name.toUpperCase()} - ${connectionId ?? "미설정"}',
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+            ),
+            const Divider(height: 32),
+            // Content
+            TextFormField(
+              initialValue: station.name,
+              decoration: const InputDecoration(labelText: '주방 이름', border: OutlineInputBorder()),
+              onChanged: (val) {
+                setState(() {
+                  final idx = _kitchenStations.indexWhere((s) => s.id == station.id);
+                  if (idx != -1) {
+                    _kitchenStations[idx] = KitchenStationModel(
+                      id: station.id,
+                      storeId: station.storeId,
+                      name: val,
+                      deviceType: station.deviceType,
+                      deviceConfig: station.deviceConfig,
+                      isDefault: station.isDefault,
+                      createdAt: station.createdAt,
+                      updatedAt: DateTime.now(),
+                    );
+                  }
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: station.deviceType,
+              decoration: const InputDecoration(labelText: '장치 유형', border: OutlineInputBorder()),
+              items: const [
+                DropdownMenuItem(value: 'PRINTER', child: Text('영수증 프린터')),
+                DropdownMenuItem(
+                  value: 'KDS',
+                  enabled: false,
+                  child: Text(
+                    '주방 모니터(KDS) - 준비 중',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+                DropdownMenuItem(value: 'NONE', child: Text('출력 안함')),
+              ],
+              onChanged: (val) {
+                setState(() {
+                  final idx = _kitchenStations.indexWhere((s) => s.id == station.id);
+                  if (idx != -1) {
+                    _kitchenStations[idx] = KitchenStationModel(
+                      id: station.id,
+                      storeId: station.storeId,
+                      name: station.name,
+                      deviceType: val!,
+                      deviceConfig: station.deviceConfig,
+                      isDefault: station.isDefault,
+                      createdAt: station.createdAt,
+                      updatedAt: DateTime.now(),
+                    );
+                  }
+                });
+              },
+            ),
+            if (station.deviceType == 'PRINTER') ...[
+              const SizedBox(height: 16),
+              _buildPrinterSettingsInline(
+                type: type,
+                connectionId: connectionId,
+                baud: baud,
+                onConfigChanged: (newConfig) {
+                  setState(() {
+                    final idx = _kitchenStations.indexWhere((s) => s.id == station.id);
+                    if (idx != -1) {
+                      _kitchenStations[idx] = KitchenStationModel(
+                        id: station.id,
+                        storeId: station.storeId,
+                        name: station.name,
+                        deviceType: station.deviceType,
+                        deviceConfig: json.encode(newConfig),
+                        isDefault: station.isDefault,
+                        createdAt: station.createdAt,
+                        updatedAt: DateTime.now(),
+                      );
+                    }
+                  });
+                },
+                onTestPrint: () => _testPrint('kitchen', station: station),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildKitchenStationCard(KitchenStationModel station) {
     Map<String, dynamic> config = {};
     if (station.deviceConfig != null) {
@@ -530,7 +832,9 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
         subtitle: Text(
-          station.deviceType == 'NONE' ? '장치 없음' : '${type.name.toUpperCase()} - ${connectionId ?? "미설정"}',
+          station.deviceType == 'NONE' 
+            ? '장치 없음' 
+            : '${type == PrinterConnectionType.windows ? "WINDOWS PRINTER" : type.name.toUpperCase()} - ${connectionId ?? "미설정"}',
           style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
         ),
         trailing: IconButton(
@@ -569,7 +873,14 @@ class _SettingsPageState extends State<SettingsPage> {
                   decoration: const InputDecoration(labelText: '장치 유형', border: OutlineInputBorder()),
                   items: const [
                     DropdownMenuItem(value: 'PRINTER', child: Text('영수증 프린터')),
-                    DropdownMenuItem(value: 'KDS', child: Text('주방 모니터(KDS)')),
+                    DropdownMenuItem(
+                      value: 'KDS',
+                      enabled: false,
+                      child: Text(
+                        '주방 모니터(KDS) - 준비 중',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
                     DropdownMenuItem(value: 'NONE', child: Text('출력 안함')),
                   ],
                   onChanged: (val) {
@@ -639,7 +950,10 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(width: 8),
             DropdownButton<PrinterConnectionType>(
               value: type,
-              items: PrinterConnectionType.values.map((t) => DropdownMenuItem(value: t, child: Text(t.name.toUpperCase()))).toList(),
+              items: PrinterConnectionType.values.map((t) => DropdownMenuItem(
+                value: t, 
+                child: Text(t == PrinterConnectionType.windows ? 'WINDOWS PRINTER' : t.name.toUpperCase())
+              )).toList(),
               onChanged: (val) {
                 onConfigChanged({
                   'type': val!.name,
@@ -721,7 +1035,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   value: type,
                   items: PrinterConnectionType.values.map((t) => DropdownMenuItem(
                     value: t, 
-                    child: Text(t.name.toUpperCase())
+                    child: Text(t == PrinterConnectionType.windows ? 'WINDOWS PRINTER' : t.name.toUpperCase())
                   )).toList(),
                   onChanged: onTypeChanged,
                 ),

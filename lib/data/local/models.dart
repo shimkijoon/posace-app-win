@@ -5,6 +5,7 @@ import './models/bundle_models.dart';
 import './models/employee_model.dart';
 import './models/session_model.dart';
 import './models/payment_model.dart';
+import './models/store_settings_model.dart';
 
 export './models/taxes_models.dart';
 export './models/options_models.dart';
@@ -12,6 +13,8 @@ export './models/bundle_models.dart';
 export './models/employee_model.dart';
 export './models/session_model.dart';
 export './models/payment_model.dart';
+export './models/store_settings_model.dart';
+
 
 class CategoryModel {
   final String id;

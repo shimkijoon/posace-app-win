@@ -1,6 +1,9 @@
 {
   "app": {
-    "name": "POSAce"
+    "name": "POSAce",
+    "exit": "結束",
+    "exitConfirmTitle": "結束確認",
+    "exitConfirmMessage": "確定要關閉POS程式嗎？\n未儲存的工作可能會遺失。"
   },
   "auth": {
     "logout": "登出",
@@ -33,6 +36,12 @@
     "sessionNotUsed": "未使用營業",
     "enterOpeningAmount": "請輸入營業準備金(現金)。",
     "enterClosingAmount": "請輸入最終現金餘額。"
+  },
+  "taxes": {
+    "title": "稅金"
+  },
+  "receipt": {
+    "kitchenOrder": "廚房訂單"
   },
   "sales": {
     "title": "銷售",

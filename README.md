@@ -2,15 +2,43 @@
 
 Flutter 기반 Windows POS 클라이언트 애플리케이션.
 
+## 최근 업데이트 (2026-01-29)
+
+### 앱 종료 개선
+- **종료 확인 팝업 추가**: 창 닫기(X 버튼) 클릭 시 종료 확인 다이얼로그 표시
+- **window_manager 통합**: Windows 네이티브 창 제어를 위한 패키지 추가
+- **우아한 종료**: 리소스 정리 후 50ms 딜레이로 빠른 종료 처리
+
+### 프린터 기능 개선
+- **자동 연결**: 시리얼 프린터 미연결 시 자동 연결 시도
+- **주방주문서 양식 개선**: 해외 주방 스타일 적용 (예: "2 X 아메리카노")
+- **옵션 출력**: 주방주문서에 상품 옵션 표시 (예: "+ 휘핑크림 추가")
+- **테스트 인쇄 개선**: 실제 양식 기반 샘플 영수증/주방주문서 출력
+- **Windows 프린터 명칭 개선**: "WINDOWS" → "WINDOWS PRINTER"로 명확화
+
+### 주방 프린터 설정 개선
+- **단일 주방 최적화**: 주방이 1개인 경우 선택 단계 생략, 직접 설정 화면 표시
+- **KDS 준비 중 표시**: KDS 옵션 비활성화 및 "준비 중" 안내
+
+### 번역 개선
+- **번역 키 누락 수정**: `taxes.title`, `receipt.kitchenOrder` 등 추가
+- **번역 헬퍼 함수**: `_translate()` 함수로 fallback 처리 개선
+- **모든 언어 지원**: ko, en, ja, zh-TW, zh-HK
+
 ## 요구사항
 
 - Flutter 3.38.7 이상
 - Visual Studio 2026 또는 2022 (Desktop development with C++ 워크로드)
 - Windows 10/11
+- **Windows Developer Mode** (플러그인 사용을 위한 symlink 지원)
 
 ## 로컬 실행
 
 ```bash
+# Developer Mode 활성화
+start ms-settings:developers
+
+# 앱 실행
 flutter run -d windows --dart-define=API_BASE_URL=http://localhost:3000/api/v1
 ```
 
@@ -28,6 +56,9 @@ flutter run -d windows --dart-define=API_BASE_URL=http://localhost:3000/api/v1
 - ✅ 로컬 SQLite 데이터베이스 저장
 - ✅ 자동/수동 동기화 지원
 - ✅ 증분 동기화 지원 (`updatedAfter` 파라미터)
+- ✅ **동적 영수증 렌더링**: 백오피스 설정을 기반으로 한 다국어 영수증 출력.
+- ✅ **국가별 포맷팅**: LocaleHelper를 통한 통화(₩, $, ¥ 등) 및 날짜 형식 자동 변환.
+- ✅ **글로벌 i18n**: 7개 로케일 지원 및 실시간 UI 언어 전환.
 
 ## 기술 스택
 

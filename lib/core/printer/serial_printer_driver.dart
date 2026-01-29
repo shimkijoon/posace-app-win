@@ -30,6 +30,15 @@ class SerialPrinterDriver implements PrinterDriver {
 
   @override
   Future<bool> printBytes(Uint8List bytes) async {
+    // 연결되지 않은 경우 자동 연결 시도
+    if (!isConnected) {
+      print('SerialPrinterDriver: Not connected to $portName, attempting to connect...');
+      final connected = await connect();
+      if (!connected) {
+        print('SerialPrinterDriver: Failed to connect to $portName');
+        return false;
+      }
+    }
     return _service.printBytes(portName, bytes);
   }
 }

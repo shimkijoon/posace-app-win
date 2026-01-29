@@ -4,21 +4,27 @@ import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import '../../data/local/models.dart';
 import '../i18n/app_localizations.dart';
+import '../i18n/locale_helper.dart';
 import '../storage/auth_storage.dart';
 import 'esc_pos_encoder.dart';
 
 class ReceiptTemplates {
-  static final _currencyFormat = NumberFormat.currency(locale: 'ko_KR', symbol: '₩');
-  static final _dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
+  // 번역 헬퍼: 번역 실패 시 fallback 사용
+  static String _translate(AppLocalizations? localizations, String key, String fallback) {
+    if (localizations == null) return fallback;
+    final result = localizations.translate(key);
+    // 번역 실패 시 키가 그대로 반환되므로 fallback 사용
+    return (result == key) ? fallback : result;
+  }
 
   static int _getDisplayWidth(String text) {
     int width = 0;
     for (int i = 0; i < text.length; i++) {
       int code = text.codeUnitAt(i);
       if (code > 128) {
-        width += 2; // Korean
+        width += 2; 
       } else {
-        width += 1; // ASCII
+        width += 1; 
       }
     }
     return width;
@@ -36,48 +42,26 @@ class ReceiptTemplates {
     return ' ' * (width - currentWidth) + text;
   }
 
-  static Future<Uint8List> saleReceipt(SaleModel sale, List<SaleItemModel> items, Map<String, ProductModel> productMap, {Map<String, String?> storeInfo = const {}, BuildContext? context}) async {
+  static Future<Uint8List> saleReceipt(
+    SaleModel sale, 
+    List<SaleItemModel> items, 
+    Map<String, ProductModel> productMap, 
+    {Map<String, String?> storeInfo = const {}, 
+    StoreSettingsModel? settings,
+    BuildContext? context}
+  ) async {
     print('ReceiptTemplates: Generating sale receipt for sale ${sale.id}');
+    
+    final country = settings?.receiptTemplate?.country ?? 'KR';
+    final currencyFormat = LocaleHelper.getCurrencyFormat(country);
+    final dateFormat = LocaleHelper.getDateFormat(country);
+    
     final storeName = storeInfo['name'] ?? 'POSAce Store';
     final bizNo = storeInfo['businessNumber'] ?? '-';
     final address = storeInfo['address']?.replaceAll('||', ' ') ?? '-';
     final phone = storeInfo['phone'] ?? '-';
 
-    // Get translations if context is available
-    String businessNumberLabel = '사업자번호';
-    String addressLabel = '주소';
-    String phoneLabel = '전화';
-    String dateTimeLabel = '일시';
-    String transactionLabel = '거래 NO';
-    String productNameLabel = '상품명';
-    String qtyLabel = '수량';
-    String amountLabel = '금액';
-    String discountLabel = '할인';
-    String subtotalLabel = '소계';
-    String totalLabel = '합계';
-    String paymentMethodLabel = '결제수단';
-    String changeLabel = '거스름돈';
-    String thankYouMessage = '이용해 주셔서 감사합니다';
-    
-    if (context != null) {
-      final localizations = AppLocalizations.of(context);
-      if (localizations != null) {
-        businessNumberLabel = localizations.businessNumber;
-        addressLabel = localizations.address;
-        phoneLabel = localizations.phone;
-        dateTimeLabel = localizations.translate('receipt.dateTime');
-        transactionLabel = localizations.translate('receipt.transactionNumber');
-        productNameLabel = localizations.translate('sales.productName');
-        qtyLabel = localizations.translate('sales.qty');
-        amountLabel = localizations.translate('receipt.amount');
-        discountLabel = localizations.discount;
-        subtotalLabel = localizations.subtotal;
-        totalLabel = localizations.translate('sales.total');
-        paymentMethodLabel = localizations.translate('receipt.paymentMethod');
-        changeLabel = localizations.translate('receipt.change');
-        thankYouMessage = localizations.translate('receipt.thankYouMessage');
-      }
-    }
+    final localizations = context != null ? AppLocalizations.of(context) : null;
     
     final encoder = EscPosEncoder();
     encoder.reset();
@@ -86,22 +70,42 @@ class ReceiptTemplates {
     encoder.setAlign('center');
     await encoder.text(storeName, bold: true, doubleHeight: true, doubleWidth: true);
     encoder.lineFeed(1);
+    
+    if (settings?.receiptHeader != null && settings!.receiptHeader!.isNotEmpty) {
+      await encoder.text(settings.receiptHeader!);
+      encoder.lineFeed(1);
+    }
+
     encoder.setAlign('center');
-    await encoder.text('$businessNumberLabel: $bizNo');
+    await encoder.text('${localizations?.businessNumber ?? '사업자번호'}: $bizNo');
     encoder.lineFeed();
-    await encoder.text('$addressLabel: $address');
+    await encoder.text('${localizations?.address ?? '주소'}: $address');
     encoder.lineFeed();
-    await encoder.text('$phoneLabel: $phone');
+    await encoder.text('${localizations?.phone ?? '전화'}: $phone');
+    
+    // Country specific header fields
+    if (country == 'AU' && storeInfo['abn'] != null) {
+      await encoder.text('ABN: ${storeInfo['abn']}');
+      encoder.lineFeed();
+    } else if (country == 'SG' && storeInfo['gstNumber'] != null) {
+      await encoder.text('GST Reg No: ${storeInfo['gstNumber']}');
+      encoder.lineFeed();
+    }
+    
     encoder.lineFeed(2);
     
     encoder.setAlign('left');
-    await encoder.text('$dateTimeLabel: ${_dateFormat.format(sale.createdAt)}');
+    await encoder.text('${_translate(localizations, 'receipt.dateTime', '일시')}: ${dateFormat.format(sale.createdAt)}');
     encoder.lineFeed();
-    await encoder.text('$transactionLabel: ${sale.id.substring(0, 8)}');
+    await encoder.text('${_translate(localizations, 'receipt.transactionNumber', '거래 NO')}: ${sale.id.substring(0, 8)}');
     encoder.lineFeed();
     await encoder.dashLine();
     
-    // Items Header (Name: 20, Qty: 6, Amt: 16 -> Total 42)
+    // Items Header
+    String productNameLabel = _translate(localizations, 'sales.productName', '상품명');
+    String qtyLabel = _translate(localizations, 'sales.qty', '수량');
+    String amountLabel = _translate(localizations, 'receipt.amount', '금액');
+    
     String header = _padRight(productNameLabel, 20) + _padLeft(qtyLabel, 6) + _padLeft(amountLabel, 16);
     await encoder.text(header);
     encoder.lineFeed();
@@ -111,17 +115,15 @@ class ReceiptTemplates {
       final product = productMap[item.productId];
       final name = product?.name ?? 'Unknown';
       final qtyStr = item.qty.toString();
-      final priceStr = _currencyFormat.format(item.price * item.qty);
+      final priceStr = currencyFormat.format(item.price * item.qty);
 
       int nameWidth = _getDisplayWidth(name);
       
       if (nameWidth <= 20) {
-        // Name, Qty, Price on one line
         String line = _padRight(name, 20) + _padLeft(qtyStr, 6) + _padLeft(priceStr, 16);
         await encoder.text(line);
         encoder.lineFeed();
       } else {
-        // Name on first line, Qty/Price on second line
         await encoder.text(name);
         encoder.lineFeed();
         String line = _padLeft(qtyStr, 26) + _padLeft(priceStr, 16);
@@ -129,50 +131,58 @@ class ReceiptTemplates {
         encoder.lineFeed();
       }
 
-      // Discount lines for the item
-      if (item.discountsJson != null && item.discountsJson!.isNotEmpty) {
+      // Item discounts
+      if (settings?.receiptShowDiscountDetails != false && item.discountsJson != null && item.discountsJson!.isNotEmpty) {
         try {
           final List<dynamic> itemDiscounts = jsonDecode(item.discountsJson!);
           for (var d in itemDiscounts) {
-            final dName = d['name'] ?? discountLabel;
+            final dName = d['name'] ?? 'Discount';
             final dAmount = d['amount'] ?? 0;
             if (dAmount > 0) {
-              String dLine = _padRight('  [$discountLabel] $dName', 26) + _padLeft('-${_currencyFormat.format(dAmount)}', 16);
+              String dLine = _padRight('  [-] $dName', 26) + _padLeft('-${currencyFormat.format(dAmount)}', 16);
               await encoder.text(dLine);
               encoder.lineFeed();
             }
           }
-        } catch (e) {
-          print('Error parsing item discounts: $e');
-        }
+        } catch (_) {}
       }
     }
     
     await encoder.dashLine();
     
-    // Totals
+    // Summary
     encoder.setStyles(bold: true);
     
-    // Subtotal
     int subtotal = sale.totalAmount + sale.discountAmount;
-    String subtotalVal = _currencyFormat.format(subtotal);
+    String subtotalLabel = localizations?.subtotal ?? '소계';
+    String subtotalVal = currencyFormat.format(subtotal);
     String subtotalLine = _padRight('$subtotalLabel:', 42 - _getDisplayWidth(subtotalVal)) + subtotalVal;
     await encoder.text(subtotalLine);
     encoder.lineFeed();
 
-    // Discounts in Footer
+    // Tax details if enabled
+    if (settings?.receiptShowTaxDetails != false && sale.taxAmount > 0) {
+      encoder.setStyles(bold: false);
+      String taxLabel = _translate(localizations, 'taxes.title', '세금');
+      String taxVal = currencyFormat.format(sale.taxAmount);
+      String taxLine = _padRight('  $taxLabel:', 42 - _getDisplayWidth(taxVal)) + taxVal;
+      await encoder.text(taxLine);
+      encoder.lineFeed();
+    }
+
+    // Discounts
     if (sale.discountAmount > 0) {
       encoder.setStyles(bold: false);
+      String discountLabel = localizations?.discount ?? '할인';
       
-      // Cart level discounts
-      if (sale.cartDiscountsJson != null) {
+      if (settings?.receiptShowDiscountDetails != false && sale.cartDiscountsJson != null) {
         try {
           final List<dynamic> cartDiscounts = jsonDecode(sale.cartDiscountsJson!);
           for (var d in cartDiscounts) {
              final dName = d['name'] ?? discountLabel;
              final dAmount = d['amount'] ?? 0;
              if (dAmount > 0) {
-               String dVal = '-${_currencyFormat.format(dAmount)}';
+               String dVal = '-${currencyFormat.format(dAmount)}';
                String dLine = _padRight('  $dName:', 42 - _getDisplayWidth(dVal)) + dVal;
                await encoder.text(dLine);
                encoder.lineFeed();
@@ -181,52 +191,75 @@ class ReceiptTemplates {
         } catch (_) {}
       }
 
-      // Total Discount
-      String discVal = '-${_currencyFormat.format(sale.discountAmount)}';
-      String discLine = _padRight('${discountLabel}:', 42 - _getDisplayWidth(discVal)) + discVal;
-      await encoder.text(discLine);
+      String totalDiscVal = '-${currencyFormat.format(sale.discountAmount)}';
+      String totalDiscLine = _padRight('$discountLabel:', 42 - _getDisplayWidth(totalDiscVal)) + totalDiscVal;
+      await encoder.text(totalDiscLine);
       encoder.lineFeed();
     }
 
     encoder.setStyles(bold: true);
-    String totalLabelText = '$totalLabel:';
-    String totalVal = _currencyFormat.format(sale.totalAmount);
-    String totalLine = _padRight(totalLabelText, 42 - _getDisplayWidth(totalVal)) + totalVal;
+    String totalLabel = _translate(localizations, 'sales.total', '합계');
+    String totalVal = currencyFormat.format(sale.totalAmount);
+    String totalLine = _padRight('$totalLabel:', 42 - _getDisplayWidth(totalVal)) + totalVal;
     await encoder.text(totalLine);
     encoder.lineFeed(2);
     
-    // Payment
+    // Footer
     encoder.setStyles(bold: false);
+    String paymentMethodLabel = _translate(localizations, 'receipt.paymentMethod', '결제수단');
     await encoder.text('$paymentMethodLabel: ${sale.paymentMethod}');
+    encoder.lineFeed(2);
+    
+    if (settings?.receiptFooter != null && settings!.receiptFooter!.isNotEmpty) {
+      encoder.setAlign('center');
+      await encoder.text(settings.receiptFooter!);
+      encoder.lineFeed(1);
+    }
+
+    encoder.setAlign('center');
+    await encoder.text(_translate(localizations, 'receipt.thankYouMessage', '이용해 주셔서 감사합니다'));
     encoder.lineFeed(2);
     
     encoder.cut();
     return encoder.bytes;
   }
 
-  static Future<Uint8List> cancelReceipt(SaleModel sale, List<SaleItemModel> items, Map<String, ProductModel> productMap, {Map<String, String?> storeInfo = const {}}) async {
+  static Future<Uint8List> cancelReceipt(
+    SaleModel sale, 
+    List<SaleItemModel> items, 
+    Map<String, ProductModel> productMap, 
+    {Map<String, String?> storeInfo = const {},
+    StoreSettingsModel? settings,
+    BuildContext? context}
+  ) async {
     print('ReceiptTemplates: Generating cancel receipt for sale ${sale.id}');
+    final country = settings?.receiptTemplate?.country ?? 'KR';
+    final currencyFormat = LocaleHelper.getCurrencyFormat(country);
+    final dateFormat = LocaleHelper.getDateFormat(country);
+    
     final storeName = storeInfo['name'] ?? 'POSAce Store';
     final bizNo = storeInfo['businessNumber'] ?? '-';
+    final localizations = context != null ? AppLocalizations.of(context) : null;
 
     final encoder = EscPosEncoder();
     encoder.reset();
     
     // Header
     encoder.setAlign('center');
-    await encoder.text('*** [취 소] ***', bold: true, doubleHeight: true, doubleWidth: true);
+    String cancelTitle = '*** [${_translate(localizations, 'common.cancel', '취소')}] ***';
+    await encoder.text(cancelTitle, bold: true, doubleHeight: true, doubleWidth: true);
     encoder.lineFeed(1);
     await encoder.text(storeName, bold: true);
     encoder.lineFeed(1);
-    await encoder.text('사업자번호: $bizNo');
+    await encoder.text('${localizations?.businessNumber ?? '사업자번호'}: $bizNo');
     encoder.lineFeed(2);
     
     encoder.setAlign('left');
-    await encoder.text('취소일시: ${_dateFormat.format(DateTime.now())}');
+    await encoder.text('${_translate(localizations, 'receipt.cancelDateTime', '취소일시')}: ${dateFormat.format(DateTime.now())}');
     encoder.lineFeed();
-    await encoder.text('원거래일: ${_dateFormat.format(sale.createdAt)}');
+    await encoder.text('${_translate(localizations, 'receipt.originalDateTime', '원거래일')}: ${dateFormat.format(sale.createdAt)}');
     encoder.lineFeed();
-    await encoder.text('거래 NO: ${sale.id.substring(0, 8)}');
+    await encoder.text('${_translate(localizations, 'receipt.transactionNumber', '거래 NO')}: ${sale.id.substring(0, 8)}');
     encoder.lineFeed();
     await encoder.dashLine();
     
@@ -234,7 +267,7 @@ class ReceiptTemplates {
       final product = productMap[item.productId];
       final name = product?.name ?? 'Unknown';
       final qtyStr = (-item.qty).toString();
-      final priceStr = _currencyFormat.format(-(item.price * item.qty));
+      final priceStr = currencyFormat.format(-(item.price * item.qty));
 
       int nameWidth = _getDisplayWidth(name);
       if (nameWidth <= 20) {
@@ -248,79 +281,65 @@ class ReceiptTemplates {
         await encoder.text(line);
         encoder.lineFeed();
       }
-
-      // Discount lines for the item
-      if (item.discountsJson != null && item.discountsJson!.isNotEmpty) {
-        try {
-          final List<dynamic> itemDiscounts = jsonDecode(item.discountsJson!);
-          for (var d in itemDiscounts) {
-            final dName = d['name'] ?? '할인';
-            final dAmount = d['amount'] ?? 0;
-            if (dAmount > 0) {
-              String dLine = _padRight('  [할인] $dName', 26) + _padLeft('+${_currencyFormat.format(dAmount)}', 16);
-              await encoder.text(dLine);
-              encoder.lineFeed();
-            }
-          }
-        } catch (_) {}
-      }
     }
     
     await encoder.dashLine();
     
     // Totals
     encoder.setStyles(bold: true);
-    
-    // Subtotal
     int subtotal = sale.totalAmount + sale.discountAmount;
-    String subtotalVal = _currencyFormat.format(-subtotal);
-    String subtotalLine = _padRight('취소 소계:', 42 - _getDisplayWidth(subtotalVal)) + subtotalVal;
-    await encoder.text(subtotalLine);
+    String subtotalVal = currencyFormat.format(-subtotal);
+    await encoder.text(_padRight('${localizations?.subtotal ?? '소계'} ${_translate(localizations, 'common.cancel', '취소')}:', 42 - _getDisplayWidth(subtotalVal)) + subtotalVal);
     encoder.lineFeed();
 
-    // Discount reversal
-    if (sale.discountAmount > 0) {
-      encoder.setStyles(bold: false);
-      String discVal = '+${_currencyFormat.format(sale.discountAmount)}';
-      String discLine = _padRight('  할인 취소액:', 42 - _getDisplayWidth(discVal)) + discVal;
-      await encoder.text(discLine);
-      encoder.lineFeed();
-    }
-
-    encoder.setStyles(bold: true);
-    String totalLabel = '취소 확정액:';
-    String totalVal = _currencyFormat.format(-sale.totalAmount);
-    String totalLine = _padRight(totalLabel, 42 - _getDisplayWidth(totalVal)) + totalVal;
-    await encoder.text(totalLine);
+    String totalVal = currencyFormat.format(-sale.totalAmount);
+    await encoder.text(_padRight('${_translate(localizations, 'sales.total', '합계')} ${_translate(localizations, 'common.cancel', '취소')}:', 42 - _getDisplayWidth(totalVal)) + totalVal);
     encoder.lineFeed(2);
     
     encoder.cut();
     return encoder.bytes;
   }
 
-  static Future<Uint8List> kitchenOrder(SaleModel sale, List<SaleItemModel> items, Map<String, ProductModel> productMap) async {
+  static Future<Uint8List> kitchenOrder(
+    SaleModel sale, 
+    List<SaleItemModel> items, 
+    Map<String, ProductModel> productMap,
+    {Map<String, List<ProductOptionModel>>? itemOptions,
+    BuildContext? context}
+  ) async {
     print('ReceiptTemplates: Generating kitchen order for sale ${sale.id}');
+    final localizations = context != null ? AppLocalizations.of(context) : null;
+    final dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
+    
     final encoder = EscPosEncoder();
     encoder.reset();
     
     encoder.setAlign('center');
-    await encoder.text('*** 주방주문서 ***', bold: true, doubleHeight: true, doubleWidth: true);
+    String title = '*** ${_translate(localizations, 'receipt.kitchenOrder', '주방주문서')} ***';
+    await encoder.text(title, bold: true, doubleHeight: true, doubleWidth: true);
     encoder.lineFeed(2);
     
     encoder.setAlign('left');
-    await encoder.text('주문일시: ${_dateFormat.format(sale.createdAt)}');
+    await encoder.text('${_translate(localizations, 'receipt.dateTime', '주문일시')}: ${dateFormat.format(sale.createdAt)}');
     encoder.lineFeed();
     await encoder.dashLine();
     
     for (var item in items) {
       final product = productMap[item.productId];
       final name = product?.name ?? 'Unknown';
-      // Kitchen orders usually use large fonts, so we keep name and qty on separate lines if needed
-      // or just name on one line, qty on next line as it was.
-      await encoder.text(name, doubleHeight: true, doubleWidth: true);
+      
+      // 해외 주방 스타일: "2 X 아메리카노"
+      await encoder.text('${item.qty} X $name', doubleHeight: true, doubleWidth: true);
       encoder.lineFeed();
-      await encoder.text('    수량: ${item.qty}', doubleHeight: true, doubleWidth: true);
-      encoder.lineFeed();
+      
+      // 옵션 출력 (들여쓰기)
+      final options = itemOptions?[item.id] ?? [];
+      if (options.isNotEmpty) {
+        for (var option in options) {
+          await encoder.text('   + ${option.name}');
+          encoder.lineFeed();
+        }
+      }
     }
     
     await encoder.dashLine();

@@ -48,6 +48,7 @@ class MasterDataResponse {
   final List<TaxModel> taxes;
   final List<TableLayoutData> tableLayouts;
   final List<KitchenStationModel> kitchenStations;
+  final StoreSettingsModel? storeSettings;
 
   MasterDataResponse({
     required this.serverTime,
@@ -58,6 +59,7 @@ class MasterDataResponse {
     required this.taxes,
     required this.tableLayouts,
     required this.kitchenStations,
+    this.storeSettings,
   });
 
   factory MasterDataResponse.fromJson(Map<String, dynamic> json) {
@@ -88,7 +90,11 @@ class MasterDataResponse {
         kitchenStations: (json['kitchenStations'] as List? ?? [])
             .map((e) => KitchenStationModel.fromMap(e as Map<String, dynamic>))
             .toList(),
+        storeSettings: json['storeSettings'] != null
+            ? StoreSettingsModel.fromMap(json['storeSettings'] as Map<String, dynamic>)
+            : null,
       );
+
     } catch (e, stack) {
       print('[POS] Error parsing MasterDataResponse: $e');
       print(stack);

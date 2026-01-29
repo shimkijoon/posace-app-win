@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../storage/auth_storage.dart';
 
 class LocaleHelper {
@@ -29,4 +30,45 @@ class LocaleHelper {
     Locale('zh', 'HK'),
     Locale('en'),
   ];
+
+  static NumberFormat getCurrencyFormat(String countryCode) {
+    switch (countryCode) {
+      case 'KR':
+        return NumberFormat.currency(locale: 'ko_KR', symbol: '₩', decimalDigits: 0);
+      case 'JP':
+        return NumberFormat.currency(locale: 'ja_JP', symbol: '¥', decimalDigits: 0);
+      case 'TW':
+        return NumberFormat.currency(locale: 'zh_TW', symbol: 'NT\$', decimalDigits: 0);
+      case 'HK':
+        return NumberFormat.currency(locale: 'zh_HK', symbol: 'HK\$', decimalDigits: 2);
+      case 'SG':
+        return NumberFormat.currency(locale: 'en_SG', symbol: 'S\$', decimalDigits: 2);
+      case 'AU':
+        return NumberFormat.currency(locale: 'en_AU', symbol: 'A\$', decimalDigits: 2);
+      case 'US':
+        return NumberFormat.currency(locale: 'en_US', symbol: '\$', decimalDigits: 2);
+      default:
+        return NumberFormat.currency(locale: 'en_US', symbol: '\$', decimalDigits: 2);
+    }
+  }
+
+  static DateFormat getDateFormat(String countryCode) {
+    switch (countryCode) {
+      case 'KR':
+      case 'JP':
+      case 'TW':
+      case 'HK':
+        return DateFormat('yyyy-MM-dd HH:mm:ss');
+      default:
+        return DateFormat('dd/MM/yyyy HH:mm:ss');
+    }
+  }
+
+  static String formatCurrency(num amount, String countryCode) {
+    return getCurrencyFormat(countryCode).format(amount);
+  }
+
+  static String formatDate(DateTime date, String countryCode) {
+    return getDateFormat(countryCode).format(date);
+  }
 }

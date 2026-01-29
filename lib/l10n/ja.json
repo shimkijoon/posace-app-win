@@ -1,6 +1,9 @@
 {
   "app": {
-    "name": "POSAce"
+    "name": "POSAce",
+    "exit": "終了",
+    "exitConfirmTitle": "終了確認",
+    "exitConfirmMessage": "POSプログラムを終了しますか？\n保存されていない作業は失われる可能性があります。"
   },
   "auth": {
     "logout": "ログアウト",
@@ -33,6 +36,12 @@
     "sessionNotUsed": "営業未使用",
     "enterOpeningAmount": "営業準備金(現金)を入力してください。",
     "enterClosingAmount": "最終現金残高を入力してください。"
+  },
+  "taxes": {
+    "title": "税金"
+  },
+  "receipt": {
+    "kitchenOrder": "厨房注文書"
   },
   "sales": {
     "title": "販売",

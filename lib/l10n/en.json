@@ -1,6 +1,9 @@
 {
   "app": {
-    "name": "POSAce"
+    "name": "POSAce",
+    "exit": "Exit",
+    "exitConfirmTitle": "Exit Confirmation",
+    "exitConfirmMessage": "Do you want to close the POS program?\nAny unsaved work may be lost."
   },
   "auth": {
     "logout": "Logout",
@@ -33,6 +36,12 @@
     "sessionNotUsed": "Session Not Used",
     "enterOpeningAmount": "Enter opening cash amount.",
     "enterClosingAmount": "Enter final cash balance."
+  },
+  "taxes": {
+    "title": "Tax"
+  },
+  "receipt": {
+    "kitchenOrder": "Kitchen Order"
   },
   "sales": {
     "title": "Sales",
