@@ -2,7 +2,7 @@ class AppConfig {
   static const String appName = 'POSAce';
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:3000/api/v1',
+    defaultValue: 'https://api.posace.com/api/v1',
   );
   
   static const String supabaseUrl = 'https://wqjirowshlxfjcjmydfk.supabase.co';
