@@ -4,6 +4,11 @@ Flutter 기반 Windows POS 클라이언트 애플리케이션.
 
 ## 최근 업데이트 (2026-01-29)
 
+### 프로덕션 배포 설정
+- **도메인 적용**: API 기본 URL을 `https://api.posace.com/api/v1`로 변경
+- **MSIX 빌드 구성**: Windows 설치 패키지 자동 생성 기능 추가
+- **버전**: 1.0.0+1
+
 ### 앱 종료 개선
 - **종료 확인 팝업 추가**: 창 닫기(X 버튼) 클릭 시 종료 확인 다이얼로그 표시
 - **window_manager 통합**: Windows 네이티브 창 제어를 위한 패키지 추가
@@ -32,14 +37,42 @@ Flutter 기반 Windows POS 클라이언트 애플리케이션.
 - Windows 10/11
 - **Windows Developer Mode** (플러그인 사용을 위한 symlink 지원)
 
-## 로컬 실행
+## 로컬 실행 (개발 모드)
 
 ```bash
 # Developer Mode 활성화
 start ms-settings:developers
 
-# 앱 실행
+# 로컬 API 서버 연결
 flutter run -d windows --dart-define=API_BASE_URL=http://localhost:3000/api/v1
+```
+
+## 프로덕션 빌드
+
+### 릴리즈 빌드 (.exe)
+
+```bash
+flutter build windows --release
+```
+
+생성 위치: `build\windows\x64\runner\Release\posace_app_win.exe`
+
+### MSIX 설치 패키지 (.msix)
+
+```bash
+# MSIX 패키지 생성
+flutter pub run msix:create
+```
+
+생성 위치: `build\windows\x64\runner\Release\posace_app_win.msix`
+
+**배포된 프로덕션 API 사용**:
+- 기본 URL: `https://api.posace.com/api/v1`
+- 빌드 시 자동으로 프로덕션 도메인 적용
+
+**개발 API로 빌드하려면**:
+```bash
+flutter build windows --release --dart-define=API_BASE_URL=http://localhost:3000/api/v1
 ```
 
 ## 로그인
