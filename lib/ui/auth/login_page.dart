@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../core/auth/pos_auth_service.dart';
 import '../../core/utils/restart_widget.dart';
@@ -192,12 +193,13 @@ class _LoginPageState extends State<LoginPage> {
                   child: Text(_loading ? '로그인 중...' : '로그인'),
                 ),
               ),
-              // Test account selection (always show in development)
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: OutlinedButton(
+              // Test account selection (only show in debug mode)
+              if (kDebugMode) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: OutlinedButton(
                   onPressed: _loading
                       ? null
                       : () {
@@ -219,10 +221,10 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  child: Text(_showTestAccounts ? '테스트 계정 선택 닫기' : '테스트 계정 선택'),
+                    child: Text(_showTestAccounts ? '테스트 계정 선택 닫기' : '테스트 계정 선택'),
+                  ),
                 ),
-              ),
-              if (_showTestAccounts) ...[
+                if (_showTestAccounts) ...[
                 const SizedBox(height: 12),
                 Container(
                   constraints: const BoxConstraints(maxHeight: 300),
@@ -314,6 +316,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
+                ],
               ],
             ],
           ),
