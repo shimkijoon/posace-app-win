@@ -57,19 +57,25 @@ class _PosaceAppState extends State<PosaceApp> with WindowListener {
   Future<void> _cleanupAndExit() async {
     print('[PosaceApp] Starting cleanup and exit...');
     
+    // Fallback: 2초 내에 정상 종료되지 않으면 강제 종료 처리
+    Future.delayed(const Duration(seconds: 2)).then((_) {
+      print('[PosaceApp] Exit timeout reached. Forcing exit via dart:io...');
+      exit(0);
+    });
+
     try {
-      // 프린터 연결 해제 등 리소스 정리
-      // (필요시 추가)
+      // 비동기 작업 정리 (예: 프린터 종료 대기 등)
+      // 필요한 핵심 리소스 정리를 여기에 추가
       
-      // 짧은 딜레이 후 종료 (UI 업데이트 완료 대기)
-      await Future.delayed(const Duration(milliseconds: 50));
+      // UI 스레드가 이벤트를 처리할 시간을 줌
+      await Future.delayed(const Duration(milliseconds: 100));
       
       print('[PosaceApp] Destroying window...');
       await windowManager.destroy();
     } catch (e) {
       print('[PosaceApp] Error during cleanup: $e');
-      // 오류 발생 시에도 강제 종료
-      await windowManager.destroy();
+      // 오류 발생 시에도 시스템 강제 종료
+      exit(0);
     }
   }
 
