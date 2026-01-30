@@ -24,6 +24,7 @@ class PosAuthService {
       storeId: storeId,
       posId: posId,
       uiLanguage: result['uiLanguage'] as String?,
+      saleShowBarcodeInGrid: result['saleShowBarcodeInGrid'] as bool?,
     );
   }
 
@@ -39,6 +40,7 @@ class PosAuthService {
       final storeId = result['storeId'] as String?;
       final posId = result['posId'] as String?;
       final uiLanguage = result['uiLanguage'] as String?;
+      final saleShowBarcodeInGrid = result['saleShowBarcodeInGrid'] as bool?;
 
       print('[PosAuthService] autoSelected path - uiLanguage from response: $uiLanguage');
 
@@ -55,6 +57,7 @@ class PosAuthService {
         storeAddr: result['address'],
         storePhone: result['phone'],
         uiLanguage: uiLanguage,
+        saleShowBarcodeInGrid: saleShowBarcodeInGrid,
       );
       
       print('[PosAuthService] Saved uiLanguage: $uiLanguage');
@@ -85,6 +88,7 @@ class PosAuthService {
     
     final accessToken = result['accessToken'] as String?;
     final uiLanguage = result['uiLanguage'] as String?;
+    final saleShowBarcodeInGrid = result['saleShowBarcodeInGrid'] as bool?;
     
     print('[PosAuthService] selectPos response - uiLanguage: $uiLanguage');
     
@@ -101,6 +105,7 @@ class PosAuthService {
       storeAddr: result['address'],
       storePhone: result['phone'],
       uiLanguage: uiLanguage,
+      saleShowBarcodeInGrid: saleShowBarcodeInGrid,
     );
     
     print('[PosAuthService] Saved uiLanguage: $uiLanguage');

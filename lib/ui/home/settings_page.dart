@@ -144,10 +144,10 @@ class _SettingsPageState extends State<SettingsPage> {
       // 백오피스 설정 가져오기
       final sessionInfo = await _authStorage.getSessionInfo();
       final storeInfo = {
-        'storeName': sessionInfo['storeName'] ?? '포스에이스 테스트 매장',
-        'storeAddress': sessionInfo['storeAddress'] ?? '서울특별시 강남구 테헤란로 123',
-        'storePhone': sessionInfo['storePhone'] ?? '02-1234-5678',
-        'businessNumber': sessionInfo['businessNumber'] ?? '123-45-67890',
+        'storeName': sessionInfo['storeName'] as String? ?? '포스에이스 테스트 매장',
+        'storeAddress': sessionInfo['storeAddress'] as String? ?? '서울특별시 강남구 테헤란로 123',
+        'storePhone': sessionInfo['storePhone'] as String? ?? '02-1234-5678',
+        'businessNumber': sessionInfo['businessNumber'] as String? ?? '123-45-67890',
       };
       
       // 매장 설정 가져오기 (없으면 null)

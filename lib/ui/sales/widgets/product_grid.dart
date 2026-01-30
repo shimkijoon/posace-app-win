@@ -7,14 +7,17 @@ class ProductGrid extends StatelessWidget {
     super.key,
     required this.products,
     required this.onProductTap,
+    this.showBarcodeInGrid = false,
   });
 
   final List<ProductModel> products;
   final ValueChanged<ProductModel> onProductTap;
+  final bool showBarcodeInGrid;
 
   @override
   Widget build(BuildContext context) {
     if (products.isEmpty) {
+      // ... (existing empty state)
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -40,16 +43,17 @@ class ProductGrid extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: GridView.builder(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 8, // 유통업용: Access POS처럼 더 많은 상품 표시 (50개 버튼 참고)
+          crossAxisCount: 8, 
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
-          childAspectRatio: 0.8, // 상품 카드 비율 조정
+          childAspectRatio: 0.8, 
         ),
         itemCount: products.length,
         itemBuilder: (context, index) {
           return _ProductCard(
             product: products[index],
             onTap: () => onProductTap(products[index]),
+            showBarcode: showBarcodeInGrid,
           );
         },
       ),
@@ -61,10 +65,12 @@ class _ProductCard extends StatelessWidget {
   const _ProductCard({
     required this.product,
     required this.onTap,
+    required this.showBarcode,
   });
 
   final ProductModel product;
   final VoidCallback onTap;
+  final bool showBarcode;
 
   String _formatPrice(int price) {
     return '₩${price.toString().replaceAllMapped(
@@ -107,6 +113,7 @@ class _ProductCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // ... existing image code ...
               // 상품 이미지 영역 (플레이스홀더) - 유통업용으로 더 작게
               Expanded(
                 flex: 2,
@@ -152,7 +159,7 @@ class _ProductCard extends StatelessWidget {
                 ),
               ),
               
-              // 상품 정보 영역 - 유통업용으로 간결하게
+              // 상품 정보 영역
               Expanded(
                 flex: 3,
                 child: Padding(
@@ -162,9 +169,8 @@ class _ProductCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // 상품명
-                      // 상품명 (2줄 높이 고정으로 레이아웃 일관성 유지)
                       SizedBox(
-                        height: 36, // 약 2줄 분량의 높이
+                        height: 36, 
                         child: Text(
                           product.name,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -191,16 +197,18 @@ class _ProductCard extends StatelessWidget {
                                   color: AppTheme.primary,
                                 ),
                           ),
-                          if (product.barcode != null)
+                          if (showBarcode && product.barcode != null && product.barcode!.isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
                               child: Text(
                                 product.barcode!,
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  color: AppTheme.textSecondary,
-                                  fontFamily: 'monospace',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey, // Requested gray tone
+                                  // fontFamily: 'monospace', // user said "grey tone", removed monospace for cleaner look unless specified, but kept small size
                                 ),
+                                overflow: TextOverflow.ellipsis, // Ensure it doesn't break layout
+                                maxLines: 1,
                               ),
                             ),
                           if (product.stockEnabled && product.stockQuantity != null)

@@ -30,7 +30,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _storage = AuthStorage();
   final _settingsStorage = SettingsStorage();
-  Map<String, String?> _session = {};
+  Map<String, dynamic> _session = {};
   int _unsyncedSalesCount = 0;
   String? _currentEmployeeName;
   bool _isSessionActive = false;

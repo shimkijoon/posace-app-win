@@ -11,6 +11,7 @@ class ProductSelectionArea extends StatefulWidget {
     required this.products,
     required this.onCategorySelected,
     required this.onProductTap,
+    this.showBarcodeInGrid = false,
   });
 
   final List<CategoryModel> categories;
@@ -18,12 +19,14 @@ class ProductSelectionArea extends StatefulWidget {
   final List<ProductModel> products;
   final ValueChanged<String?> onCategorySelected;
   final ValueChanged<ProductModel> onProductTap;
+  final bool showBarcodeInGrid;
 
   @override
   State<ProductSelectionArea> createState() => _ProductSelectionAreaState();
 }
 
 class _ProductSelectionAreaState extends State<ProductSelectionArea> {
+  // ... (existing scroll controller code)
   final ScrollController _categoryScrollController = ScrollController();
 
   void _scrollCategories(double offset) {
@@ -38,6 +41,7 @@ class _ProductSelectionAreaState extends State<ProductSelectionArea> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // ... (existing category selection code)
         // 카테고리 선택 영역 (Toast-style with Scroll Buttons)
         Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -96,13 +100,14 @@ class _ProductSelectionAreaState extends State<ProductSelectionArea> {
                     crossAxisCount: 4,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
-                    childAspectRatio: 0.72, // Space for 2-line names and price
+                    childAspectRatio: 0.72,
                   ),
                   itemCount: widget.products.length,
                   itemBuilder: (context, index) {
                     return _ProductCard(
                       product: widget.products[index],
                       onTap: () => widget.onProductTap(widget.products[index]),
+                      showBarcode: widget.showBarcodeInGrid,
                     );
                   },
                 ),
@@ -128,6 +133,7 @@ class _ProductSelectionAreaState extends State<ProductSelectionArea> {
   }
 }
 
+// ... (keep _ScrollIconButton and _CategoryTab as is)
 class _ScrollIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onPressed;
@@ -200,10 +206,12 @@ class _ProductCard extends StatelessWidget {
   const _ProductCard({
     required this.product,
     required this.onTap,
+    this.showBarcode = false,
   });
 
   final ProductModel product;
   final VoidCallback onTap;
+  final bool showBarcode;
 
   String _formatPrice(int price) {
     return '₩${price.toString().replaceAllMapped(
@@ -231,7 +239,7 @@ class _ProductCard extends StatelessWidget {
         child: Column(
           children: [
             Expanded(
-              flex: 2, // Icon area smaller
+              flex: 2,
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
@@ -249,15 +257,15 @@ class _ProductCard extends StatelessWidget {
             ),
             const Divider(height: 1),
             Expanded(
-              flex: 5, // Text info area larger
+              flex: 5,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start, // Better for variable line counts
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     const SizedBox(height: 8),
                     SizedBox(
-                      height: 32, // Fixed height for 2 lines of text
+                      height: 32,
                       child: Text(
                         product.name,
                         textAlign: TextAlign.center,
@@ -272,6 +280,19 @@ class _ProductCard extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.w900, color: AppTheme.primary, fontSize: 14),
                     ),
                     const SizedBox(height: 4),
+                    if (showBarcode && product.barcode != null && product.barcode!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 2),
+                        child: Text(
+                          product.barcode!,
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
                     if (product.stockEnabled && !isOutOfStock)
                       Text('${product.stockQuantity} ${AppLocalizations.of(context)!.translate('sales.remaining')}', style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary)),
                     const SizedBox(height: 4),

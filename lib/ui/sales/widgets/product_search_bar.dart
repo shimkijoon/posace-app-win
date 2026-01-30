@@ -8,16 +8,21 @@ class ProductSearchBar extends StatelessWidget {
     required this.searchQuery,
     required this.onSearchChanged,
     required this.onBarcodeSubmitted,
+    required this.focusNode,
+    required this.onShowKeypad,
   });
 
   final String searchQuery;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String> onBarcodeSubmitted;
+  final FocusNode focusNode;
+  final VoidCallback onShowKeypad;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      // ... existing decoration ...
       decoration: const BoxDecoration(
         color: AppTheme.surface,
         border: Border(
@@ -42,6 +47,7 @@ class ProductSearchBar extends StatelessWidget {
                     child: TextField(
                       controller: TextEditingController(text: searchQuery)
                         ..selection = TextSelection.collapsed(offset: searchQuery.length),
+                      focusNode: focusNode,
                       onChanged: onSearchChanged,
                       decoration: InputDecoration(
                         hintText: AppLocalizations.of(context)!.searchProduct,
@@ -72,17 +78,19 @@ class ProductSearchBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
+          _buildActionButton(Icons.dialpad, '키패드', onShowKeypad, color: Colors.blueGrey),
+          const SizedBox(width: 8),
           _buildActionButton(Icons.qr_code_scanner, '바코드 스캔', () {}),
         ],
       ),
     );
   }
 
-  Widget _buildActionButton(IconData icon, String tooltip, VoidCallback onTap) {
+  Widget _buildActionButton(IconData icon, String tooltip, VoidCallback onTap, {Color? color}) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.primary,
+        color: color ?? AppTheme.primary,
         borderRadius: BorderRadius.circular(12),
       ),
       child: IconButton(

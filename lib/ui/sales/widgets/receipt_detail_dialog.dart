@@ -30,7 +30,7 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
   Map<String, ProductModel> _productMap = {};
   bool _isLoading = true;
 
-  Map<String, String?> _storeInfo = {};
+  Map<String, dynamic> _storeInfo = {};
 
   @override
   void initState() {

@@ -46,7 +46,7 @@ class ReceiptTemplates {
     SaleModel sale, 
     List<SaleItemModel> items, 
     Map<String, ProductModel> productMap, 
-    {Map<String, String?> storeInfo = const {}, 
+    {Map<String, dynamic> storeInfo = const {}, 
     StoreSettingsModel? settings,
     BuildContext? context}
   ) async {
@@ -228,7 +228,7 @@ class ReceiptTemplates {
     SaleModel sale, 
     List<SaleItemModel> items, 
     Map<String, ProductModel> productMap, 
-    {Map<String, String?> storeInfo = const {},
+    {Map<String, dynamic> storeInfo = const {},
     StoreSettingsModel? settings,
     BuildContext? context}
   ) async {
