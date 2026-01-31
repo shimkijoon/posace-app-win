@@ -44,18 +44,19 @@ class PosAuthService {
         print('[PosAuthService] Supabase login success for ${user.email}');
         
         // Fetch stores
+        // Note: Using camelCase column names to match Prisma schema (Postgres columns are likely case-sensitive or standard Prisma naming)
         final stores = await client
             .from('stores')
-            .select('id, name, address, business_number, phone, language, country, owner_id')
-            .eq('owner_id', user.id)
-            .eq('is_deleted', false); // Assuming is_deleted column exists based on backend logic
+            .select('id, name, address, businessNumber, phone, language, country, ownerId')
+            .eq('ownerId', user.id)
+            .eq('isDeleted', false); 
             
         // Map to expected format
         final mappedStores = (stores as List).map((s) => {
           'id': s['id'],
           'name': s['name'],
           'address': s['address'],
-          'businessNumber': s['business_number'],
+          'businessNumber': s['businessNumber'],
           'phone': s['phone'],
           // Add other fields if needed for UI or next steps
         }).toList();
