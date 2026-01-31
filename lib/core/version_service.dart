@@ -8,23 +8,43 @@ class VersionService {
   factory VersionService() => _instance;
   VersionService._internal();
 
+  // Point to the Next.js API in posace-web
+  static const String _updateUrl = 'https://www.posace.com/api/download/windows?mode=json';
+
   Future<Map<String, dynamic>?> checkUpdate() async {
     try {
-      final response = await http.get(Uri.parse('${AppConfig.apiBaseUrl}/app/version'));
+      final response = await http.get(Uri.parse(_updateUrl));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final latestVersion = data['version'] as String;
+        final latestTag = data['version'] as String; // e.g. "v1.0.1-win"
+        
         final info = await PackageInfo.fromPlatform();
         final currentVersion = info.version;
         
-        if (_isNewer(latestVersion, currentVersion)) {
-          return data;
+        // Clean the tag to get pure version number
+        final cleanLatestVersion = _cleanVersion(latestTag);
+        
+        if (_isNewer(cleanLatestVersion, currentVersion)) {
+          return {
+            'version': latestTag,
+            'url': data['url'],
+            'changelog': data['notes'],
+            'mandatory': false, // Optional by default
+          };
         }
       }
     } catch (e) {
       print('[VersionService] Error checking update: $e');
     }
     return null;
+  }
+
+  String _cleanVersion(String tag) {
+    // Remove "v", "V" from start
+    String v = tag.replaceAll(RegExp(r'^[vV]'), '');
+    // Remove suffixes like "-win", "+build"
+    v = v.split('-')[0].split('+')[0];
+    return v;
   }
 
   bool _isNewer(String latest, String current) {
