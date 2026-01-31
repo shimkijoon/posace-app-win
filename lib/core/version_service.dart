@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'app_config.dart';
@@ -9,7 +10,15 @@ class VersionService {
   VersionService._internal();
 
   // Point to the Next.js API in posace-web
-  static const String _updateUrl = 'https://www.posace.com/api/download/windows?mode=json';
+  // Dev: localhost:3001 (posace-web default port)
+  // Prod: posace.com
+  static String get _updateUrl {
+    if (kReleaseMode) {
+      return 'https://www.posace.com/api/download/windows?mode=json';
+    } else {
+      return 'http://localhost:3001/api/download/windows?mode=json';
+    }
+  }
 
   Future<Map<String, dynamic>?> checkUpdate() async {
     try {
