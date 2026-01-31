@@ -197,7 +197,8 @@
     "search": "検索",
     "refresh": "更新",
     "apply": "適用",
-    "reset": "リセット"
+    "reset": "リセット",
+    "select": "選択"
   },
   "payment": {
     "splitPayment": "分割決済",

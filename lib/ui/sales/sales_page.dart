@@ -560,30 +560,35 @@ class _SalesPageState extends State<SalesPage> {
       final salesApi = PosSalesApi(ApiClient(accessToken: token));
       
       try {
-        final transactionId = const Uuid().v4();
+        final clientSaleId = const Uuid().v4();
         
         await salesApi.createSale({
-          'transactionId': transactionId,
+          'clientSaleId': clientSaleId,
           'storeId': session['storeId'],
           'posId': session['posId'],
           'totalAmount': totalAmount,
-          'paymentMethod': method.toString().split('.').last.toUpperCase(), // CARD, CASH
+          'paidAmount': paidAmount ?? totalAmount,
           'items': _cart.items.map((i) => {
             'productId': i.product.id,
             'qty': i.quantity,
             'price': i.product.price,
-            'discount': i.discountAmount,
-            'options': i.selectedOptions.map((o) => o.toMap()).toList(),
+            'discountAmount': i.discountAmount,
           }).toList(),
-          'paidAmount': paidAmount ?? totalAmount,
-          'changeAmount': changeAmount ?? 0,
-          'cardApprovalNumber': cardApprovalNumber,
-          'cardCompany': cardCompany,
-          'cardNumber': cardNumber,
-          'installmentMonths': installmentMonths,
-          'memberId': _selectedMember?.id,
-          'tableId': widget.tableId,
-          if (payments != null) 'payments': payments.map((p) => p.toMap()).toList(), // Send payments if available
+          'payments': payments != null
+              ? payments.map((p) => {
+                  'method': p.method,
+                  'amount': p.amount,
+                  if (p.cardApproval != null) 'cardApproval': p.cardApproval,
+                  if (p.cardLast4 != null) 'cardLast4': p.cardLast4,
+                }).toList()
+              : [
+                  {
+                    'method': method.toString().split('.').last.toUpperCase(),
+                    'amount': paidAmount ?? totalAmount,
+                    if (cardApprovalNumber != null) 'cardApproval': cardApprovalNumber,
+                  }
+                ],
+          if (_selectedMember?.id != null) 'membershipId': _selectedMember!.id,
         });
 
         // 테이블 주문인 경우 주문 완료 처리

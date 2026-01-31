@@ -41,10 +41,18 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _loadSession();
-    _loadDataCounts();
-    _loadWeeklySales();
-    _checkUpdate();
+    _initializeApp(); // 순차적 초기화
+  }
+
+  /// 앱 초기화 (세션 로드 후 동기화 실행)
+  Future<void> _initializeApp() async {
+    await _loadSession(); // 먼저 세션 정보 로드
+    if (mounted) {
+      _performInitialSync(); // 그 다음 동기화 실행 (백그라운드)
+      _loadDataCounts();
+      _loadWeeklySales();
+      _checkUpdate();
+    }
   }
 
   Future<void> _loadSession() async {
@@ -57,7 +65,6 @@ class _HomePageState extends State<HomePage> {
       _isSessionActive = session['sessionId'] != null;
       _usePosSession = useSession;
     });
-    
   }
 
   Future<void> _loadDataCounts() async {
@@ -240,6 +247,47 @@ class _HomePageState extends State<HomePage> {
     final updateInfo = await VersionService().checkUpdate();
     if (updateInfo != null && mounted) {
       _showUpdateDialog(updateInfo);
+    }
+  }
+
+  /// 앱 시작 시 자동 마스터 데이터 동기화 (전체 동기화)
+  Future<void> _performInitialSync() async {
+    try {
+      print('[HomePage] 🔄 Starting initial master data sync...');
+      final storeId = _session['storeId'];
+      final accessToken = await _storage.getAccessToken();
+      
+      if (storeId == null || accessToken == null) {
+        print('[HomePage] ⚠️ Cannot sync: missing storeId or accessToken');
+        return;
+      }
+
+      final apiClient = ApiClient(accessToken: accessToken);
+      final masterApi = PosMasterApi(apiClient);
+      final syncService = SyncService(
+        database: widget.database,
+        masterApi: masterApi,
+        salesApi: PosSalesApi(apiClient),
+      );
+
+      // 전체 동기화 (manual: true)
+      final result = await syncService.syncMaster(
+        storeId: storeId,
+        manual: true, // 앱 시작 시에는 항상 전체 동기화
+      );
+
+      if (result.success) {
+        print('[HomePage] ✅ Initial sync completed successfully');
+        print('[HomePage] 📦 Synced: ${result.categoriesCount} categories, ${result.productsCount} products');
+        
+        // 동기화 완료 후 데이터 개수 다시 로드
+        _loadDataCounts();
+      } else {
+        print('[HomePage] ❌ Initial sync failed: ${result.error}');
+      }
+    } catch (e) {
+      print('[HomePage] ❌ Initial sync error: $e');
+      // 동기화 실패해도 앱은 계속 사용 가능하도록 에러를 무시
     }
   }
 

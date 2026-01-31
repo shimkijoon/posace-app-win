@@ -2,7 +2,16 @@
 
 Flutter 기반 Windows POS 클라이언트 애플리케이션.
 
-## 최근 업데이트 (2026-01-29)
+## 최근 업데이트
+
+### 2026-01-31 (금)
+- **빌드 오류 수정**: PDB 파일 잠금 문제로 인한 C++ 컴파일 오류 해결
+  - 원인: 여러 CL.EXE 프로세스가 동시에 같은 .PDB 파일 접근
+  - 해결: `flutter clean` 후 재빌드로 해결
+  - 영향받은 플러그인: `url_launcher_windows`, `flutter_libserialport`
+- **번역 누락 수정**: 모든 언어 파일에 `common.select` 키 추가 (ko, en, ja, zh-TW, zh-HK)
+
+### 2026-01-29
 
 ### 프로덕션 배포 설정
 - **도메인 적용**: API 기본 URL을 `https://api.posace.com/api/v1`로 변경

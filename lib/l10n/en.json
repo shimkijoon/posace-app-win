@@ -127,7 +127,8 @@
     "search": "Search",
     "refresh": "Refresh",
     "apply": "Apply",
-    "reset": "Reset"
+    "reset": "Reset",
+    "select": "Select"
   },
   "payment": {
     "splitPayment": "Split Payment",

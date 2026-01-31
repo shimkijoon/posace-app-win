@@ -17,9 +17,21 @@ class PosSalesApi {
     if (apiClient.accessToken != null) {
       print('[PosSalesApi] Token preview: ${apiClient.accessToken!.substring(0, 50)}...');
     }
+    
+    // Log the payload data
+    print('[PosSalesApi] 📦 Payload keys: ${saleData.keys.toList()}');
+    print('[PosSalesApi] 📦 Items count: ${(saleData['items'] as List?)?.length ?? 0}');
+    if (saleData['items'] != null) {
+      for (var i = 0; i < (saleData['items'] as List).length; i++) {
+        final item = (saleData['items'] as List)[i];
+        print('[PosSalesApi] 📦 Item $i: productId=${item['productId']}, qty=${item['qty']}, price=${item['price']}');
+      }
+    }
+    print('[PosSalesApi] 📦 Payments count: ${(saleData['payments'] as List?)?.length ?? 0}');
+    print('[PosSalesApi] 📦 Total amount: ${saleData['totalAmount']}');
+    print('[PosSalesApi] 📦 Full payload: ${json.encode(saleData)}');
 
     // The saleData is already built by the caller, so we just encode and send.
-    // We can add a simple check or logging here if needed.
     final body = json.encode(saleData);
 
     final response = await http.post(
