@@ -1,5 +1,6 @@
 import '../../core/storage/auth_storage.dart';
 import '../../data/remote/pos_auth_api.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 class PosAuthService {
   PosAuthService({PosAuthApi? api, AuthStorage? storage})
@@ -71,6 +72,53 @@ class PosAuthService {
         'stores': result['stores']
       };
     }
+  }
+
+  Future<Map<String, dynamic>> loginWithGoogle() async {
+    try {
+      // 1. Google Login via Supabase (Opens Browser)
+      
+      final client = supabase.Supabase.instance.client;
+      await client.auth.signInWithOAuth(
+        supabase.OAuthProvider.google,
+        redirectTo: 'posace://login-callback',
+      );
+      
+      return {'initiated': true};
+    } catch (e) {
+      throw Exception('Google 로그인 시작 실패: $e');
+    }
+  }
+  
+  // This method is called AFTER the deep link has processed the session
+  Future<Map<String, dynamic>> completeSocialLogin() async {
+     final client = supabase.Supabase.instance.client;
+     final session = client.auth.currentSession;
+     if (session == null) throw Exception('No active session');
+     
+     final user = session.user;
+     final userId = user.id;
+     final email = user.email; // might be null
+     
+     final stores = await client
+         .from('stores')
+         .select('id, name, address, business_number')
+         .eq('owner_id', userId); // or appropriate column
+         
+     final mappedStores = (stores as List).map((s) => {
+       'id': s['id'],
+       'name': s['name'],
+       'address': s['address'],
+       'businessNumber': s['business_number'],
+     }).toList();
+     
+     return {
+        'success': true, 
+        'autoSelected': false, 
+        'stores': mappedStores,
+        'email': email,
+        'userId': userId
+      };
   }
 
   Future<Map<String, dynamic>> selectPos({

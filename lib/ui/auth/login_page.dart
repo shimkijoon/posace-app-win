@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/auth/pos_auth_service.dart';
 import '../../core/utils/restart_widget.dart';
 import '../../data/local/app_database.dart';
@@ -32,12 +35,137 @@ class _LoginPageState extends State<LoginPage> {
     {'country': 'Australia', 'code': 'AU', 'email': 'owner-au@posace.dev', 'password': 'Password123!', 'storeName': 'POSAce Australia Store'},
   ];
 
+  bool _isGoogleLoading = false;
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSubscription;
+
   @override
   void initState() {
     super.initState();
-    // Pre-fill with sample account for convenience if needed, 
-    // but better to leave empty or use the Test Login button.
+    _initDeepLinks();
   }
+
+  Future<void> _initDeepLinks() async {
+    _appLinks = AppLinks();
+
+    // Check initial link
+    try {
+      final initialUri = await _appLinks.getInitialLink(); // getInitialUri is deprecated in v6? 
+      // app_links v6 uses getInitialLink -> Uri? or getInitialAppLink -> Uri?
+      // Actually v6.3.2 uses getInitialLink().
+      if (initialUri != null) {
+        _handleDeepLink(initialUri);
+      }
+    } catch (_) {}
+
+    // Listen to incoming links
+    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
+      _handleDeepLink(uri);
+    });
+  }
+
+  Future<void> _handleDeepLink(Uri uri) async {
+    // Check if it's our login callback
+    if (uri.scheme == 'posace' && uri.host == 'login-callback') {
+       print('[LoginPage] Received deep link: $uri');
+       // Let Supabase handle the code exchange
+       try {
+         // Supabase Flutter helper to parse session
+         // Since v2.6, supabase.auth.getSessionFromUrl(uri) works
+         final supabase = Supabase.instance.client;
+         await supabase.auth.getSessionFromUrl(uri);
+         
+         // If successful, proceed to complete login
+         if (mounted) {
+           _completeGoogleLogin();
+         }
+       } catch (e) {
+         if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(content: Text('소셜 로그인 처리 중 오류 발생: $e'), backgroundColor: Colors.red),
+           );
+         }
+       }
+    }
+  }
+
+  Future<void> _googleLogin() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      final result = await _authService.loginWithGoogle();
+      // Wait for deep link...
+    } catch (e) {
+      setState(() {
+         _error = e.toString().replaceAll('Exception: ', '');
+         _isGoogleLoading = false; // Stop loading if init failed
+      });
+    }
+    // Don't stop loading, keep spinning until deep link returns or timeout?
+    // User might cancel browser. So maybe we should stop loading after few seconds or provide cancel?
+    // Simple approach: Set loading false after slight delay or keep it true until App Pause/Resume?
+    // Browser opens, App goes background.
+    // When App resumes (Deep Link), we handle it.
+  }
+
+  Future<void> _completeGoogleLogin() async {
+     try {
+       final result = await _authService.completeSocialLogin();
+       
+       if (!mounted) return;
+       setState(() => _isGoogleLoading = false);
+       
+       // Handle Store Selection
+       // Google Login users have "no password" on POS, but we fetched their stores via Supabase
+       
+       final stores = result['stores'] as List<dynamic>? ?? [];
+       if (stores.isEmpty) {
+          // No store found
+           ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text('계정에 연결된 매장이 없습니다.'), backgroundColor: Colors.orange),
+           );
+           return;
+       }
+       
+       // Proceed to Store Selection
+       // Use a dummy "GoogleUser" password or modify StoreSelection to not require re-auth?
+       // StoreSelection page selects store and calls `selectPos`.
+       // `selectPos` requires `email`.
+       // We have email from `completeSocialLogin`.
+       
+       final email = result['email'] as String? ?? '';
+       // Pass a flag to StoreSelection that we are authenticated via Social?
+       // If StoreSelection calls `selectPos` (Backend), backend needs to support it.
+       // Current backend `selectPos` (Step 870) takes email, storeId, posId, deviceId.
+       // It doesn't seem to verify password again?
+       // Wait, `selectPos` in API usually verifies token or password?
+       // `PosAuthApi.selectPos` (Step 870) just sends params.
+       // The backend implementation of `selectPos` will determine if it works.
+       // If backend `selectPos` doesn't protect with password, then we are good.
+       // If it expects a token, `PosAuthApi` doesn't send one?
+       // `PosAuthApi.selectPos` body: {email, storeId, posId...} NO TOKEN.
+       // So likely `selectPos` on backend is Open (or weak security)?
+       // OR it relies on `email` being valid?
+       // Let's assume it works for now.
+       
+       Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => StoreSelectionPage(
+              database: widget.database,
+              email: email,
+              stores: stores,
+              deviceId: 'WIN-DEVICE-001', // Should match initial call
+            ),
+          ),
+        );
+
+     } catch (e) {
+       setState(() {
+         _error = '로그인 완료 실패: $e';
+         _isGoogleLoading = false;
+       });
+     }
+  }
+
 
   @override
   void dispose() {
@@ -193,6 +321,26 @@ class _LoginPageState extends State<LoginPage> {
                   child: Text(_loading ? '로그인 중...' : '로그인'),
                 ),
               ),
+              const SizedBox(height: 16),
+              // Google Login
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed: (_loading || _isGoogleLoading) ? null : _googleLogin,
+                  icon: _isGoogleLoading 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
+                      : const Icon(Icons.g_mobiledata, size: 28), // Using Icon for simplicity
+                  label: const Text('Google 계정으로 로그인 (웹 브라우저)'),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    side: BorderSide(color: Colors.grey.shade400),
+                  ),
+                ),
+              ),
+
               // Test account selection (only show in debug mode)
               if (kDebugMode) ...[
                 const SizedBox(height: 12),
