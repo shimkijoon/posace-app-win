@@ -157,6 +157,45 @@ class Cart {
     return Cart(items: [], cartDiscounts: []);
   }
 
+  /// JSON으로 변환
+  Map<String, dynamic> toJson() {
+    return {
+      'items': items.map((item) => {
+        'product': item.product.toMap(),
+        'quantity': item.quantity,
+        'selectedOptions': item.selectedOptions.map((opt) => opt.toMap()).toList(),
+        'appliedDiscounts': item.appliedDiscounts.map((d) => d.toMap()).toList(),
+        'customPrice': item.customPrice,
+      }).toList(),
+      'cartDiscounts': cartDiscounts.map((d) => d.toMap()).toList(),
+    };
+  }
+
+  /// JSON에서 복원
+  factory Cart.fromJson(Map<String, dynamic> json) {
+    return Cart(
+      items: (json['items'] as List<dynamic>?)?.map((itemJson) {
+        final product = ProductModel.fromMap(itemJson['product'] as Map<String, dynamic>);
+        final selectedOptions = (itemJson['selectedOptions'] as List<dynamic>?)
+            ?.map((opt) => ProductOptionModel.fromMap(opt as Map<String, dynamic>))
+            .toList() ?? [];
+        final appliedDiscounts = (itemJson['appliedDiscounts'] as List<dynamic>?)
+            ?.map((d) => DiscountModel.fromMap(d as Map<String, dynamic>))
+            .toList() ?? [];
+        return CartItem(
+          product: product,
+          quantity: itemJson['quantity'] as int,
+          selectedOptions: selectedOptions,
+          appliedDiscounts: appliedDiscounts,
+          customPrice: itemJson['customPrice'] as int?,
+        );
+      }).toList() ?? [],
+      cartDiscounts: (json['cartDiscounts'] as List<dynamic>?)
+          ?.map((d) => DiscountModel.fromMap(d as Map<String, dynamic>))
+          .toList() ?? [],
+    );
+  }
+
   Cart applyDiscounts(List<DiscountModel> discounts, List<CategoryModel> categories) {
     final now = DateTime.now();
 

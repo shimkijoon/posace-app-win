@@ -53,7 +53,7 @@ class _PinLoginPageState extends State<PinLoginPage> {
 
       if (storeId == null || token == null) throw Exception('인증 정보가 없습니다. 다시 로그인해주세요.');
 
-      final apiClient = ApiClient(baseUrl: '', accessToken: token); // Base URL will be handled by buildUri
+      final apiClient = ApiClient(accessToken: token);
       final api = PosEmployeesApi(apiClient);
       
       final employee = await api.verifyPin(storeId, _pin);

@@ -6,7 +6,7 @@ import '../../data/local/models.dart';
 class PaymentContext {
   final Cart cart;
   final Set<String> selectedDiscountIds;
-  final CustomerMembershipModel? selectedMember;
+  final MemberModel? selectedMember;
   final double? customAmount;
   final String? paymentMethod;
   final String? tableId;
@@ -25,7 +25,7 @@ class PaymentContext {
     return {
       'cart': cart.toJson(),
       'selectedDiscountIds': selectedDiscountIds.toList(),
-      'selectedMember': selectedMember?.toJson(),
+      'selectedMember': selectedMember?.toMap(),
       'customAmount': customAmount,
       'paymentMethod': paymentMethod,
       'tableId': tableId,
@@ -38,7 +38,7 @@ class PaymentContext {
       cart: Cart.fromJson(json['cart']),
       selectedDiscountIds: Set<String>.from(json['selectedDiscountIds'] ?? []),
       selectedMember: json['selectedMember'] != null
-          ? CustomerMembershipModel.fromJson(json['selectedMember'])
+          ? MemberModel.fromMap(json['selectedMember'])
           : null,
       customAmount: json['customAmount'],
       paymentMethod: json['paymentMethod'],
