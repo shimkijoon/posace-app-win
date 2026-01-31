@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:posace/core/models/cart.dart';
-import 'package:posace/data/local/models.dart';
+import '../models/cart.dart';
+import '../../data/local/models.dart';
 
 /// 결제 컨텍스트 저장/복원을 위한 클래스
 class PaymentContext {

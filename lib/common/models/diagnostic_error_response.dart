@@ -1,4 +1,4 @@
-import 'package:posace/common/enums/error_code.dart';
+import '../../common/enums/error_code.dart';
 
 /// 진단 가능한 에러 응답
 class DiagnosticErrorResponse {

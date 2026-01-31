@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:posace/common/models/diagnostic_error_response.dart';
-import 'package:posace/common/enums/error_code.dart';
-import 'package:posace/common/services/error_diagnostic_service.dart';
+import '../../common/models/diagnostic_error_response.dart';
+import '../../common/enums/error_code.dart';
+import '../../common/services/error_diagnostic_service.dart';
 
 /// 진단 가능한 에러를 표시하는 다이얼로그
 class DiagnosticErrorDialog extends StatelessWidget {
@@ -373,7 +373,7 @@ class DiagnosticErrorDialog extends StatelessWidget {
           ],
         ),
         backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
   }

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:posace/common/models/diagnostic_error_response.dart';
-import 'package:posace/common/enums/error_code.dart';
+import '../models/diagnostic_error_response.dart';
+import '../enums/error_code.dart';
 
 /// 에러 진단 및 리포트 생성 서비스
 class ErrorDiagnosticService {

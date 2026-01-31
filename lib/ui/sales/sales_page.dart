@@ -373,7 +373,7 @@ class _SalesPageState extends State<SalesPage> {
                       if (savedDiscountIds.isNotEmpty)
                         Text('• 할인: ${savedDiscountIds.length}개'),
                       if (savedMember != null)
-                        Text('• 멤버: ${savedMember.customer?.name ?? "등록"}'),
+                        Text('• 멤버: ${savedMember.name}'),
                     ],
                   ),
                 ),
@@ -438,8 +438,9 @@ class _SalesPageState extends State<SalesPage> {
         ),
       );
 
-      final session = await _storage.getSession();
-      final accessToken = await _storage.getAccessToken();
+      final storage = AuthStorage();
+      final session = await storage.getSessionInfo();
+      final accessToken = await storage.getAccessToken();
       
       if (session == null || accessToken == null) {
         throw Exception('세션 정보가 없습니다');
@@ -710,7 +711,7 @@ class _SalesPageState extends State<SalesPage> {
     
     try {
       final storage = AuthStorage();
-      final session = await storage.getSession();
+      final session = await storage.getSessionInfo();
       final accessToken = await storage.getAccessToken();
       
       if (session == null || accessToken == null) {
@@ -729,17 +730,17 @@ class _SalesPageState extends State<SalesPage> {
           'productId': item.product.id,
           'qty': item.quantity,
           'price': item.product.price,
-          'options': item.options?.map((opt) => {
+          'options': item.selectedOptions.map((opt) => {
             'id': opt.id,
             'name': opt.name,
-            'price': opt.price,
+            'price': opt.priceAdjustment,
           }).toList(),
         }).toList(),
         'discountIds': _selectedManualDiscountIds.toList(),
         'memberId': _selectedMember?.id,
       };
       
-      await api.suspendSale(session['storeId'] as String, suspendedData);
+      await api.createSuspendedSale(session['storeId'] as String, suspendedData);
       
       // ✅ 보류 성공 - 장바구니 초기화
       setState(() {
@@ -931,9 +932,12 @@ class _SalesPageState extends State<SalesPage> {
             
             if (diagnosticError != null) {
               // 시스템 정보 수집
-              final productCount = await widget.database.productDao.countProducts();
-              final categoryCount = await widget.database.categoryDao.countCategories();
-              final lastSync = await widget.database.syncLogDao.getLastSyncTime();
+              final products = await widget.database.getProducts();
+              final categories = await widget.database.getCategories();
+              final productCount = products.length;
+              final categoryCount = categories.length;
+              final lastSyncStr = await widget.database.getSyncMetadata('lastMasterSync');
+              final lastSync = lastSyncStr != null ? DateTime.parse(lastSyncStr) : null;
               
               // ⚠️ 중복 결제 위험 체크
               final isDuplicateRisk = diagnosticError.statusCode >= 500 || 
@@ -951,6 +955,7 @@ class _SalesPageState extends State<SalesPage> {
                   // (결제가 성공했는데 응답만 실패했을 수 있음)
                   await _processPaymentSuccess(
                     method,
+                    totalAmount,
                     paidAmount: paidAmount,
                     cardApprovalNumber: cardApprovalNumber,
                     cardCompany: cardCompany,
