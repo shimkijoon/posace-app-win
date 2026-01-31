@@ -18,6 +18,7 @@ void main() {
 
     Widget createTestWidget(List<ProductModel> productList, {
       ValueChanged<ProductModel>? onProductTap,
+      bool showBarcodeInGrid = false,
     }) {
       return MaterialApp(
         home: MediaQuery(
@@ -27,6 +28,7 @@ void main() {
             body: ProductGrid(
               products: productList,
               onProductTap: onProductTap ?? (product) {},
+              showBarcodeInGrid: showBarcodeInGrid,
             ),
           ),
         ),
@@ -165,7 +167,10 @@ void main() {
         optionGroups: [],
       );
 
-      await tester.pumpWidget(createTestWidget([productWithBarcode]));
+      await tester.pumpWidget(createTestWidget(
+        [productWithBarcode],
+        showBarcodeInGrid: true, // Enable barcode display
+      ));
 
       expect(find.text('8801234567890'), findsOneWidget);
     });
