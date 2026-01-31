@@ -120,7 +120,7 @@ msix_config:
   publisher_display_name: POSAce
   publisher: CN=SHIMKIJOON, O=POSAce, C=KR
   identity_name: com.posace.app.win
-  msix_version: 1.0.3.0
+  msix_version: 1.0.4.0
   logo_path: assets/app_icon.png
   capabilities: internetClient, privateNetworkClientServer
   install_certificate: false
