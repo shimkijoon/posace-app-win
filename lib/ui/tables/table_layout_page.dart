@@ -35,33 +35,119 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
 
   Future<void> _loadLayouts() async {
     setState(() => _isLoading = true);
+    
     try {
+      // ✅ 1. 로컬 DB에서 테이블 레이아웃 로드
       final layouts = await widget.database.getTableLayouts();
-      // Fetch active orders from server if possible, or use local state
-      // For now, let's assume we fetch them here to show 'occupied' state
-      final accessToken = await _storage.getAccessToken();
-      if (accessToken != null) {
-        final apiClient = ApiClient(accessToken: accessToken);
-        final response = await http.get(
-          apiClient.buildUri('/tables/active-orders', {'storeId': (await _storage.getSessionInfo())['storeId'] ?? ''}),
-          headers: apiClient.headers,
-        );
-        if (response.statusCode == 200) {
-          final data = List<Map<String, dynamic>>.from(jsonDecode(response.body));
-          _activeOrders = data;
+      
+      // ✅ 2. 로컬 DB에서 미전송 판매 조회 (테이블별)
+      final unsyncedSales = await widget.database.getUnsyncedSales();
+      final localActiveOrders = _convertUnsyncedSalesToActiveOrders(unsyncedSales);
+      
+      // ✅ 3. 서버에서 활성 주문 조회 (백그라운드, 실패해도 계속)
+      List<Map<String, dynamic>> serverActiveOrders = [];
+      String? serverError;
+      
+      try {
+        final accessToken = await _storage.getAccessToken();
+        if (accessToken != null) {
+          final apiClient = ApiClient(accessToken: accessToken);
+          final session = await _storage.getSessionInfo();
+          final storeId = session['storeId'];
+          
+          if (storeId != null) {
+            final response = await http.get(
+              apiClient.buildUri('/tables/active-orders', {'storeId': storeId}),
+              headers: apiClient.headers,
+            );
+            
+            if (response.statusCode == 200) {
+              final data = List<Map<String, dynamic>>.from(jsonDecode(response.body));
+              serverActiveOrders = data;
+            }
+          }
         }
+      } catch (e) {
+        print('[TableLayout] ⚠️ Server active orders fetch failed, using local only: $e');
+        serverError = e.toString();
       }
+      
+      // ✅ 4. 로컬과 서버 주문 병합 (로컬 우선)
+      final mergedOrders = _mergeActiveOrders(localActiveOrders, serverActiveOrders);
       
       setState(() {
         _layouts = layouts;
+        _activeOrders = mergedOrders;
         _isLoading = false;
       });
+      
+      // ✅ 5. 서버 오류 시 조용한 알림 (디버그용)
+      if (serverError != null && mounted) {
+        print('[TableLayout] 💡 Using local orders only. Server error: $serverError');
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('데이터 로드 실패: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('데이터 로드 실패: $e')),
+        );
       }
     }
+  }
+
+  /// 미전송 판매를 활성 주문 형식으로 변환
+  List<Map<String, dynamic>> _convertUnsyncedSalesToActiveOrders(List<dynamic> unsyncedSales) {
+    final activeOrders = <Map<String, dynamic>>[];
+    
+    for (final sale in unsyncedSales) {
+      // tableId가 있는 판매만 처리
+      if (sale.tableId != null) {
+        activeOrders.add({
+          'id': sale.id,
+          'tableId': sale.tableId,
+          'totalAmount': sale.totalAmount,
+          'status': sale.status,
+          'createdAt': sale.createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+          'source': 'local',
+          'isLocalOnly': true,
+        });
+      }
+    }
+    
+    return activeOrders;
+  }
+
+  /// 로컬과 서버 활성 주문 병합 (로컬 우선)
+  List<Map<String, dynamic>> _mergeActiveOrders(
+    List<Map<String, dynamic>> local,
+    List<Map<String, dynamic>> server,
+  ) {
+    final merged = <String, Map<String, dynamic>>{};
+    
+    // ✅ 로컬 우선 (로컬 DB가 최신 정보)
+    for (final order in local) {
+      final tableId = order['tableId'] as String?;
+      if (tableId != null) {
+        merged[tableId] = {
+          ...order,
+          'isLocalOnly': true,
+        };
+      }
+    }
+    
+    // ✅ 서버 정보 추가 (로컬에 없는 테이블만)
+    for (final order in server) {
+      final tableId = order['tableId'] as String?;
+      if (tableId != null && !merged.containsKey(tableId)) {
+        merged[tableId] = {
+          ...order,
+          'source': 'server',
+          'isLocalOnly': false,
+        };
+      }
+    }
+    
+    return merged.values.toList();
   }
 
   void _showTableManagementDialog(Map<String, dynamic> table, Map<String, dynamic> activeOrder) {
@@ -292,19 +378,22 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
       orElse: () => {},
     );
     bool hasOrder = activeOrder.isNotEmpty;
+    bool isLocalOnly = activeOrder['isLocalOnly'] == true;
     
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: hasOrder ? AppTheme.warning : AppTheme.border,
+          color: hasOrder 
+            ? (isLocalOnly ? Colors.orange : AppTheme.warning)
+            : AppTheme.border,
           width: hasOrder ? 2 : 1,
         ),
         boxShadow: [
           BoxShadow(
             color: hasOrder 
-              ? AppTheme.warning.withOpacity(0.1) 
+              ? (isLocalOnly ? Colors.orange.withOpacity(0.1) : AppTheme.warning.withOpacity(0.1))
               : Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
@@ -340,10 +429,36 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
               child: Container(
                 height: 6,
                 decoration: BoxDecoration(
-                  color: hasOrder ? AppTheme.warning : Colors.grey.shade200,
+                  color: hasOrder 
+                    ? (isLocalOnly ? Colors.orange : AppTheme.warning)
+                    : Colors.grey.shade200,
                 ),
               ),
             ),
+
+            // ✅ 로컬 전용 주문 표시
+            if (isLocalOnly)
+              Positioned(
+                top: 8,
+                left: 8,
+                child: IgnorePointer(
+                  child: Tooltip(
+                    message: '미전송 주문 (서버 동기화 필요)',
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.cloud_off,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
             // 중앙 정보 표시
             IgnorePointer(
@@ -356,7 +471,9 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: hasOrder ? AppTheme.warning : AppTheme.textPrimary,
+                        color: hasOrder 
+                          ? (isLocalOnly ? Colors.orange : AppTheme.warning)
+                          : AppTheme.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -364,7 +481,9 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: hasOrder 
-                          ? AppTheme.warning.withOpacity(0.1) 
+                          ? (isLocalOnly 
+                            ? Colors.orange.withOpacity(0.1)
+                            : AppTheme.warning.withOpacity(0.1))
                           : Colors.grey.shade50,
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -373,7 +492,9 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: hasOrder ? AppTheme.warning : AppTheme.textSecondary,
+                          color: hasOrder 
+                            ? (isLocalOnly ? Colors.orange : AppTheme.warning)
+                            : AppTheme.textSecondary,
                         ),
                       ),
                     ),
@@ -388,14 +509,18 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
                 top: 8,
                 right: 8,
                 child: Material(
-                  color: AppTheme.warning.withOpacity(0.1),
+                  color: (isLocalOnly ? Colors.orange : AppTheme.warning).withOpacity(0.1),
                   shape: const CircleBorder(),
                   child: InkWell(
                     customBorder: const CircleBorder(),
                     onTap: () => _showTableManagementDialog(table, activeOrder),
-                    child: const Padding(
-                      padding: EdgeInsets.all(6),
-                      child: Icon(Icons.settings, size: 18, color: AppTheme.warning),
+                    child: Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Icon(
+                        Icons.settings,
+                        size: 18,
+                        color: isLocalOnly ? Colors.orange : AppTheme.warning,
+                      ),
                     ),
                   ),
                 ),
@@ -409,7 +534,11 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
                 child: Icon(
                   hasOrder ? Icons.restaurant : Icons.event_seat_outlined,
                   size: 16,
-                  color: hasOrder ? AppTheme.warning.withOpacity(0.5) : Colors.grey.shade300,
+                  color: hasOrder 
+                    ? (isLocalOnly 
+                      ? Colors.orange.withOpacity(0.5)
+                      : AppTheme.warning.withOpacity(0.5))
+                    : Colors.grey.shade300,
                 ),
               ),
             ),

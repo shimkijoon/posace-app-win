@@ -8,6 +8,9 @@ import '../../core/i18n/app_localizations.dart';
 import '../../data/local/app_database.dart';
 import '../../data/local/models.dart';
 import 'package:uuid/uuid.dart';
+import '../../common/services/error_diagnostic_service.dart';
+import '../../common/models/diagnostic_error_response.dart';
+import '../common/diagnostic_error_dialog.dart';
 import '../../core/storage/auth_storage.dart';
 import '../home/home_page.dart';
 import 'widgets/title_bar.dart';
@@ -30,6 +33,9 @@ import 'widgets/split_payment_dialog.dart';
 import '../../data/local/models/payment_model.dart';
 import '../../data/remote/pos_sales_api.dart';
 import '../../data/remote/table_management_api.dart';
+import '../../data/remote/api_client.dart';
+import '../../data/remote/pos_master_api.dart';
+import '../../sync/sync_service.dart';
 import '../../data/remote/api_client.dart';
 import '../../ui/widgets/virtual_keypad.dart';
 
@@ -311,6 +317,223 @@ class _SalesPageState extends State<SalesPage> {
     );
   }
 
+  /// 자동 동기화 실행 (에러 복구용)
+  /// 장바구니와 결제 컨텍스트를 보존하면서 동기화
+  Future<void> _performAutoSync() async {
+    try {
+      if (!mounted) return;
+      
+      // ✅ 1. 현재 컨텍스트 저장
+      final savedCart = _cart;
+      final savedDiscountIds = Set<String>.from(_selectedManualDiscountIds);
+      final savedMember = _selectedMember;
+      
+      print('[SalesPage] 💾 장바구니 저장: ${savedCart.items.length}개 상품');
+      print('[SalesPage] 💾 할인 저장: ${savedDiscountIds.length}개');
+      print('[SalesPage] 💾 멤버 저장: ${savedMember?.id ?? "없음"}');
+      
+      // ✅ 2. 사용자에게 확인 (장바구니가 있는 경우만)
+      if (savedCart.items.isNotEmpty) {
+        final confirm = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber, color: Colors.orange),
+                SizedBox(width: 8),
+                Text('동기화 확인'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('마스터 데이터를 동기화합니다.'),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '📦 현재 장바구니 정보',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('• 상품: ${savedCart.items.length}개'),
+                      Text('• 금액: ₩${savedCart.total.toStringAsFixed(0)}'),
+                      if (savedDiscountIds.isNotEmpty)
+                        Text('• 할인: ${savedDiscountIds.length}개'),
+                      if (savedMember != null)
+                        Text('• 멤버: ${savedMember.customer?.name ?? "등록"}'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '✅ 장바구니 정보는 보존됩니다\n✅ 동기화 후 결제를 계속할 수 있습니다',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('취소'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('동기화 실행'),
+              ),
+            ],
+          ),
+        );
+        
+        if (confirm != true) {
+          print('[SalesPage] ❌ 동기화 취소됨');
+          return;
+        }
+      }
+      
+      // ✅ 3. 로딩 표시
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => WillPopScope(
+          onWillPop: () async => false, // 뒤로가기 막기
+          child: const Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('마스터 데이터 동기화 중...'),
+                    SizedBox(height: 8),
+                    Text(
+                      '장바구니 정보는 보존됩니다',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final session = await _storage.getSession();
+      final accessToken = await _storage.getAccessToken();
+      
+      if (session == null || accessToken == null) {
+        throw Exception('세션 정보가 없습니다');
+      }
+
+      final apiClient = ApiClient(accessToken: accessToken);
+      final masterApi = PosMasterApi(apiClient);
+      final syncService = SyncService(
+        database: widget.database,
+        masterApi: masterApi,
+        salesApi: PosSalesApi(apiClient),
+      );
+
+      // ✅ 4. 전체 동기화 실행
+      print('[SalesPage] 🔄 동기화 시작...');
+      final result = await syncService.syncMaster(
+        storeId: session['storeId'] as String,
+        manual: true,
+      );
+
+      if (mounted) {
+        Navigator.of(context).pop(); // 로딩 다이얼로그 닫기
+      }
+
+      if (result.success) {
+        print('[SalesPage] ✅ 동기화 성공: ${result.categoriesCount}개 카테고리, ${result.productsCount}개 상품');
+        
+        // ✅ 5. 데이터 다시 로드 (카테고리, 상품 목록만)
+        await _loadData();
+        
+        // ✅ 6. 장바구니와 컨텍스트 복원
+        if (mounted) {
+          setState(() {
+            _cart = savedCart;
+            _selectedManualDiscountIds = savedDiscountIds;
+            _selectedMember = savedMember;
+          });
+          
+          print('[SalesPage] 🔄 장바구니 복원: ${_cart.items.length}개 상품');
+          print('[SalesPage] 🔄 할인 복원: ${_selectedManualDiscountIds.length}개');
+          print('[SalesPage] 🔄 멤버 복원: ${_selectedMember?.id ?? "없음"}');
+        }
+        
+        // ✅ 7. 성공 메시지
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('동기화 완료!'),
+                        Text(
+                          '${result.categoriesCount}개 카테고리, ${result.productsCount}개 상품',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        throw Exception(result.error ?? '동기화 실패');
+      }
+    } catch (e) {
+      print('[SalesPage] ❌ 동기화 오류: $e');
+      
+      if (mounted) {
+        // 로딩 다이얼로그가 열려있으면 닫기
+        Navigator.of(context, rootNavigator: true).popUntil((route) {
+          return route.isFirst || !route.navigator!.canPop();
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('동기화 실패: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
   void _onSearchChanged(String query) {
     setState(() {
       _searchQuery = query;
@@ -456,22 +679,98 @@ class _SalesPageState extends State<SalesPage> {
     );
   }
 
-  void _onHold() {
-    // For now, if cart is empty, show suspended sales list. If not empty, we might want to suspend.
-    // However, existing SuspendedSalesDialog only lists sales (retrieval).
-    // Logic for suspending should be separate or added to dialog. 
-    // Fixing build first: match constructor
+  Future<void> _onHold() async {
+    // ✅ 장바구니가 비어있으면 보류 거래 복원
     if (_cart.isEmpty) {
-      showDialog(
-        context: context,
-        builder: (context) => SuspendedSalesDialog(database: widget.database),
-      ).then((result) {
-        // Handle retrieval based on result (sale ID or object)
-        // TODO: Implement retrieval logic
-      });
+      await _handleSuspendedSalesRestore();
     } else {
-       // TODO: Implement save logic
-       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('보류 기능 구현 필요')));
+      // ✅ 장바구니가 있으면 현재 거래 보류
+      await _suspendCurrentSale();
+    }
+  }
+
+  /// 보류 거래 복원 (장바구니 확인 포함)
+  Future<void> _handleSuspendedSalesRestore() async {
+    final suspendedId = await showDialog<String>(
+      context: context,
+      builder: (context) => SuspendedSalesDialog(database: widget.database),
+    );
+    
+    if (suspendedId != null) {
+      // TODO: 보류 거래 복원 로직 구현
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('보류 거래 복원: $suspendedId')),
+      );
+    }
+  }
+
+  /// 현재 장바구니 보류
+  Future<void> _suspendCurrentSale() async {
+    if (_cart.isEmpty) return;
+    
+    try {
+      final storage = AuthStorage();
+      final session = await storage.getSession();
+      final accessToken = await storage.getAccessToken();
+      
+      if (session == null || accessToken == null) {
+        throw Exception('세션 정보가 없습니다');
+      }
+      
+      final api = PosSuspendedApi(accessToken: accessToken);
+      
+      // 보류 거래 데이터 생성
+      final suspendedData = {
+        'storeId': session['storeId'],
+        'posId': session['posId'],
+        'tableId': widget.tableId,
+        'totalAmount': _cart.total,
+        'items': _cart.items.map((item) => {
+          'productId': item.product.id,
+          'qty': item.quantity,
+          'price': item.product.price,
+          'options': item.options?.map((opt) => {
+            'id': opt.id,
+            'name': opt.name,
+            'price': opt.price,
+          }).toList(),
+        }).toList(),
+        'discountIds': _selectedManualDiscountIds.toList(),
+        'memberId': _selectedMember?.id,
+      };
+      
+      await api.suspendSale(session['storeId'] as String, suspendedData);
+      
+      // ✅ 보류 성공 - 장바구니 초기화
+      setState(() {
+        _cart = Cart();
+        _selectedManualDiscountIds.clear();
+        _selectedMember = null;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('거래가 보류되었습니다'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('보류 실패: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -626,8 +925,62 @@ class _SalesPageState extends State<SalesPage> {
         
       } catch (e) {
         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(content: Text('결제 처리 실패: $e')),
+          // HTTP 응답인 경우 진단 가능한 에러로 처리
+          if (e is http.Response) {
+            final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(e);
+            
+            if (diagnosticError != null) {
+              // 시스템 정보 수집
+              final productCount = await widget.database.productDao.countProducts();
+              final categoryCount = await widget.database.categoryDao.countCategories();
+              final lastSync = await widget.database.syncLogDao.getLastSyncTime();
+              
+              // ⚠️ 중복 결제 위험 체크
+              final isDuplicateRisk = diagnosticError.statusCode >= 500 || 
+                                     diagnosticError.errorCode.code.contains('TIMEOUT');
+              
+              await DiagnosticErrorDialog.show(
+                context: context,
+                error: diagnosticError,
+                onSyncPressed: () async {
+                  // 자동 동기화 실행
+                  await _performAutoSync();
+                },
+                onRetryPressed: isDuplicateRisk ? null : () async {
+                  // ⚠️ 서버 오류나 타임아웃일 경우 재시도 버튼 비활성화
+                  // (결제가 성공했는데 응답만 실패했을 수 있음)
+                  await _processPaymentSuccess(
+                    method,
+                    paidAmount: paidAmount,
+                    cardApprovalNumber: cardApprovalNumber,
+                    cardCompany: cardCompany,
+                    cardNumber: cardNumber,
+                    installmentMonths: installmentMonths,
+                    payments: payments,
+                  );
+                },
+                systemInfo: {
+                  'storeId': session['storeId'],
+                  'posId': session['posId'],
+                  'appVersion': '1.0.0',
+                  'lastSyncAt': lastSync?.toIso8601String() ?? 'Never',
+                  'productCount': productCount,
+                  'categoryCount': categoryCount,
+                  'cartItemCount': _cart.items.length,
+                  'totalAmount': totalAmount,
+                  'isDuplicateRisk': isDuplicateRisk,
+                  'warning': isDuplicateRisk 
+                    ? '서버 오류 또는 타임아웃: 결제가 실제로는 성공했을 수 있음' 
+                    : null,
+                },
+              );
+              return;
+            }
+          }
+          
+          // 구형 에러 처리 (fallback)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('결제 처리 실패: $e')),
           );
         }
       }

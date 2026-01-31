@@ -31,10 +31,11 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
 
     setState(() => _isLoading = true);
     
-    // 1. Local Search
+    // ✅ 1. 로컬 검색
     final results = await widget.database.searchMembersByPhone(query);
     
-    // 2. Online Search (if local not enough or always to be sure)
+    // ✅ 2. 온라인 검색 (로컬 결과 없을 때만)
+    String? onlineSearchError;
     if (results.isEmpty) {
       try {
         final authStorage = AuthStorage();
@@ -52,6 +53,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
         }
       } catch (e) {
         print('Online search failed: $e');
+        onlineSearchError = e.toString();
       }
     }
 
@@ -59,6 +61,48 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
       _results = results;
       _isLoading = false;
     });
+    
+    // ✅ 3. 결과 없을 때 명확한 메시지 및 등록 제안
+    if (mounted && results.isEmpty) {
+      String message;
+      if (onlineSearchError != null) {
+        message = '⚠️ 검색 결과가 없습니다.\n\n'
+                  '로컬: 결과 없음\n'
+                  '서버: 연결 실패 ($onlineSearchError)\n\n'
+                  '신규 회원으로 등록하시겠습니까?';
+      } else {
+        message = '검색 결과가 없습니다.\n\n'
+                  '신규 회원으로 등록하시겠습니까?';
+      }
+      
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('검색 결과 없음'),
+            ],
+          ),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('신규 등록'),
+            ),
+          ],
+        ),
+      );
+      
+      if (confirm == true) {
+        await _openRegistration();
+      }
+    }
   }
 
   Future<void> _openRegistration() async {
@@ -142,7 +186,35 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
                         border: Border.all(color: AppTheme.border),
                       ),
                       child: ListTile(
-                        onTap: () => Navigator.pop(context, member),
+                        onTap: () async {
+                          // ✅ 서버에서 최신 회원 정보 확인 (백그라운드)
+                          MemberModel finalMember = member;
+                          try {
+                            final authStorage = AuthStorage();
+                            final session = await authStorage.getSessionInfo();
+                            final accessToken = await authStorage.getAccessToken();
+                            final storeId = session['storeId'];
+                            
+                            if (storeId != null && accessToken != null) {
+                              final apiClient = ApiClient(accessToken: accessToken);
+                              final customerApi = PosCustomerApi(apiClient);
+                              
+                              // 최신 회원 정보 가져오기 (포인트 등)
+                              final updatedMember = await customerApi.searchOnlineMember(storeId, member.phone);
+                              await widget.database.upsertMember(updatedMember);
+                              finalMember = updatedMember;
+                              
+                              print('[MemberSearch] ✅ Updated member info from server');
+                            }
+                          } catch (e) {
+                            print('[MemberSearch] ⚠️ Failed to fetch latest member info, using cached: $e');
+                            // 실패해도 캐시된 정보 사용
+                          }
+                          
+                          if (mounted) {
+                            Navigator.pop(context, finalMember);
+                          }
+                        },
                         leading: CircleAvatar(
                           backgroundColor: AppTheme.primary.withOpacity(0.1),
                           child: Text(member.name[0], style: const TextStyle(color: AppTheme.primary)),
