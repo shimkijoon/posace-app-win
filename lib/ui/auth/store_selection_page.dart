@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/auth/pos_auth_service.dart';
+import '../../core/app_config.dart';
 import '../../core/storage/auth_storage.dart';
 import '../../core/utils/restart_widget.dart';
 import '../../data/local/app_database.dart';
