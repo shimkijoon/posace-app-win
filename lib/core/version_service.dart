@@ -9,14 +9,14 @@ class VersionService {
   factory VersionService() => _instance;
   VersionService._internal();
 
-  // Point to the Next.js API in posace-web
-  // Dev: localhost:3001 (posace-web default port)
-  // Prod: posace.com
+  // Point to the Next.js API in backoffice
+  // Dev: localhost:3002 (posace-backoffice)
+  // Prod: backoffice.posace.com
   static String get _updateUrl {
     if (kReleaseMode) {
-      return 'https://www.posace.com/api/download/windows?mode=json';
+      return '${AppConfig.backofficeBaseUrl}/api/download/windows?mode=json';
     } else {
-      return 'http://localhost:3001/api/download/windows?mode=json';
+      return '${AppConfig.backofficeBaseUrl}/api/download/windows?mode=json';
     }
   }
 

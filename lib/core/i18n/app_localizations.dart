@@ -21,7 +21,8 @@ class AppLocalizations {
     if (locale.countryCode != null) {
       // 복합 언어 코드 처리
       if (languageCode == 'zh') {
-        languageCode = locale.toString(); // zh-TW, zh-HK
+        // Use hyphenated locale to match asset filenames (zh-TW.json, zh-HK.json)
+        languageCode = '${locale.languageCode}-${locale.countryCode}';
       }
       // 영어는 통합 (en-SG, en-AU -> en)
       // 다른 언어는 단순 언어 코드 사용

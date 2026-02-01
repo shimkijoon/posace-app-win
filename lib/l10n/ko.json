@@ -11,7 +11,16 @@
     "email": "이메일",
     "password": "비밀번호",
     "selectStore": "매장 선택",
-    "selectPos": "POS 기기 선택"
+    "selectPos": "POS 기기 선택",
+    "noStores": "등록된 매장이 없습니다.",
+    "selectStorePrompt": "접속할 매장을 선택하세요",
+    "noName": "이름 없음",
+    "posDeviceCount": "POS 기기: {count}대",
+    "selectPosForStore": "{storeName}의 POS 기기 선택",
+    "noPosDevices": "등록된 POS 기기가 없습니다.",
+    "connectedDevice": "연결된 기기: {deviceId}",
+    "canConnectNewDevice": "새 기기 연결 가능",
+    "reselectStore": "매장 다시 선택"
   },
   "store": {
     "info": "매장 정보",
@@ -40,9 +49,6 @@
   "taxes": {
     "title": "세금"
   },
-  "receipt": {
-    "kitchenOrder": "주방 주문서"
-  },
   "sales": {
     "title": "판매",
     "cart": "장바구니",
@@ -57,8 +63,6 @@
     "all": "전체",
     "discount": "할인",
     "member": "회원",
-    "cancelTransaction": "거래취소",
-    "holdTransaction": "거래보류",
     "remaining": "남아있음",
     "name": "이름",
     "qty": "수량",
@@ -127,7 +131,10 @@
     "orderTaken": "주문 접수",
     "paymentComplete": "결제 완료",
     "clearTable": "테이블 정리",
-    "status": "상태"
+    "status": "상태",
+    "noLayouts": "설정된 테이블 레이아웃이 없습니다.",
+    "noTables": "설정된 테이블이 없습니다.",
+    "dataLoadFailed": "데이터 로드 실패"
   },
   "salesInquiry": {
     "title": "매출 조회",
@@ -142,7 +149,11 @@
     "status": "상태",
     "normalPayment": "정상결제",
     "cancelled": "취소",
-    "method": "결제수단"
+    "cancelledBadge": "취소됨",
+    "method": "결제수단",
+    "noResults": "조회된 매출 내역이 없습니다.",
+    "noProducts": "상품 없음",
+    "dataLoadFailed": "데이터 로드 실패"
   },
   "receiptDialog": {
     "title": "영수증 상세",

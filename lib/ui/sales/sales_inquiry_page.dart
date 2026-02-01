@@ -61,7 +61,7 @@ class _SalesInquiryPageState extends State<SalesInquiryPage> {
             summaries[sale.id] = firstName;
           }
         } else {
-          summaries[sale.id] = '상품 없음';
+          summaries[sale.id] = AppLocalizations.of(context)!.translate('salesInquiry.noProducts') ?? '상품 없음';
         }
       }
 
@@ -76,7 +76,7 @@ class _SalesInquiryPageState extends State<SalesInquiryPage> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('데이터 로드 실패: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)!.translate('salesInquiry.dataLoadFailed') ?? '데이터 로드 실패'}: $e')),
         );
       }
     }
@@ -227,7 +227,7 @@ class _SalesInquiryPageState extends State<SalesInquiryPage> {
                 ? const Center(child: CircularProgressIndicator())
                 : _sales.isEmpty
                     ? Center(
-                        child: Text('조회된 매출 내역이 없습니다.', 
+                        child: Text(AppLocalizations.of(context)!.translate('salesInquiry.noResults') ?? '조회된 매출 내역이 없습니다.', 
                           style: TextStyle(color: AppTheme.textSecondary)),
                       )
                     : ListView.builder(
@@ -294,7 +294,7 @@ class _SalesInquiryPageState extends State<SalesInquiryPage> {
                                         color: AppTheme.error,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      child: const Text('취소됨', 
+                                      child: Text(AppLocalizations.of(context)!.translate('salesInquiry.cancelledBadge') ?? '취소됨', 
                                         style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
                                     ),
                                   ],

@@ -1,10 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:posace_app_win/data/local/models.dart';
+import 'package:posace_app_win/core/i18n/app_localizations.dart';
 import 'package:posace_app_win/ui/sales/widgets/product_grid.dart';
 import '../helpers/test_fixtures.dart';
 
 void main() {
+  Finder findTextContaining(String text) {
+    return find.byWidgetPredicate((widget) {
+      if (widget is Text) {
+        final data = widget.data ?? widget.textSpan?.toPlainText() ?? '';
+        return data.contains(text);
+      }
+      if (widget is RichText) {
+        return widget.text.toPlainText().contains(text);
+      }
+      return false;
+    });
+  }
+
   group('ProductGrid Widget', () {
     late List<ProductModel> products;
 
@@ -21,6 +36,20 @@ void main() {
       bool showBarcodeInGrid = false,
     }) {
       return MaterialApp(
+        locale: const Locale('ko'),
+        supportedLocales: const [
+          Locale('ko'),
+          Locale('en'),
+          Locale('ja'),
+          Locale('zh', 'TW'),
+          Locale('zh', 'HK'),
+        ],
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         home: MediaQuery(
           // Windows POS 기본 화면 크기: 1024x768
           data: const MediaQueryData(size: Size(1024, 768)),
@@ -37,8 +66,9 @@ void main() {
 
     testWidgets('should display empty state when products list is empty', (tester) async {
       await tester.pumpWidget(createTestWidget([]));
+      await tester.pumpAndSettle();
 
-      expect(find.text('상품이 없습니다'), findsOneWidget);
+      expect(findTextContaining('상품이 없습니다'), findsOneWidget);
       expect(find.byIcon(Icons.inventory_2_outlined), findsOneWidget);
     });
 
@@ -67,8 +97,9 @@ void main() {
         products,
         onProductTap: (product) => tappedProduct = product,
       ));
+      await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Americano'));
+      await tester.tap(findTextContaining('Americano'));
       await tester.pump();
 
       expect(tappedProduct, isNotNull);
@@ -93,8 +124,9 @@ void main() {
       );
 
       await tester.pumpWidget(createTestWidget([outOfStockProduct]));
+      await tester.pumpAndSettle();
 
-      expect(find.text('품절'), findsOneWidget);
+      expect(findTextContaining('품절'), findsOneWidget);
     });
 
     testWidgets('should not trigger tap for out of stock products', (tester) async {
@@ -120,8 +152,9 @@ void main() {
         [outOfStockProduct],
         onProductTap: (product) => tappedProduct = product,
       ));
+      await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Out of Stock Product'));
+      await tester.tap(findTextContaining('Out of Stock Product'));
       await tester.pump();
 
       expect(tappedProduct, isNull);
@@ -145,8 +178,9 @@ void main() {
       );
 
       await tester.pumpWidget(createTestWidget([productWithStock]));
+      await tester.pumpAndSettle();
 
-      expect(find.textContaining('재고'), findsOneWidget);
+      expect(findTextContaining('재고'), findsOneWidget);
       expect(find.textContaining('25'), findsOneWidget);
     });
 
@@ -172,7 +206,7 @@ void main() {
         showBarcodeInGrid: true, // Enable barcode display
       ));
 
-      expect(find.text('8801234567890'), findsOneWidget);
+      expect(findTextContaining('8801234567890'), findsOneWidget);
     });
 
     testWidgets('should use GridView with correct layout', (tester) async {
