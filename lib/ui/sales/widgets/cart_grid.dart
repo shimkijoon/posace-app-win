@@ -4,6 +4,7 @@ import '../../../core/models/cart_item.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../data/local/models.dart';
+import '../../../core/i18n/locale_helper.dart';
 
 typedef ValueChanged2<T1, T2> = void Function(T1 value1, T2 value2);
 
@@ -13,11 +14,13 @@ class CartGrid extends StatefulWidget {
     required this.cart,
     required this.onQuantityChanged,
     required this.onItemRemove,
+    this.countryCode = 'KR',
   });
 
   final Cart cart;
   final ValueChanged2<String, int> onQuantityChanged;
   final ValueChanged<String> onItemRemove;
+  final String countryCode;
 
   @override
   State<CartGrid> createState() => _CartGridState();
@@ -124,10 +127,7 @@ class _CartGridState extends State<CartGrid> {
       );
 
   String _formatPrice(int price) {
-    return '₩${price.toString().replaceAllMapped(
-          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-          (match) => '${match[1]},',
-        )}';
+    return LocaleHelper.getCurrencyFormat(widget.countryCode).format(price);
   }
 
   @override
@@ -518,7 +518,7 @@ class _CartGridRow extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onRemove,
                     icon: const Icon(Icons.delete_outline, size: 16),
-                    label: const Text('삭제'),
+                    label: Text(AppLocalizations.of(context)!.translate('common.delete')),
                     style: TextButton.styleFrom(foregroundColor: AppTheme.error, padding: EdgeInsets.zero),
                   ),
                 ],

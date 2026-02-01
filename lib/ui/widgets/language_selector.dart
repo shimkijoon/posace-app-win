@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/storage/auth_storage.dart';
 import '../../core/utils/restart_widget.dart';
+import '../../core/i18n/locale_controller.dart';
 
 class LanguageSelector extends StatelessWidget {
   const LanguageSelector({super.key});
@@ -13,10 +14,8 @@ class LanguageSelector extends StatelessWidget {
       onSelected: (languageCode) async {
         // 앱 언어 저장
         await AuthStorage().saveAppLanguage(languageCode);
-        // 앱 재시작하여 언어 적용
-        if (context.mounted) {
-          RestartWidget.restartApp(context);
-        }
+        // 앱 재시작 없이 Locale만 즉시 갱신
+        await reloadLocale();
       },
       itemBuilder: (context) => const [
         PopupMenuItem(

@@ -3,6 +3,7 @@ import '../../../core/i18n/app_localizations.dart';
 import '../../../core/models/cart.dart';
 import '../../../core/models/cart_item.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/locale_helper.dart';
 
 typedef ValueChanged2<T1, T2> = void Function(T1 value1, T2 value2);
 
@@ -14,6 +15,7 @@ class CartBottomSheet extends StatelessWidget {
     required this.onItemRemove,
     required this.onClear,
     required this.onCheckout,
+    this.countryCode = 'KR',
   });
 
   final Cart cart;
@@ -21,12 +23,10 @@ class CartBottomSheet extends StatelessWidget {
   final ValueChanged<String> onItemRemove;
   final VoidCallback onClear;
   final VoidCallback onCheckout;
+  final String countryCode;
 
   String _formatPrice(int price) {
-    return '₩${price.toString().replaceAllMapped(
-          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-          (match) => '${match[1]},',
-        )}';
+    return LocaleHelper.getCurrencyFormat(countryCode).format(price);
   }
 
   @override
@@ -61,7 +61,7 @@ class CartBottomSheet extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '장바구니',
+                      AppLocalizations.of(context)!.cart,
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -70,7 +70,7 @@ class CartBottomSheet extends StatelessWidget {
                       TextButton.icon(
                         onPressed: onClear,
                         icon: const Icon(Icons.delete_outline, size: 18),
-                        label: const Text('비우기'),
+                        label: Text(AppLocalizations.of(context)!.clear),
                       ),
                   ],
                 ),
@@ -128,7 +128,7 @@ class CartBottomSheet extends StatelessWidget {
                   child: Column(
                     children: [
                       // 할인 정보
-                      if (cart.cartDiscountAmount > 0) ...[
+                      if (cart.cartDiscountTotal > 0) ...[
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -137,7 +137,7 @@ class CartBottomSheet extends StatelessWidget {
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                             Text(
-                              '-${_formatPrice(cart.cartDiscountAmount)}',
+                              '-${_formatPrice(cart.cartDiscountTotal)}',
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     color: AppTheme.success,
                                     fontWeight: FontWeight.w600,
@@ -153,7 +153,7 @@ class CartBottomSheet extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            '총액',
+                            AppLocalizations.of(context)!.translate('sales.totalAmount'),
                             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),

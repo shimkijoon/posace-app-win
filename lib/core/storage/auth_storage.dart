@@ -9,6 +9,8 @@ class AuthStorage {
   static const _storeAddrKey = 'pos_store_addr';
   static const _storePhoneKey = 'pos_store_phone';
   static const _uiLanguageKey = 'pos_ui_language';
+  static const _storeCountryKey = 'pos_store_country';
+  static const _storeCurrencyKey = 'pos_store_currency';
   static const _employeeIdKey = 'pos_employee_id';
   static const _sessionIdKey = 'pos_session_id';
   static const _saleShowBarcodeInGridKey = 'pos_sale_show_barcode_in_grid';
@@ -34,6 +36,8 @@ class AuthStorage {
     String? storeAddr,
     String? storePhone,
     String? uiLanguage,
+    String? storeCountry,
+    String? storeCurrency,
     bool? saleShowBarcodeInGrid,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -45,6 +49,8 @@ class AuthStorage {
     if (storeAddr != null) await prefs.setString(_storeAddrKey, storeAddr);
     if (storePhone != null) await prefs.setString(_storePhoneKey, storePhone);
     if (uiLanguage != null) await prefs.setString(_uiLanguageKey, uiLanguage);
+    if (storeCountry != null) await prefs.setString(_storeCountryKey, storeCountry);
+    if (storeCurrency != null) await prefs.setString(_storeCurrencyKey, storeCurrency);
     if (saleShowBarcodeInGrid != null) {
       await prefs.setBool(_saleShowBarcodeInGridKey, saleShowBarcodeInGrid);
     }
@@ -61,6 +67,8 @@ class AuthStorage {
       'address': prefs.getString(_storeAddrKey),
       'phone': prefs.getString(_storePhoneKey),
       'uiLanguage': prefs.getString(_uiLanguageKey),
+      'country': prefs.getString(_storeCountryKey),
+      'currency': prefs.getString(_storeCurrencyKey),
       'employeeId': prefs.getString(_employeeIdKey),
       'sessionId': prefs.getString(_sessionIdKey),
       'saleShowBarcodeInGrid': prefs.getBool(_saleShowBarcodeInGridKey),
@@ -70,6 +78,16 @@ class AuthStorage {
   Future<String?> getUiLanguage() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_uiLanguageKey);
+  }
+
+  Future<String?> getStoreCountry() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_storeCountryKey);
+  }
+
+  Future<String?> getStoreCurrency() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_storeCurrencyKey);
   }
 
   Future<void> saveEmployee(String? employeeId) async {
@@ -162,6 +180,8 @@ class AuthStorage {
     await prefs.remove(_storeAddrKey);
     await prefs.remove(_storePhoneKey);
     await prefs.remove(_uiLanguageKey);
+    await prefs.remove(_storeCountryKey);
+    await prefs.remove(_storeCurrencyKey);
     await prefs.remove(_saleShowBarcodeInGridKey);
     await prefs.remove(_preferredStoreIdKey);
     await prefs.remove(_preferredPosIdKey);

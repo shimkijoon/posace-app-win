@@ -3,6 +3,7 @@ import '../../../core/models/cart.dart';
 import '../../../core/models/cart_item.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/i18n/app_localizations.dart';
+import '../../../core/i18n/locale_helper.dart';
 
 typedef ValueChanged2<T1, T2> = void Function(T1 value1, T2 value2);
 
@@ -14,6 +15,7 @@ class CartSidebar extends StatelessWidget {
     required this.onItemRemove,
     required this.onClear,
     required this.onCheckout,
+    this.countryCode = 'KR',
   });
 
   final Cart cart;
@@ -21,12 +23,10 @@ class CartSidebar extends StatelessWidget {
   final ValueChanged<String> onItemRemove;
   final VoidCallback onClear;
   final VoidCallback onCheckout;
+  final String countryCode;
 
   String _formatPrice(int price) {
-    return '₩${price.toString().replaceAllMapped(
-          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-          (match) => '${match[1]},',
-        )}';
+    return LocaleHelper.getCurrencyFormat(countryCode).format(price);
   }
 
   @override

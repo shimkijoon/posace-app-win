@@ -3,21 +3,24 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/i18n/app_localizations.dart';
 import '../../../../data/local/models.dart';
+import '../../../../core/i18n/locale_helper.dart';
 
 class DiscountSelectionDialog extends StatelessWidget {
   const DiscountSelectionDialog({
     super.key,
     required this.availableDiscounts,
     this.selectedDiscountIds = const {},
+    this.countryCode = 'KR',
   });
 
   final List<DiscountModel> availableDiscounts;
   final Set<String> selectedDiscountIds;
+  final String countryCode;
 
   @override
   Widget build(BuildContext context) {
     final cartDiscounts = availableDiscounts.where((d) => d.type == 'CART').toList();
-    final currencyFormat = NumberFormat.currency(locale: 'ko_KR', symbol: '₩');
+    final currencyFormat = LocaleHelper.getCurrencyFormat(countryCode);
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

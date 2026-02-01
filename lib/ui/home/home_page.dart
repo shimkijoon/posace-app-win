@@ -4,6 +4,7 @@ import '../../core/storage/auth_storage.dart';
 import '../../core/storage/settings_storage.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/i18n/app_localizations.dart';
+import '../../core/i18n/locale_controller.dart';
 import '../../data/local/app_database.dart';
 import '../../data/remote/api_client.dart';
 import '../../data/remote/pos_master_api.dart';
@@ -98,6 +99,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _logout() async {
     await _storage.clear();
+    await reloadLocale();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => LoginPage(database: widget.database)),

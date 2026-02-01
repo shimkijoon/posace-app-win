@@ -1,6 +1,7 @@
 import '../../core/storage/auth_storage.dart';
 import '../../data/remote/pos_auth_api.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import '../i18n/locale_controller.dart';
 
 class PosAuthService {
   PosAuthService({PosAuthApi? api, AuthStorage? storage})
@@ -25,8 +26,13 @@ class PosAuthService {
       storeId: storeId,
       posId: posId,
       uiLanguage: result['uiLanguage'] as String?,
+      storeCountry: result['country'] as String?,
+      storeCurrency: result['currency'] as String?,
       saleShowBarcodeInGrid: result['saleShowBarcodeInGrid'] as bool?,
     );
+
+    // 로그인 후 UI 언어 즉시 갱신
+    await reloadLocale();
   }
 
   Future<Map<String, dynamic>> loginAsOwner(String email, String password, {String? deviceId}) async {
@@ -167,8 +173,11 @@ class PosAuthService {
               storeAddr: result['address'],
               storePhone: result['phone'],
               uiLanguage: uiLanguage,
+              storeCountry: result['country'] as String?,
+              storeCurrency: result['currency'] as String?,
               saleShowBarcodeInGrid: saleShowBarcodeInGrid,
             );
+            await reloadLocale();
             return {'success': true, 'autoSelected': true};
          } else {
             return {
@@ -265,8 +274,11 @@ class PosAuthService {
       storeAddr: result['address'],
       storePhone: result['phone'],
       uiLanguage: uiLanguage,
+      storeCountry: result['country'] as String?,
+      storeCurrency: result['currency'] as String?,
       saleShowBarcodeInGrid: saleShowBarcodeInGrid,
     );
+    await reloadLocale();
     
     print('[PosAuthService] Saved uiLanguage: $uiLanguage');
     
@@ -280,6 +292,7 @@ class PosAuthService {
     final isValid = await _api.verifyToken(token);
     if (!isValid) {
       await _storage.clear();
+      await reloadLocale();
     }
     return isValid;
   }

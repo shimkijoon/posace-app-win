@@ -7,6 +7,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import '../../core/theme/app_theme.dart';
 import '../sales/widgets/title_bar.dart';
 import 'widgets/receipt_detail_dialog.dart';
+import '../../core/storage/auth_storage.dart';
+import '../../core/i18n/locale_helper.dart';
 
 class SalesInquiryPage extends StatefulWidget {
   const SalesInquiryPage({super.key, required this.database});
@@ -23,12 +25,51 @@ class _SalesInquiryPageState extends State<SalesInquiryPage> {
   bool _isLoading = true;
   DateTime _fromDate = DateTime.now().subtract(const Duration(days: 7));
   DateTime _toDate = DateTime.now();
+  String _countryCode = 'KR';
+  String _intlLocale = 'ko_KR';
 
   @override
   void initState() {
     super.initState();
-    initializeDateFormatting('ko_KR', null);
+    _loadLocaleSettings();
     _loadSales();
+  }
+
+  Future<void> _loadLocaleSettings() async {
+    try {
+      final session = await AuthStorage().getSessionInfo();
+      final sessionCountry = (session['country'] as String?)?.trim();
+      final uiLanguage = (session['uiLanguage'] as String?) ?? '';
+      final derivedCountry = () {
+        if (uiLanguage.startsWith('ja')) return 'JP';
+        if (uiLanguage == 'zh-TW') return 'TW';
+        if (uiLanguage == 'zh-HK') return 'HK';
+        if (uiLanguage == 'en-SG') return 'SG';
+        if (uiLanguage == 'en-AU') return 'AU';
+        return 'KR';
+      }();
+      final country = (sessionCountry != null && sessionCountry.isNotEmpty)
+          ? sessionCountry
+          : derivedCountry;
+
+      // Intl locale for date formatting (best effort)
+      String intlLocale = 'ko_KR';
+      if (uiLanguage.startsWith('ja') || country == 'JP') intlLocale = 'ja_JP';
+      else if (uiLanguage == 'zh-TW' || country == 'TW') intlLocale = 'zh_TW';
+      else if (uiLanguage == 'zh-HK' || country == 'HK') intlLocale = 'zh_HK';
+      else if (uiLanguage.startsWith('en')) intlLocale = 'en_US';
+
+      await initializeDateFormatting(intlLocale, null);
+      if (mounted) {
+        setState(() {
+          _countryCode = country;
+          _intlLocale = intlLocale;
+        });
+      }
+    } catch (_) {
+      // ignore: fallback to KR defaults
+      await initializeDateFormatting('ko_KR', null);
+    }
   }
 
   Future<void> _loadSales() async {
@@ -155,8 +196,8 @@ class _SalesInquiryPageState extends State<SalesInquiryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('yyyy-MM-dd (E) HH:mm', 'ko_KR');
-    final currencyFormat = NumberFormat.currency(locale: 'ko_KR', symbol: '₩');
+    final dateFormat = DateFormat('yyyy-MM-dd (E) HH:mm', _intlLocale);
+    final currencyFormat = LocaleHelper.getCurrencyFormat(_countryCode);
 
     return Scaffold(
       backgroundColor: AppTheme.background,

@@ -38,6 +38,7 @@ import '../../data/remote/pos_master_api.dart';
 import '../../sync/sync_service.dart';
 import '../../data/remote/api_client.dart';
 import '../../ui/widgets/virtual_keypad.dart';
+import '../../core/i18n/locale_helper.dart';
 
 enum PaymentMethod { card, cash, point, easy_payment }
 
@@ -73,6 +74,7 @@ class _SalesPageState extends State<SalesPage> {
 
   bool _showBarcodeInGrid = false;
   final FocusNode _searchFocusNode = FocusNode();
+  String _countryCode = 'KR';
 
   @override
   void initState() {
@@ -101,6 +103,18 @@ class _SalesPageState extends State<SalesPage> {
       // Load store settings for barcode display
       final auth = AuthStorage();
       final session = await auth.getSessionInfo();
+      final sessionCountry = (session['country'] as String?)?.trim();
+      final uiLanguage = (session['uiLanguage'] as String?)?.trim() ?? '';
+      final derivedCountry = () {
+        if (uiLanguage.startsWith('ja')) return 'JP';
+        if (uiLanguage == 'zh-TW') return 'TW';
+        if (uiLanguage == 'zh-HK') return 'HK';
+        if (uiLanguage == 'en-SG') return 'SG';
+        if (uiLanguage == 'en-AU') return 'AU';
+        return 'KR';
+      }();
+      final countryCode =
+          (sessionCountry != null && sessionCountry.isNotEmpty) ? sessionCountry : derivedCountry;
       // Assuming 'saleShowBarcodeInGrid' is/will be available in session info or we fetch it
       // If currently not in session, might need to fetch settings or update session logic.
       // For now, let's assume it gets synced into session or we default to false.
@@ -161,6 +175,7 @@ class _SalesPageState extends State<SalesPage> {
           _discounts = discounts;
           _selectedCategoryId = categories.isNotEmpty ? categories.first.id : null;
           _showBarcodeInGrid = showBarcode;
+          _countryCode = countryCode;
           _isLoading = false;
         });
         _updateCartDiscounts();
@@ -390,7 +405,7 @@ class _SalesPageState extends State<SalesPage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('취소'),
+                child: Text(AppLocalizations.of(context)!.translate('common.cancel')),
               ),
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
@@ -621,6 +636,7 @@ class _SalesPageState extends State<SalesPage> {
       builder: (context) => DiscountSelectionDialog(
         availableDiscounts: _discounts.where((d) => d.type == 'CART' && d.status == 'ACTIVE').toList(),
         selectedDiscountIds: _selectedManualDiscountIds,
+        countryCode: _countryCode,
       ),
     ).then((result) {
       if (result != null && result is Set<String>) {
@@ -673,7 +689,7 @@ class _SalesPageState extends State<SalesPage> {
               });
               _searchFocusNode.requestFocus();
             },
-            child: const Text('비우기'),
+            child: Text(AppLocalizations.of(context)!.clear),
           ),
         ],
       ),
@@ -1073,6 +1089,7 @@ class _SalesPageState extends State<SalesPage> {
                           cart: _cart,
                           onQuantityChanged: _onCartItemQuantityChanged,
                           onItemRemove: _onCartItemRemove,
+                          countryCode: _countryCode,
                         ),
                       ),
                       // Toast-style Big Pay Button
@@ -1098,7 +1115,7 @@ class _SalesPageState extends State<SalesPage> {
                                 ),
                                 const SizedBox(width: 12),
                                 Text(
-                                  '|   ₩${_cart.total.toString().replaceAllMapped(RegExp(r"(\d)(?=(\d{3})+(?!\d))"), (match) => "${match[1]},")}',
+                                  '|   ${LocaleHelper.getCurrencyFormat(_countryCode).format(_cart.total)}',
                                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: Colors.white70),
                                 ),
                               ],
@@ -1124,6 +1141,7 @@ class _SalesPageState extends State<SalesPage> {
                           onCategorySelected: _onCategorySelected,
                           onProductTap: _onProductTap,
                           showBarcodeInGrid: _showBarcodeInGrid,
+                          countryCode: _countryCode,
                         ),
                       ),
 

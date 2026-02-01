@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/local/models.dart';
+import '../../../core/i18n/locale_helper.dart';
 
 class ProductGrid extends StatelessWidget {
   const ProductGrid({
@@ -8,11 +9,13 @@ class ProductGrid extends StatelessWidget {
     required this.products,
     required this.onProductTap,
     this.showBarcodeInGrid = false,
+    this.countryCode = 'KR',
   });
 
   final List<ProductModel> products;
   final ValueChanged<ProductModel> onProductTap;
   final bool showBarcodeInGrid;
+  final String countryCode;
 
   @override
   Widget build(BuildContext context) {
@@ -54,6 +57,7 @@ class ProductGrid extends StatelessWidget {
             product: products[index],
             onTap: () => onProductTap(products[index]),
             showBarcode: showBarcodeInGrid,
+            countryCode: countryCode,
           );
         },
       ),
@@ -66,17 +70,16 @@ class _ProductCard extends StatelessWidget {
     required this.product,
     required this.onTap,
     required this.showBarcode,
+    required this.countryCode,
   });
 
   final ProductModel product;
   final VoidCallback onTap;
   final bool showBarcode;
+  final String countryCode;
 
   String _formatPrice(int price) {
-    return '₩${price.toString().replaceAllMapped(
-          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-          (match) => '${match[1]},',
-        )}';
+    return LocaleHelper.getCurrencyFormat(countryCode).format(price);
   }
 
   @override

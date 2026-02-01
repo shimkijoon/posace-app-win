@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../data/local/models.dart';
 import '../../../data/local/models/options_models.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/app_localizations.dart';
 
 class OptionSelectionDialog extends StatefulWidget {
   final ProductModel product;
@@ -173,7 +174,7 @@ class _OptionSelectionDialogState extends State<OptionSelectionDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('취소'),
+          child: Text(AppLocalizations.of(context)!.translate('common.cancel')),
         ),
         ElevatedButton(
           onPressed: _canSubmit

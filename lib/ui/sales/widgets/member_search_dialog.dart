@@ -78,22 +78,22 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
               Icon(Icons.info_outline, color: Colors.blue),
               SizedBox(width: 8),
-              Text('검색 결과 없음'),
+              Text(AppLocalizations.of(context)!.translate('sales.noSearchResults')),
             ],
           ),
           content: Text(message),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('취소'),
+              child: Text(AppLocalizations.of(context)!.translate('common.cancel')),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('신규 등록'),
+              child: Text(AppLocalizations.of(context)!.translate('sales.registerNewMember')),
             ),
           ],
         ),

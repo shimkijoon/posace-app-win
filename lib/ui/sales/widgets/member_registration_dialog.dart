@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/i18n/app_localizations.dart';
 import '../../../../core/storage/auth_storage.dart';
 import '../../../../data/local/app_database.dart';
 import '../../../../data/local/models.dart';
@@ -114,7 +115,7 @@ class _MemberRegistrationDialogState extends State<MemberRegistrationDialog> {
                 children: [
                   TextButton(
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
-                    child: const Text('취소'),
+                    child: Text(AppLocalizations.of(context)!.translate('common.cancel')),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
