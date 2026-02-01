@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -21,6 +24,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/windows/runner/Release/*.msix
+          files: build/windows/x64/runner/Release/*.msix
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
