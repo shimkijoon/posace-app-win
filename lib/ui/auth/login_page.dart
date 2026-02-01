@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/auth/pos_auth_service.dart';
+import '../../core/storage/auth_storage.dart';
 import '../../core/utils/restart_widget.dart';
 import '../../data/local/app_database.dart';
 import '../home/home_page.dart';
+import '../widgets/language_selector.dart';
 import 'store_selection_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -22,9 +24,11 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = PosAuthService();
+  final _authStorage = AuthStorage();
   bool _loading = false;
   String? _error;
   bool _showTestAccounts = false;
+  bool _rememberMe = false;
 
   static const List<Map<String, String>> _testAccounts = [
     {'country': '한국', 'code': 'KR', 'email': 'owner-kr@posace.dev', 'password': 'Password123!', 'storeName': 'POSAce 한국 매장'},
@@ -42,7 +46,20 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
+    _loadSavedEmail();
     _initDeepLinks();
+  }
+
+  Future<void> _loadSavedEmail() async {
+    final savedEmail = await _authStorage.getSavedEmail();
+    final autoLogin = await _authStorage.getAutoLogin();
+    
+    if (savedEmail != null) {
+      _emailController.text = savedEmail;
+      setState(() {
+        _rememberMe = autoLogin;
+      });
+    }
   }
 
   Future<void> _initDeepLinks() async {
@@ -200,10 +217,23 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) return;
 
+      // Save auto-login preferences
+      if (_rememberMe) {
+        await _authStorage.saveAutoLogin(true);
+        await _authStorage.saveSavedEmail(_emailController.text.trim());
+      } else {
+        await _authStorage.saveAutoLogin(false);
+        await _authStorage.saveSavedEmail(null);
+      }
+
       if (result['autoSelected'] == true) {
-        // 로그인 성공 - 언어 설정을 적용하기 위해 앱 재시작
-        print('[LoginPage] Login successful, restarting app to apply new locale...');
-        RestartWidget.restartApp(context);
+        // 자동 로그인 성공 - 홈 화면으로 직접 이동
+        print('[LoginPage] Auto-login successful, navigating to home...');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => HomePage(database: widget.database),
+          ),
+        );
       } else {
         // stores가 null일 수 있으므로 안전하게 처리
         final stores = result['stores'] as List<dynamic>? ?? [];
@@ -247,12 +277,19 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('POS 로그인')),
+      appBar: AppBar(
+        title: const Text('POS 로그인'),
+        actions: const [
+          LanguageSelector(),
+          SizedBox(width: 8),
+        ],
+      ),
       body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          padding: const EdgeInsets.all(32),
-          child: Column(
+        child: SingleChildScrollView(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.all(32),
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -282,7 +319,17 @@ class _LoginPageState extends State<LoginPage> {
                   prefixIcon: Icon(Icons.lock_outline),
                 ),
                 obscureText: true,
+                autofocus: _emailController.text.isNotEmpty,
                 onSubmitted: (_) => _submit(),
+              ),
+              const SizedBox(height: 16),
+              CheckboxListTile(
+                title: const Text('자동 로그인'),
+                subtitle: const Text('다음 로그인 시 자동으로 로그인합니다'),
+                value: _rememberMe,
+                onChanged: (value) => setState(() => _rememberMe = value ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
               ),
               const SizedBox(height: 24),
               if (_error != null) ...[
@@ -316,6 +363,14 @@ class _LoginPageState extends State<LoginPage> {
                   style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
+                    ),
+                    // Fix: avoid TextStyle.lerp crash when button toggles enabled/disabled.
+                    // Keep a stable TextStyle with inherit=false across transitions.
+                    textStyle: const TextStyle(
+                      inherit: false,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
                     ),
                   ),
                   child: Text(_loading ? '로그인 중...' : '로그인'),
@@ -468,6 +523,7 @@ class _LoginPageState extends State<LoginPage> {
               ],
             ],
           ),
+        ),
         ),
       ),
     );

@@ -43,11 +43,10 @@ class PosAuthService {
         // Supabase Login Success
         print('[PosAuthService] Supabase login success for ${user.email}');
         
-        // Fetch stores
-        // Note: Using camelCase column names to match Prisma schema (Postgres columns are likely case-sensitive or standard Prisma naming)
+        // Fetch stores with POS devices
         final stores = await client
             .from('stores')
-            .select('id, name, address, businessNumber, phone, language, country, ownerId')
+            .select('id, name, address, businessNumber, phone, language, country, ownerId, posDevices:pos_devices(id, name, deviceId, type, status)')
             .eq('ownerId', user.id)
             .eq('isDeleted', false); 
             
@@ -58,8 +57,64 @@ class PosAuthService {
           'address': s['address'],
           'businessNumber': s['businessNumber'],
           'phone': s['phone'],
-          // Add other fields if needed for UI or next steps
+          'posDevices': (s['posDevices'] as List?)?.map((p) => {
+            'id': p['id'],
+            'name': p['name'],
+            'deviceId': p['deviceId'],
+            'type': p['type'],
+            'status': p['status'],
+          }).toList() ?? [],
         }).toList();
+        
+        // Check for saved preferred store/POS
+        final preferredStoreId = await _storage.getPreferredStore();
+        final preferredPosId = await _storage.getPreferredPos();
+        
+        if (preferredStoreId != null && preferredPosId != null) {
+          // Try to find the preferred store and POS
+          final preferredStore = mappedStores.cast<Map<String, dynamic>>().firstWhere(
+            (store) => store['id'] == preferredStoreId,
+            orElse: () => {},
+          );
+          
+          if (preferredStore.isNotEmpty) {
+            final posDevices = preferredStore['posDevices'] as List<dynamic>? ?? [];
+            final preferredPos = posDevices.cast<Map<String, dynamic>>().firstWhere(
+              (pos) => pos['id'] == preferredPosId,
+              orElse: () => {},
+            );
+            
+            if (preferredPos.isNotEmpty) {
+              // Auto-select the preferred store/POS
+              print('[PosAuthService] Auto-selecting preferred store: ${preferredStore['name']}, POS: ${preferredPos['name']}');
+              
+              try {
+                await selectPos(
+                  email: user.email!,
+                  storeId: preferredStoreId,
+                  posId: preferredPosId,
+                  deviceId: deviceId,
+                );
+                
+                return {
+                  'success': true,
+                  'autoSelected': true,
+                  'email': user.email,
+                };
+              } catch (e) {
+                print('[PosAuthService] Auto-selection failed: $e, clearing preferences');
+                await _storage.clearPreferredSelections();
+                // Fall through to manual selection
+              }
+            } else {
+              print('[PosAuthService] Preferred POS not found, clearing preferences');
+              await _storage.clearPreferredSelections();
+            }
+          } else {
+            print('[PosAuthService] Preferred store not found, clearing preferences');
+            await _storage.clearPreferredSelections();
+          }
+        }
         
         // Return result compatible with LoginPage expectations
         // Note: Auto-selection logic is simplified here; we just return list.

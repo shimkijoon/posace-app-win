@@ -89,7 +89,7 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('데이터 로드 실패: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context)!.translate('tables.dataLoadFailed') ?? '데이터 로드 실패'}: $e')),
         );
       }
     }
@@ -295,7 +295,7 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
     final List<dynamic> tables = currentLayout['tables'] ?? [];
 
     if (tables.isEmpty) {
-      return const Center(child: Text('설정된 테이블이 없습니다.'));
+      return Center(child: Text(AppLocalizations.of(context)!.translate('tables.noTables') ?? '설정된 테이블이 없습니다.'));
     }
 
     return Container(

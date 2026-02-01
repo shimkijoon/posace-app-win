@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'dart:io';
 import 'core/app_config.dart';
 import 'core/storage/auth_storage.dart';
@@ -164,7 +165,21 @@ class _PosaceAppState extends State<PosaceApp> with WindowListener {
   }
 
   Future<bool> _checkAuth() async {
-    return PosAuthService().verifyToken();
+    // 1. Check Supabase session
+    final session = supabase.Supabase.instance.client.auth.currentSession;
+    if (session == null) return false;
+    
+    // 2. Check auto-login enabled
+    final authStorage = AuthStorage();
+    final autoLogin = await authStorage.getAutoLogin();
+    if (!autoLogin) return false;
+    
+    // 3. Check if we have store/POS info
+    final sessionInfo = await authStorage.getSessionInfo();
+    final storeId = sessionInfo['storeId'];
+    final posId = sessionInfo['posId'];
+    
+    return storeId != null && posId != null;
   }
 }
 

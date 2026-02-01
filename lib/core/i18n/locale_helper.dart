@@ -1,13 +1,51 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui' as ui;
 import '../storage/auth_storage.dart';
 
 class LocaleHelper {
   /// 저장된 언어 설정을 읽어서 Locale 객체로 변환
+  /// 우선순위: 1) POS 세션 언어, 2) 앱 전역 언어, 3) 시스템 로케일
   static Future<Locale> getLocale() async {
     final authStorage = AuthStorage();
-    final languageCode = await authStorage.getUiLanguage() ?? 'ko';
-    return _parseLocale(languageCode);
+    
+    // 1순위: POS 세션 언어 (로그인 후 서버에서 받은 언어)
+    final uiLanguage = await authStorage.getUiLanguage();
+    if (uiLanguage != null && uiLanguage.isNotEmpty) {
+      print('[LocaleHelper] Using POS session language: $uiLanguage');
+      return _parseLocale(uiLanguage);
+    }
+    
+    // 2순위: 앱 전역 언어 (사용자가 로그인 전 선택한 언어)
+    final appLanguage = await authStorage.getAppLanguage();
+    if (appLanguage != null && appLanguage.isNotEmpty) {
+      print('[LocaleHelper] Using app language: $appLanguage');
+      return _parseLocale(appLanguage);
+    }
+    
+    // 3순위: 시스템 로케일
+    final systemLocale = ui.PlatformDispatcher.instance.locale;
+    final supportedLanguage = _getSupportedLanguage(systemLocale.languageCode);
+    print('[LocaleHelper] Using system locale: ${systemLocale.languageCode} -> $supportedLanguage');
+    
+    return Locale(supportedLanguage);
+  }
+  
+  /// 시스템 언어 코드를 지원되는 언어로 매핑
+  static String _getSupportedLanguage(String languageCode) {
+    switch (languageCode) {
+      case 'ko':
+        return 'ko';
+      case 'ja':
+        return 'ja';
+      case 'zh':
+        return 'zh';
+      case 'en':
+        return 'en';
+      default:
+        // 기본값: 한국어
+        return 'ko';
+    }
   }
 
   /// 언어 코드 문자열을 Locale 객체로 변환

@@ -11,7 +11,16 @@
     "email": "メールアドレス",
     "password": "パスワード",
     "selectStore": "店舗選択",
-    "selectPos": "POS機器選択"
+    "selectPos": "POS機器選択",
+    "noStores": "登録された店舗がありません。",
+    "selectStorePrompt": "接続する店舗を選択してください",
+    "noName": "名前なし",
+    "posDeviceCount": "POS機器: {count}台",
+    "selectPosForStore": "{storeName}のPOS機器選択",
+    "noPosDevices": "登録されたPOS機器がありません。",
+    "connectedDevice": "接続済み機器: {deviceId}",
+    "canConnectNewDevice": "新しい機器を接続可能",
+    "reselectStore": "店舗を再選択"
   },
   "store": {
     "info": "店舗情報",
@@ -40,9 +49,6 @@
   "taxes": {
     "title": "税金"
   },
-  "receipt": {
-    "kitchenOrder": "厨房注文書"
-  },
   "sales": {
     "title": "販売",
     "cart": "カート",
@@ -57,8 +63,6 @@
     "all": "すべて",
     "discount": "割引",
     "member": "会員",
-    "cancelTransaction": "取引キャンセル",
-    "holdTransaction": "取引保留",
     "remaining": "残り",
     "name": "名前",
     "qty": "数量",
@@ -127,7 +131,10 @@
     "orderTaken": "注文受付",
     "paymentComplete": "お会計完了",
     "clearTable": "テーブル片付け",
-    "status": "ステータス"
+    "status": "ステータス",
+    "noLayouts": "設定されたテーブルレイアウトがありません。",
+    "noTables": "設定されたテーブルがありません。",
+    "dataLoadFailed": "データの読み込みに失敗しました"
   },
   "salesInquiry": {
     "title": "売上照会",
@@ -142,7 +149,11 @@
     "status": "ステータス",
     "normalPayment": "正常決済",
     "cancelled": "キャンセル",
-    "method": "決済方法"
+    "cancelledBadge": "キャンセル済み",
+    "method": "決済方法",
+    "noResults": "照会された売上履歴がありません。",
+    "noProducts": "商品なし",
+    "dataLoadFailed": "データの読み込みに失敗しました"
   },
   "receiptDialog": {
     "title": "レシート詳細",

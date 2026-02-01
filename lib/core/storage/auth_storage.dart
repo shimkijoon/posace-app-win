@@ -12,6 +12,13 @@ class AuthStorage {
   static const _employeeIdKey = 'pos_employee_id';
   static const _sessionIdKey = 'pos_session_id';
   static const _saleShowBarcodeInGridKey = 'pos_sale_show_barcode_in_grid';
+  static const _preferredStoreIdKey = 'pos_preferred_store_id';
+  static const _preferredPosIdKey = 'pos_preferred_pos_id';
+  
+  // Auto-login settings
+  static const _autoLoginKey = 'auto_login_enabled';
+  static const _savedEmailKey = 'saved_email';
+  static const _appLanguageKey = 'app_language';
 
   Future<String?> getAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -83,6 +90,68 @@ class AuthStorage {
     }
   }
 
+  // Preferred Store/POS Selection Methods
+  Future<void> savePreferredStore(String storeId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_preferredStoreIdKey, storeId);
+  }
+
+  Future<void> savePreferredPos(String posId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_preferredPosIdKey, posId);
+  }
+
+  Future<String?> getPreferredStore() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_preferredStoreIdKey);
+  }
+
+  Future<String?> getPreferredPos() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_preferredPosIdKey);
+  }
+
+  // Auto-login methods
+  Future<void> saveAutoLogin(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_autoLoginKey, enabled);
+  }
+
+  Future<bool> getAutoLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_autoLoginKey) ?? false;
+  }
+
+  Future<void> saveSavedEmail(String? email) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (email == null) {
+      await prefs.remove(_savedEmailKey);
+    } else {
+      await prefs.setString(_savedEmailKey, email);
+    }
+  }
+
+  Future<String?> getSavedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_savedEmailKey);
+  }
+
+  Future<void> saveAppLanguage(String languageCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_appLanguageKey, languageCode);
+  }
+
+  Future<String?> getAppLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_appLanguageKey);
+  }
+
+  Future<void> clearPreferredSelections() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_preferredStoreIdKey);
+    await prefs.remove(_preferredPosIdKey);
+  }
+
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_accessTokenKey);
@@ -94,5 +163,10 @@ class AuthStorage {
     await prefs.remove(_storePhoneKey);
     await prefs.remove(_uiLanguageKey);
     await prefs.remove(_saleShowBarcodeInGridKey);
+    await prefs.remove(_preferredStoreIdKey);
+    await prefs.remove(_preferredPosIdKey);
+    await prefs.remove(_autoLoginKey);
+    await prefs.remove(_savedEmailKey);
+    // Note: appLanguage is NOT cleared on logout
   }
 }
