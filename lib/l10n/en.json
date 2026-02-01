@@ -11,7 +11,12 @@
     "email": "Email",
     "password": "Password",
     "selectStore": "Select Store",
-    "selectPos": "Select POS Device"
+    "selectPos": "Select POS Device",
+    "noStoresTitle": "No stores registered",
+    "noStoresDescription": "Please create a store in the backoffice first.",
+    "storeCreationGuideTitle": "Store creation guide",
+    "storeCreationGuideSteps": "1. Open Backoffice ({backofficeUrl})\n2. Log in with the same account\n3. Select the \"Create Store\" menu\n4. Choose a store type (cafe, restaurant, etc.)\n5. Choose the auto sample data option",
+    "createStoreInBackofficeButton": "Create a store in Backoffice"
   },
   "store": {
     "info": "Store Information",

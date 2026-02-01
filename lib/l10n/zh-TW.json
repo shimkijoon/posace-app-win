@@ -11,7 +11,12 @@
     "email": "電子郵件",
     "password": "密碼",
     "selectStore": "選擇商店",
-    "selectPos": "選擇POS設備"
+    "selectPos": "選擇POS設備",
+    "noStoresTitle": "沒有已註冊的商店",
+    "noStoresDescription": "請先在後台建立商店。",
+    "storeCreationGuideTitle": "建立商店指南",
+    "storeCreationGuideSteps": "1. 前往後台（{backofficeUrl}）\n2. 使用相同帳號登入\n3. 選擇「建立商店」選單\n4. 選擇商店類型（咖啡廳、餐廳等）\n5. 選擇自動建立範例資料選項",
+    "createStoreInBackofficeButton": "在後台建立商店"
   },
   "store": {
     "info": "商店資訊",
