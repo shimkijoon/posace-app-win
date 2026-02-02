@@ -2,8 +2,8 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "POSAce"
-#define MyAppVersion "1.0.13" 
-#define MyAppPublisher "Shim Ki Joon"
+#define MyAppVersion "1.0.14" 
+#define MyAppPublisher "Ihan Soft"
 #define MyAppURL "https://www.posace.com"
 #define MyAppExeName "posace_app_win.exe"
 
@@ -34,8 +34,6 @@ ArchitecturesInstallIn64BitMode=x64
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
-; NOTE: If Korean text appears broken, ensure you are using the Unicode version of Inno Setup or the file encoding matches.
-Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
