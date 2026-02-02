@@ -287,8 +287,12 @@ class VersionService {
     // Detached process to allow app to exit while installer runs
     try {
       if (filePath.toLowerCase().endsWith('.exe')) {
-        final process = await Process.start(filePath, [], mode: ProcessStartMode.detached);
-        debugPrint('[VersionService] Installer process started. PID: ${process.pid}');
+        final process = await Process.start(
+          filePath, 
+          ['/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART'], 
+          mode: ProcessStartMode.detached,
+        );
+        debugPrint('[VersionService] Silent installer process started. PID: ${process.pid}');
       } else if (filePath.toLowerCase().endsWith('.msix')) {
         // MSIX might need powershell or just direct start if it's associated
         final process = await Process.start('powershell', ['-Command', 'Start-Process', '"$filePath"'], mode: ProcessStartMode.detached);
