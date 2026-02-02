@@ -40,13 +40,12 @@
     "startBusiness": "開始營業",
     "sessionNotUsed": "未使用營業",
     "enterOpeningAmount": "請輸入營業準備金(現金)。",
-    "enterClosingAmount": "請輸入最終現金餘額。"
+    "enterClosingAmount": "請輸入最終現金餘額。",
+    "updateTitle": "新版本更新",
+    "updateMessage": "最新版本已發佈。係咪而家更新？"
   },
   "taxes": {
     "title": "稅金"
-  },
-  "receipt": {
-    "kitchenOrder": "廚房訂單"
   },
   "sales": {
     "title": "銷售",
@@ -81,10 +80,8 @@
     "productNotFound": "找不到商品",
     "noItemsToDiscount": "沒有商品可套用折扣",
     "nothingToCancel": "沒有內容可取消",
-    "cancelTransaction": "取消交易",
     "cancelTransactionConfirm": "是否取消目前的交易及所選會員資訊？",
     "transactionCancelled": "交易已取消",
-    "holdTransaction": "保留交易",
     "holdTransactionConfirm": "是否保留目前的交易？（其他POS也可查看）",
     "transactionHeld": "交易已保留至伺服器",
     "holdTransactionFailed": "保留交易失敗",
@@ -117,7 +114,8 @@
     "date": "日期",
     "time": "時間",
     "dateTime": "日期時間",
-    "transactionNumber": "交易 NO"
+    "transactionNumber": "交易 NO",
+    "kitchenOrder": "廚房訂單"
   },
   "common": {
     "confirm": "確認",
@@ -135,7 +133,9 @@
     "refresh": "重新整理",
     "apply": "套用",
     "reset": "重設",
-    "select": "選擇"
+    "select": "選擇",
+    "updateNow": "立即更新",
+    "later": "稍後"
   },
   "payment": {
     "splitPayment": "分拆付款",
@@ -150,7 +150,7 @@
     "cashManual": "現金手動輸入",
     "cardManual": "信用卡手動輸入",
     "paymentComplete": "付款完成",
-    "amountInput": "金額輸入",
+    "amountInput": "金額 입력",
     "inputComplete": "輸入完成"
   },
   "tables": {
@@ -208,7 +208,14 @@
     "baudRate": "通訊速度 (Baud Rate)",
     "testPrint": "測試打印",
     "connected": "已連接",
-    "disconnected": "未連接"
+    "disconnected": "未連接",
+    "appInfo": "軟件資訊",
+    "checkForUpdates": "檢查更新",
+    "checkForUpdatesDesc": "查看目前版本資訊並更新至最新版本。",
+    "versionInfo": "版本資訊",
+    "currentVersion": "目前版本",
+    "latestVersion": "最新版本",
+    "forceUpdateDesc": "點擊下方按鈕開始更新至最新版本。"
   },
   "session": {
     "startBusiness": "開始營業",

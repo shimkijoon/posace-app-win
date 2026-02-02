@@ -40,13 +40,12 @@
     "startBusiness": "Start Business",
     "sessionNotUsed": "Session Not Used",
     "enterOpeningAmount": "Enter opening cash amount.",
-    "enterClosingAmount": "Enter final cash balance."
+    "enterClosingAmount": "Enter final cash balance.",
+    "updateTitle": "New Version Available",
+    "updateMessage": "A new version has been released. Would you like to update now?"
   },
   "taxes": {
     "title": "Tax"
-  },
-  "receipt": {
-    "kitchenOrder": "Kitchen Order"
   },
   "sales": {
     "title": "Sales",
@@ -115,7 +114,8 @@
     "date": "Date",
     "time": "Time",
     "dateTime": "Date & Time",
-    "transactionNumber": "Transaction NO"
+    "transactionNumber": "Transaction NO",
+    "kitchenOrder": "Kitchen Order"
   },
   "common": {
     "confirm": "Confirm",
@@ -133,7 +133,9 @@
     "refresh": "Refresh",
     "apply": "Apply",
     "reset": "Reset",
-    "select": "Select"
+    "select": "Select",
+    "updateNow": "Update Now",
+    "later": "Later"
   },
   "payment": {
     "splitPayment": "Split Payment",
@@ -206,7 +208,14 @@
     "baudRate": "Baud Rate",
     "testPrint": "Test Print",
     "connected": "Connected",
-    "disconnected": "Disconnected"
+    "disconnected": "Disconnected",
+    "appInfo": "App Information",
+    "checkForUpdates": "Check for updates",
+    "checkForUpdatesDesc": "View current version information and update to the latest version.",
+    "versionInfo": "Version Information",
+    "currentVersion": "Current Version",
+    "latestVersion": "Latest Version",
+    "forceUpdateDesc": "Click the button below to update to the latest version."
   },
   "session": {
     "startBusiness": "Start Business",

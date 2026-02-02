@@ -1,23 +1,26 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'app_config.dart';
+import 'i18n/app_localizations.dart';
+import 'theme/app_theme.dart';
 
 class VersionService {
   static final VersionService _instance = VersionService._internal();
   factory VersionService() => _instance;
   VersionService._internal();
 
+  static bool _isDialogShowing = false;
+
   // Point to the Next.js API in backoffice
   // Dev: localhost:3002 (posace-backoffice)
   // Prod: backoffice.posace.com
   static String get _updateUrl {
-    if (kReleaseMode) {
-      return '${AppConfig.backofficeBaseUrl}/api/download/windows?mode=json';
-    } else {
-      return '${AppConfig.backofficeBaseUrl}/api/download/windows?mode=json';
-    }
+    return '${AppConfig.backofficeBaseUrl}/api/download/windows?mode=json';
   }
 
   Future<Map<String, dynamic>?> checkUpdate() async {
@@ -43,9 +46,243 @@ class VersionService {
         }
       }
     } catch (e) {
-      print('[VersionService] Error checking update: $e');
+      debugPrint('[VersionService] Error checking update: $e');
     }
     return null;
+  }
+
+  /// Checks for updates and shows a concise dialog if available.
+  Future<void> showUpdateDialogIfAvailable(BuildContext context) async {
+    if (_isDialogShowing) return;
+
+    final updateInfo = await checkUpdate();
+    if (updateInfo == null) return;
+
+    if (!context.mounted) return;
+
+    _isDialogShowing = true;
+    
+    final localizations = AppLocalizations.of(context);
+    final String title = localizations?.translate('home.updateTitle') ?? '새로운 버전 업데이트';
+    final String message = localizations?.translate('home.updateMessage') ?? '최신 버전이 출시되었습니다. 업데이트하시겠습니까?';
+    final String updateNow = localizations?.translate('common.updateNow') ?? '지금 업데이트';
+    final String later = localizations?.translate('common.later') ?? '나중에';
+
+    await showDialog(
+      context: context,
+      barrierDismissible: !(updateInfo['mandatory'] ?? false),
+      builder: (context) => AlertDialog(
+        title: Text('$title (${updateInfo['version']})'),
+        content: Text(message),
+        actions: [
+          if (!(updateInfo['mandatory'] ?? false))
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(later),
+            ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _downloadAndInstall(context, updateInfo['url']);
+            },
+            child: Text(updateNow),
+          ),
+        ],
+      ),
+    );
+    
+    _isDialogShowing = false;
+  }
+
+  /// Shows a manual update dialog with current and latest version info.
+  /// Allows forced update regardless of version comparison.
+  Future<void> showManualUpdateDialog(BuildContext context) async {
+    final localizations = AppLocalizations.of(context);
+    
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final response = await http.get(Uri.parse(_updateUrl));
+      if (context.mounted) Navigator.pop(context); // Close loading
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final latestTag = data['version'] as String;
+        final url = data['url'] as String;
+        
+        final info = await PackageInfo.fromPlatform();
+        final currentVersion = info.version;
+
+        if (!context.mounted) return;
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(localizations?.translate('settings.versionInfo') ?? '버전 정보'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildVersionRow(localizations?.translate('settings.currentVersion') ?? '현재 버전', currentVersion),
+                _buildVersionRow(localizations?.translate('settings.latestVersion') ?? '최신 버전', latestTag),
+                const SizedBox(height: 16),
+                Text(
+                  localizations?.translate('settings.forceUpdateDesc') ?? '최신 버전으로 업데이트를 시작하려면 아래 버튼을 클릭하세요.',
+                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(localizations?.translate('common.close') ?? '닫기'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _downloadAndInstall(context, url);
+                },
+                child: Text(localizations?.translate('common.updateNow') ?? '지금 업데이트'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        throw Exception('Failed to fetch version info: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        // Ensure loading dialog is closed
+        if (Navigator.canPop(context)) {
+          // This is tricky without knowing if the loading dialog is still on top.
+          // But usually, the error happens during the await.
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('버전 확인 실패: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Widget _buildVersionRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(value),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _downloadAndInstall(BuildContext context, String url) async {
+    final ValueNotifier<double> progressNotifier = ValueNotifier(0);
+    final localizations = AppLocalizations.of(context);
+    
+    // Show progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => ValueListenableBuilder<double>(
+        valueListenable: progressNotifier,
+        builder: (context, progress, child) => AlertDialog(
+          title: Text(localizations?.translate('home.updateTitle') ?? '업데이트 다운로드 중...'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LinearProgressIndicator(value: progress > 0 ? progress : null),
+              const SizedBox(height: 16),
+              Text('${(progress * 100).toStringAsFixed(1)}%'),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final client = http.Client();
+      final request = http.Request('GET', Uri.parse(url));
+      final response = await client.send(request);
+      
+      final contentLength = response.contentLength ?? 0;
+      int receivedLength = 0;
+      
+      final tempDir = await getTemporaryDirectory();
+      // Use a consistent filename or one from URL if possible
+      final fileName = url.split('/').last.split('?').first;
+      final file = File('${tempDir.path}/$fileName');
+      final sink = file.openWrite();
+
+      await response.stream.listen(
+        (chunk) {
+          receivedLength += chunk.length;
+          sink.add(chunk);
+          if (contentLength > 0) {
+            progressNotifier.value = receivedLength / contentLength;
+          }
+        },
+        onDone: () async {
+          await sink.close();
+          client.close();
+          
+          if (context.mounted) {
+            Navigator.pop(context); // Close progress dialog
+          }
+
+          // Execute the installer and exit
+          await _executeInstaller(file.path);
+        },
+        onError: (e) {
+          sink.close();
+          client.close();
+          if (context.mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('다운로드 오류: $e'), backgroundColor: Colors.red),
+            );
+          }
+        },
+        cancelOnError: true,
+      ).asFuture();
+      
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('업데이트 시작 실패: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _executeInstaller(String filePath) async {
+    debugPrint('[VersionService] Executing installer: $filePath');
+    
+    // Detached process to allow app to exit while installer runs
+    try {
+      if (filePath.toLowerCase().endsWith('.exe')) {
+        await Process.start(filePath, [], mode: ProcessStartMode.detached);
+      } else if (filePath.toLowerCase().endsWith('.msix')) {
+        // MSIX might need powershell or just direct start if it's associated
+        await Process.start('powershell', ['-Command', 'Start-Process', '"$filePath"'], mode: ProcessStartMode.detached);
+      } else {
+        // Try direct execution anyway
+        await Process.start(filePath, [], mode: ProcessStartMode.detached);
+      }
+      
+      // Wait a moment before exit to ensure process started
+      await Future.delayed(const Duration(milliseconds: 500));
+      exit(0);
+    } catch (e) {
+      debugPrint('[VersionService] Error executing installer: $e');
+    }
   }
 
   String _cleanVersion(String tag) {

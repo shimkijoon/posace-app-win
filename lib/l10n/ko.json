@@ -49,7 +49,9 @@
     "startBusiness": "영업 시작",
     "sessionNotUsed": "영업 미사용",
     "enterOpeningAmount": "영업 준비금(시재)을 입력하세요.",
-    "enterClosingAmount": "최종 시재(현금 잔액)를 입력하세요."
+    "enterClosingAmount": "최종 시재(현금 잔액)를 입력하세요.",
+    "updateTitle": "새로운 버전 업데이트",
+    "updateMessage": "최신 버전이 출시되었습니다. 업데이트하시겠습니까?"
   },
   "taxes": {
     "title": "세금"
@@ -185,7 +187,14 @@
     "baudRate": "통신 속도 (Baud Rate)",
     "testPrint": "테스트 인쇄",
     "connected": "연결됨",
-    "disconnected": "연결 안 됨"
+    "disconnected": "연결 안 됨",
+    "appInfo": "앱 정보",
+    "checkForUpdates": "업데이트 확인",
+    "checkForUpdatesDesc": "현재 버전 정보를 확인하고 최신 버전으로 업데이트합니다.",
+    "versionInfo": "버전 정보",
+    "currentVersion": "현재 버전",
+    "latestVersion": "최신 버전",
+    "forceUpdateDesc": "최신 버전으로 업데이트를 시작하려면 아래 버튼을 클릭하세요."
   },
   "session": {
     "startBusiness": "영업 시작",

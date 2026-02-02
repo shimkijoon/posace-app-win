@@ -49,7 +49,9 @@
     "startBusiness": "営業開始",
     "sessionNotUsed": "営業未使用",
     "enterOpeningAmount": "営業準備金(現金)を入力してください。",
-    "enterClosingAmount": "最終現金残高を入力してください。"
+    "enterClosingAmount": "最終現金残高を入力してください。",
+    "updateTitle": "新しいバージョンのアップデート",
+    "updateMessage": "最新バージョンがリリースされました。今すぐアップデートしますか？"
   },
   "taxes": {
     "title": "税金"
@@ -185,7 +187,14 @@
     "baudRate": "通信速度 (Baud Rate)",
     "testPrint": "テスト印刷",
     "connected": "接続済み",
-    "disconnected": "未接続"
+    "disconnected": "未接続",
+    "appInfo": "アプリ情報",
+    "checkForUpdates": "アップデート確認",
+    "checkForUpdatesDesc": "現在バージョン情報を確認し、最新バージョンにアップデートします。",
+    "versionInfo": "バージョン情報",
+    "currentVersion": "現在バージョン",
+    "latestVersion": "最新バージョン",
+    "forceUpdateDesc": "最新バージョンにアップデートを開始するには、下のボタンをクリックしてください。"
   },
   "session": {
     "startBusiness": "営業開始",

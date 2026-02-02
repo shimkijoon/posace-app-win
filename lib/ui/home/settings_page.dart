@@ -17,6 +17,7 @@ import '../../data/remote/pos_master_api.dart';
 import '../../data/remote/pos_sales_api.dart';
 import '../../sync/sync_service.dart';
 import '../sales/widgets/title_bar.dart';
+import '../../core/version_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, required this.database});
@@ -619,6 +620,18 @@ class _SettingsPageState extends State<SettingsPage> {
                               ),
                             ],
                           ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildSection(
+                      title: AppLocalizations.of(context)!.translate('settings.appInfo') ?? '앱 정보',
+                      children: [
+                        ListTile(
+                          title: Text(AppLocalizations.of(context)!.translate('settings.checkForUpdates') ?? '업데이트 확인'),
+                          subtitle: Text(AppLocalizations.of(context)!.translate('settings.checkForUpdatesDesc') ?? '현재 버전 정보를 확인하고 최신 버전으로 업데이트합니다.'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => VersionService().showManualUpdateDialog(context),
                         ),
                       ],
                     ),
