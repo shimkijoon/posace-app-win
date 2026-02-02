@@ -890,7 +890,7 @@ class _SalesPageState extends State<SalesPage> {
           createdAt: DateTime.now(),
           syncedAt: null, // Not yet synced
           taxAmount: 0, // TODO: Calculate if needed locally
-          discountAmount: _cart.discountAmount,
+          discountAmount: _cart.totalDiscountAmount,
           memberId: _selectedMember?.id,
           payments: payments ?? [ // Use provided payments or single payment
             SalePaymentModel(
