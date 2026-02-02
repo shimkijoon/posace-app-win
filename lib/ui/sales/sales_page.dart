@@ -878,53 +878,45 @@ class _SalesPageState extends State<SalesPage> {
       try {
         final clientSaleId = const Uuid().v4();
         
-        await salesApi.createSale({
-          'clientSaleId': clientSaleId,
-          'storeId': session['storeId'],
-          'posId': session['posId'],
-          'totalAmount': totalAmount,
-          'paidAmount': paidAmount ?? totalAmount,
-          'items': _cart.items.map((i) => {
-            'productId': i.product.id,
-            'qty': i.quantity,
-            'price': i.product.price,
-            'discountAmount': i.discountAmount,
-          }).toList(),
-          'payments': payments != null
-              ? payments.map((p) => {
-                  'method': p.method,
-                  'amount': p.amount,
-                  if (p.cardApproval != null) 'cardApproval': p.cardApproval,
-                  if (p.cardLast4 != null) 'cardLast4': p.cardLast4,
-                }).toList()
-              : [
-                  {
-                    'method': method.toString().split('.').last.toUpperCase(),
-                    'amount': paidAmount ?? totalAmount,
-                    if (cardApprovalNumber != null) 'cardApproval': cardApprovalNumber,
-                  }
-                ],
-          if (_selectedMember?.id != null) 'membershipId': _selectedMember!.id,
-        });
+        // 1. Construct Sale Model for Local Save
+        final sale = SaleModel(
+          id: clientSaleId,
+          storeId: session['storeId'],
+          posId: session['posId'],
+          totalAmount: totalAmount,
+          paidAmount: paidAmount ?? totalAmount,
+          paymentMethod: method.toString().split('.').last.toUpperCase(), // Main method
+          status: 'COMPLETED', // Optimization: Assume success locally
+          createdAt: DateTime.now(),
+          syncedAt: null, // Not yet synced
+          taxAmount: 0, // TODO: Calculate if needed locally
+          discountAmount: _cart.discountAmount,
+          memberId: _selectedMember?.id,
+          payments: payments ?? [ // Use provided payments or single payment
+            SalePaymentModel(
+              id: const Uuid().v4(),
+              saleId: clientSaleId,
+              method: method.toString().split('.').last.toUpperCase(),
+              amount: paidAmount ?? totalAmount,
+              cardApproval: cardApprovalNumber,
+              cardLast4: cardNumber?.substring(cardNumber.length - 4),
+            )
+          ],
+        );
 
-        // 테이블 주문인 경우 주문 완료 처리
-        if (widget.tableId != null) {
-            // Note: Server usually clears active order when sale is created linked to tableId
-            // If explicit clear is needed:
-            // final tableApi = TableManagementApi(ApiClient(accessToken: token));
-            // await tableApi.clearTable(session['storeId'] as String, widget.tableId!);
-        }
-        
-        // Print Receipt (if configured)
-        try {
-          // TODO: Fetch settings?
-          // For now, auto-print if serial printer is connected? 
-          // Or just let user decide via dialog?
-          // Usually we print automatically here.
-        } catch (e) {
-          print('Print failed: $e');
-        }
+        final saleItems = _cart.items.map((i) => SaleItemModel(
+          id: const Uuid().v4(),
+          saleId: clientSaleId,
+          productId: i.product.id,
+          qty: i.quantity,
+          price: i.product.price,
+          discountAmount: i.discountAmount,
+        )).toList();
 
+        // 2. Save to Local Database (Synchronous/Fast)
+        await widget.database.insertSale(sale, saleItems);
+
+        // 3. Reset UI Immediately (Optimistic)
         if (mounted) {
           setState(() {
             _cart = Cart();
@@ -940,68 +932,25 @@ class _SalesPageState extends State<SalesPage> {
           }
         }
         
+        // 4. Background Upload (Fire and forget)
+        // Initialize SyncService here or get from checkInContext
+        final syncService = SyncService(
+            database: widget.database,
+            masterApi:     PosMasterApi(ApiClient(accessToken: token)),
+            salesApi: salesApi // Already created above
+        );
+        
+        // Do not await this! Let it run in background
+        syncService.flushSalesQueue().then((count) {
+          if (count > 0) debugPrint('[OptimisticUI] Background sync success: $count sales');
+        }).catchError((err) {
+          debugPrint('[OptimisticUI] Background sync failed (will retry later): $err');
+        });
+
       } catch (e) {
         if (mounted) {
-          // HTTP 응답인 경우 진단 가능한 에러로 처리
-          if (e is http.Response) {
-            final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(e);
-            
-            if (diagnosticError != null) {
-              // 시스템 정보 수집
-              final products = await widget.database.getProducts();
-              final categories = await widget.database.getCategories();
-              final productCount = products.length;
-              final categoryCount = categories.length;
-              final lastSyncStr = await widget.database.getSyncMetadata('lastMasterSync');
-              final lastSync = lastSyncStr != null ? DateTime.parse(lastSyncStr) : null;
-              
-              // ⚠️ 중복 결제 위험 체크
-              final isDuplicateRisk = diagnosticError.statusCode >= 500 || 
-                                     diagnosticError.errorCode.code.contains('TIMEOUT');
-              
-              await DiagnosticErrorDialog.show(
-                context: context,
-                error: diagnosticError,
-                onSyncPressed: () async {
-                  // 자동 동기화 실행
-                  await _performAutoSync();
-                },
-                onRetryPressed: isDuplicateRisk ? null : () async {
-                  // ⚠️ 서버 오류나 타임아웃일 경우 재시도 버튼 비활성화
-                  // (결제가 성공했는데 응답만 실패했을 수 있음)
-                  await _processPaymentSuccess(
-                    method,
-                    totalAmount,
-                    paidAmount: paidAmount,
-                    cardApprovalNumber: cardApprovalNumber,
-                    cardCompany: cardCompany,
-                    cardNumber: cardNumber,
-                    installmentMonths: installmentMonths,
-                    payments: payments,
-                  );
-                },
-                systemInfo: {
-                  'storeId': session['storeId'],
-                  'posId': session['posId'],
-                  'appVersion': '1.0.0',
-                  'lastSyncAt': lastSync?.toIso8601String() ?? 'Never',
-                  'productCount': productCount,
-                  'categoryCount': categoryCount,
-                  'cartItemCount': _cart.items.length,
-                  'totalAmount': totalAmount,
-                  'isDuplicateRisk': isDuplicateRisk,
-                  'warning': isDuplicateRisk 
-                    ? '서버 오류 또는 타임아웃: 결제가 실제로는 성공했을 수 있음' 
-                    : null,
-                },
-              );
-              return;
-            }
-          }
-          
-          // 구형 에러 처리 (fallback)
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('결제 처리 실패: $e')),
+            SnackBar(content: Text('결제 처리 실패 (로컬 저장 오류): $e')),
           );
         }
       }

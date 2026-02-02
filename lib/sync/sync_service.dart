@@ -152,8 +152,8 @@ class SyncService {
           'payments': sale.payments.map((p) => {
             'method': p.method,
             'amount': p.amount,
-            // 'cardApproval': p.cardApproval, // If needed
-            // 'cardLast4': p.cardLast4, // If needed
+            'cardApproval': p.cardApproval, 
+            'cardLast4': p.cardLast4,
           }).toList(),
         };
 
