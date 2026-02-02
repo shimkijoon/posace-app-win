@@ -139,6 +139,8 @@ class SyncService {
           'storeId': sale.storeId,
           'posId': sale.posId,
           'clientSaleId': sale.id, // 로컬 ID를 클라이언트 세일 ID로 사용
+          'saleDate': sale.createdAt.toIso8601String().split('T')[0], // YYYY-MM-DD
+          'saleTime': sale.createdAt.toIso8601String().split('T')[1].substring(0, 8), // HH:mm:ss
           'totalAmount': sale.totalAmount,
           'paidAmount': sale.paidAmount,
           // 'paymentMethod': sale.paymentMethod, // Removed
