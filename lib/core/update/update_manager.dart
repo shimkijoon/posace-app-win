@@ -4,9 +4,11 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:posace_app_win/core/app_config.dart';
+
 class UpdateManager {
-  // TODO: Replace with your actual production domain
-  static const String _updateUrl = 'https://www.posace.com/api/download/windows?mode=json';
+  // Use the API Base URL from AppConfig
+  String get _updateUrl => '${AppConfig.apiBaseUrl}/app/version';
 
   Future<void> checkAndPromptUpdate(BuildContext context) async {
     try {
