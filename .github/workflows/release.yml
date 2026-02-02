@@ -14,7 +14,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0' # Adjust to match your project's requirement
           channel: 'stable'
 
       - name: Install Inno Setup
