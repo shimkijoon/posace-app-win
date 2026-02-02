@@ -122,45 +122,57 @@ class VersionService {
 
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            title: Text(localizations?.translate('settings.versionInfo') ?? '버전 정보'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildVersionRow(localizations?.translate('settings.currentVersion') ?? '현재 버전', currentVersion),
-                _buildVersionRow(localizations?.translate('settings.latestVersion') ?? '최신 버전', latestTag),
-                const SizedBox(height: 16),
-                Text(
-                  localizations?.translate('settings.forceUpdateDesc') ?? '최신 버전으로 업데이트를 시작하려면 아래 버튼을 클릭하세요.',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+          builder: (context) {
+            final bool isNewer = _isNewer(_cleanVersion(latestTag), currentVersion);
+            
+            return AlertDialog(
+              title: Text(localizations?.translate('settings.versionInfo') ?? '버전 정보'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildVersionRow(localizations?.translate('settings.currentVersion') ?? '현재 버전', currentVersion),
+                  _buildVersionRow(
+                    localizations?.translate('settings.latestVersion') ?? '최신 버전', 
+                    latestTag,
+                    onTap: () {
+                      if (HardwareKeyboard.instance.isControlPressed) {
+                        Navigator.pop(context);
+                        _downloadAndInstall(context, url);
+                      }
+                    },
+                    isVersionText: true,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    localizations?.translate('settings.forceUpdateDesc') ?? '최신 버전으로 업데이트를 시작하려면 아래 버튼을 클릭하세요.',
+                    style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(localizations?.translate('common.close') ?? '닫기'),
+                ),
+                ElevatedButton(
+                  onPressed: isNewer ? () {
+                    Navigator.pop(context);
+                    _downloadAndInstall(context, url);
+                  } : null,
+                  child: Text(localizations?.translate('common.updateNow') ?? '지금 업데이트'),
                 ),
               ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(localizations?.translate('common.close') ?? '닫기'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _downloadAndInstall(context, url);
-                },
-                child: Text(localizations?.translate('common.updateNow') ?? '지금 업데이트'),
-              ),
-            ],
-          ),
+            );
+          },
         );
       } else {
         throw Exception('Failed to fetch version info: ${response.statusCode}');
       }
     } catch (e) {
       if (context.mounted) {
-        // Ensure loading dialog is closed
         if (Navigator.canPop(context)) {
-          // This is tricky without knowing if the loading dialog is still on top.
-          // But usually, the error happens during the await.
+          // Navigator.pop(context); // This might close the wrong thing if not careful
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('버전 확인 실패: $e'), backgroundColor: Colors.red),
@@ -169,14 +181,29 @@ class VersionService {
     }
   }
 
-  Widget _buildVersionRow(String label, String value) {
+  Widget _buildVersionRow(String label, String value, {VoidCallback? onTap, bool isVersionText = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(value),
+          if (onTap != null)
+            GestureDetector(
+              onTap: onTap,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    color: isVersionText ? Colors.blue : null,
+                    decoration: isVersionText ? TextDecoration.underline : null,
+                  ),
+                ),
+              ),
+            )
+          else
+            Text(value),
         ],
       ),
     );
@@ -220,43 +247,34 @@ class VersionService {
       final file = File('${tempDir.path}/$fileName');
       final sink = file.openWrite();
 
-      await response.stream.listen(
-        (chunk) {
-          receivedLength += chunk.length;
-          sink.add(chunk);
-          if (contentLength > 0) {
-            progressNotifier.value = receivedLength / contentLength;
-          }
-        },
-        onDone: () async {
-          await sink.close();
-          client.close();
-          
-          if (context.mounted) {
-            Navigator.pop(context); // Close progress dialog
-          }
+      await for (final chunk in response.stream) {
+        receivedLength += chunk.length;
+        sink.add(chunk);
+        if (contentLength > 0) {
+          progressNotifier.value = receivedLength / contentLength;
+        }
+      }
 
-          // Execute the installer and exit
-          await _executeInstaller(file.path);
-        },
-        onError: (e) {
-          sink.close();
-          client.close();
-          if (context.mounted) {
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('다운로드 오류: $e'), backgroundColor: Colors.red),
-            );
-          }
-        },
-        cancelOnError: true,
-      ).asFuture();
+      debugPrint('[VersionService] Download complete. Finalizing file...');
+      await sink.flush();
+      await sink.close();
+      client.close();
+      debugPrint('[VersionService] File finalized. Path: ${file.path}');
+      
+      if (context.mounted) {
+        Navigator.pop(context); // Close progress dialog
+      }
+
+      // Execute the installer and exit
+      await _executeInstaller(file.path);
       
     } catch (e) {
+      debugPrint('[VersionService] Error during download: $e');
       if (context.mounted) {
-        Navigator.pop(context);
+        // Ensure progress dialog is closed if it was shown
+        if (Navigator.canPop(context)) Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('업데이트 시작 실패: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('다운로드 오류: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -268,17 +286,21 @@ class VersionService {
     // Detached process to allow app to exit while installer runs
     try {
       if (filePath.toLowerCase().endsWith('.exe')) {
-        await Process.start(filePath, [], mode: ProcessStartMode.detached);
+        final process = await Process.start(filePath, [], mode: ProcessStartMode.detached);
+        debugPrint('[VersionService] Installer process started. PID: ${process.pid}');
       } else if (filePath.toLowerCase().endsWith('.msix')) {
         // MSIX might need powershell or just direct start if it's associated
-        await Process.start('powershell', ['-Command', 'Start-Process', '"$filePath"'], mode: ProcessStartMode.detached);
+        final process = await Process.start('powershell', ['-Command', 'Start-Process', '"$filePath"'], mode: ProcessStartMode.detached);
+        debugPrint('[VersionService] MSIX installer process started via powershell. PID: ${process.pid}');
       } else {
         // Try direct execution anyway
-        await Process.start(filePath, [], mode: ProcessStartMode.detached);
+        final process = await Process.start(filePath, [], mode: ProcessStartMode.detached);
+        debugPrint('[VersionService] Installer (unknown type) process started. PID: ${process.pid}');
       }
       
       // Wait a moment before exit to ensure process started
       await Future.delayed(const Duration(milliseconds: 500));
+      debugPrint('[VersionService] Exiting app to allow installation...');
       exit(0);
     } catch (e) {
       debugPrint('[VersionService] Error executing installer: $e');

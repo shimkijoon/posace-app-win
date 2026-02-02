@@ -223,7 +223,9 @@
     "refresh": "更新",
     "apply": "適用",
     "reset": "リセット",
-    "select": "選択"
+    "select": "選択",
+    "updateNow": "今すぐアップデート",
+    "later": "後で"
   },
   "payment": {
     "splitPayment": "分割決済",
