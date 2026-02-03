@@ -34,6 +34,6 @@ class AppConfig {
     }
   }
   
-  static const String supabaseUrl = 'https://wqjirowshlxfjcjmydfk.supabase.co';
-  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indxamlyb3dzaGx4Zmpjam15ZGZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk0MjI0NjIsImV4cCI6MjA4NDk5ODQ2Mn0.9mDEINfZVcC1MiePGmm_RqGptBv2J6hsAhI3D-r5WDA';
+  static const String supabaseUrl = 'https://adefqfmddewcwgnenvto.supabase.co';
+  static const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFkZWZxZm1kZGV3Y3dnbmVudnRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAwNzU5MTAsImV4cCI6MjA4NTY1MTkxMH0.h0WfufIq0uK3alxCymVU_3DvDu7uuiQcOilS7FkfMe0';
 }
