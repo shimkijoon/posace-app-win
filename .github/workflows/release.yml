@@ -28,7 +28,7 @@ jobs:
 
       - name: Compile Inno Setup Script
         run: |
-          "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers\setup.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installers\setup.iss
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
