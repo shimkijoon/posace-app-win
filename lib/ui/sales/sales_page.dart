@@ -888,6 +888,8 @@ class _SalesPageState extends State<SalesPage> {
           paymentMethod: method.toString().split('.').last.toUpperCase(), // Main method
           status: 'COMPLETED', // Optimization: Assume success locally
           createdAt: DateTime.now(),
+          saleDate: DateTime.now(), // Stores full DateTime, toMap/Sync will format
+          saleTime: DateTime.now().toIso8601String().split('T')[1].substring(0, 8),
           syncedAt: null, // Not yet synced
           taxAmount: 0, // TODO: Calculate if needed locally
           discountAmount: _cart.totalDiscountAmount,

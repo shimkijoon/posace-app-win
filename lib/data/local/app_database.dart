@@ -9,7 +9,7 @@ import 'models/bundle_models.dart';
 
 class AppDatabase {
   static const _databaseName = 'posace.db';
-  static const _databaseVersion = 13;
+  static const _databaseVersion = 14;
 
   Database? _database;
 
@@ -177,7 +177,9 @@ class AppDatabase {
         paymentMethod TEXT NOT NULL,
         status TEXT NOT NULL,
         createdAt TEXT NOT NULL,
-        syncedAt TEXT
+        syncedAt TEXT,
+        saleDate TEXT,
+        saleTime TEXT
       )
     ''');
 
@@ -627,6 +629,13 @@ class AppDatabase {
         await db.execute('ALTER TABLE categories ADD COLUMN isKitchenPrintEnabled INTEGER NOT NULL DEFAULT 1');
         await db.execute('ALTER TABLE products ADD COLUMN kitchenStationId TEXT');
         await db.execute('ALTER TABLE products ADD COLUMN isKitchenPrintEnabled INTEGER NOT NULL DEFAULT 1');
+      } catch (_) {}
+    }
+
+    if (oldVersion < 14) {
+      try {
+        await db.execute('ALTER TABLE sales ADD COLUMN saleDate TEXT');
+        await db.execute('ALTER TABLE sales ADD COLUMN saleTime TEXT');
       } catch (_) {}
     }
   }
