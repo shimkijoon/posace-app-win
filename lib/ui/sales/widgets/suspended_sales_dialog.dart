@@ -237,7 +237,7 @@ class _SuspendedSalesDialogState extends State<SuspendedSalesDialog> {
                         ),
                       ),
                       child: ListTile(
-                        onTap: () => Navigator.pop(context, sale['id']),
+                        onTap: () => Navigator.pop(context, sale),
                         leading: isLocalOnly
                             ? const Tooltip(
                                 message: '미전송 (서버 동기화 필요)',
@@ -270,7 +270,7 @@ class _SuspendedSalesDialogState extends State<SuspendedSalesDialog> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             TextButton(
-                              onPressed: () => Navigator.pop(context, sale['id']),
+                              onPressed: () => Navigator.pop(context, sale),
                               child: Text(AppLocalizations.of(context)!.translate('sales.retrieve')),
                             ),
                             IconButton(

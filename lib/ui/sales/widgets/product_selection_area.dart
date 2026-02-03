@@ -128,8 +128,8 @@ class _ProductSelectionAreaState extends State<ProductSelectionArea> {
           Icon(Icons.inventory_2_outlined, size: 64, color: AppTheme.textSecondary.withOpacity(0.2)),
           const SizedBox(height: 16),
           Text(
-            '등록된 상품이 없습니다',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+            AppLocalizations.of(context)!.translate('sales.noProducts') ?? '등록된 상품이 없습니다',
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 16),
           ),
         ],
       ),

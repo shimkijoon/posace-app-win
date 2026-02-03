@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/i18n/app_localizations.dart';
+import '../../../core/i18n/locale_helper.dart';
 import '../../../data/local/models/payment_model.dart';
 import '../../widgets/virtual_keypad.dart';
 
@@ -10,10 +11,12 @@ class SplitPaymentDialog extends StatefulWidget {
     super.key,
     required this.totalAmount,
     this.initialMemberPoints = 0,
+    this.countryCode = 'KR',
   });
 
   final int totalAmount;
   final int initialMemberPoints;
+  final String countryCode;
 
   @override
   State<SplitPaymentDialog> createState() => _SplitPaymentDialogState();
@@ -97,7 +100,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('${p.amount}${AppLocalizations.of(context)!.translate('session.won')}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Text(LocaleHelper.getCurrencyFormat(widget.countryCode).format(p.amount), style: const TextStyle(fontWeight: FontWeight.bold)),
                           IconButton(
                             icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
                             onPressed: () => _removePayment(index),
@@ -188,7 +191,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
             fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
           )),
           Text(
-            '$amount${AppLocalizations.of(context)!.translate('session.won')}',
+            LocaleHelper.getCurrencyFormat(widget.countryCode).format(amount),
             style: TextStyle(
               fontSize: isTotal ? 18 : 14,
               fontWeight: FontWeight.bold,
@@ -216,7 +219,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
   }
 
   Future<void> _showManualAmountDialog(String method) async {
-    String currentInput = _remainingAmount.toString();
+    String currentInput = '0';
     
     final amount = await showDialog<int?>(
       context: context,
@@ -235,7 +238,7 @@ class _SplitPaymentDialogState extends State<SplitPaymentDialog> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '$currentInput${AppLocalizations.of(context)!.translate('session.won')}',
+                    LocaleHelper.getCurrencyFormat(widget.countryCode).format(int.tryParse(currentInput) ?? 0),
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.right,
                   ),

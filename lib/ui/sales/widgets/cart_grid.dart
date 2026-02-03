@@ -349,7 +349,7 @@ class _CartGridState extends State<CartGrid> {
         ));
       });
       rows.add(_buildSummaryRow(
-        '총 할인', 
+        AppLocalizations.of(context)!.translate('sales.totalDiscount') ?? '총 할인', 
         '-${_formatPrice(cart.totalDiscountAmount)}', 
         color: AppTheme.error,
         isLarge: true,
@@ -468,7 +468,7 @@ class _CartGridRow extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
-                            '할인: -${formatPrice(item.discountAmount)}',
+                            '${AppLocalizations.of(context)!.discount}: -${formatPrice(item.discountAmount)}',
                             style: const TextStyle(color: AppTheme.error, fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -624,7 +624,7 @@ class _CartGridDiscountFooterRow extends StatelessWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    '할인',
+                    AppLocalizations.of(context)!.discount,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           color: AppTheme.error,
                           fontWeight: FontWeight.bold,

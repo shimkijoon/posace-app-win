@@ -219,18 +219,27 @@ class PosAuthService {
      
      final user = session.user;
      final userId = user.id;
-     final email = user.email; // might be null
+     final email = user.email;
      
      final stores = await client
          .from('stores')
-         .select('id, name, address, business_number')
-         .eq('owner_id', userId); // or appropriate column
+         .select('id, name, address, businessNumber, phone, language, country, ownerId, posDevices:pos_devices(id, name, deviceId, type, status)')
+         .eq('ownerId', userId)
+         .eq('isDeleted', false); 
          
      final mappedStores = (stores as List).map((s) => {
        'id': s['id'],
        'name': s['name'],
        'address': s['address'],
-       'businessNumber': s['business_number'],
+       'businessNumber': s['businessNumber'],
+       'phone': s['phone'],
+       'posDevices': (s['posDevices'] as List?)?.map((p) => {
+         'id': p['id'],
+         'name': p['name'],
+         'deviceId': p['deviceId'],
+         'type': p['type'],
+         'status': p['status'],
+       }).toList() ?? [],
      }).toList();
      
      return {

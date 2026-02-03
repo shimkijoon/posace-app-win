@@ -29,6 +29,7 @@ class _MemberRegistrationDialogState extends State<MemberRegistrationDialog> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
+    final loc = AppLocalizations.of(context)!;
     try {
       final authStorage = AuthStorage();
       final session = await authStorage.getSessionInfo();
@@ -36,7 +37,7 @@ class _MemberRegistrationDialogState extends State<MemberRegistrationDialog> {
       final storeId = session['storeId'];
 
       if (storeId == null || accessToken == null) {
-        throw Exception('로그인 정보가 없습니다.');
+        throw Exception(loc.translate('auth.noLoginInfo') ?? '로그인 정보가 없습니다.');
       }
 
       final apiClient = ApiClient(accessToken: accessToken);
@@ -56,7 +57,10 @@ class _MemberRegistrationDialogState extends State<MemberRegistrationDialog> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('회원 등록 실패: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('${loc.translate('customers.registerFailed') ?? '회원 등록 실패'}: $e'), 
+          backgroundColor: Colors.red
+        ),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -65,6 +69,7 @@ class _MemberRegistrationDialogState extends State<MemberRegistrationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
@@ -76,36 +81,35 @@ class _MemberRegistrationDialogState extends State<MemberRegistrationDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                '신규 회원 등록',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              Text(
+                loc.translate('customers.registerNew') ?? '신규 회원 등록',
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 24),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: '이름',
-                  prefixIcon: Icon(Icons.person),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: loc.translate('customers.name') ?? '이름',
+                  prefixIcon: const Icon(Icons.person),
+                  border: const OutlineInputBorder(),
                 ),
                 validator: (value) => 
-                  (value == null || value.isEmpty) ? '이름을 입력하세요.' : null,
+                  (value == null || value.isEmpty) ? loc.translate('customers.enterName') ?? '이름을 입력하세요.' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: '휴대폰 번호',
-                  hintText: '010-0000-0000',
-                  prefixIcon: Icon(Icons.phone),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: loc.translate('customers.phone') ?? '휴대폰 번호',
+                  hintText: loc.translate('customers.phoneHint') ?? '전화번호 입력',
+                  prefixIcon: const Icon(Icons.phone),
+                  border: const OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return '번호를 입력하세요.';
-                  if (!RegExp(r'^010-\d{4}-\d{4}$').hasMatch(value)) {
-                    return '형식이 올바르지 않습니다 (010-0000-0000).';
-                  }
+                  if (value == null || value.isEmpty) return loc.translate('customers.enterPhone') ?? '번호를 입력하세요.';
+                  // Relaxed validation: just length check or nothing
+                  if (value.length < 3) return loc.translate('customers.phoneTooShort') ?? '번호가 너무 짧습니다.';
                   return null;
                 },
               ),
@@ -115,7 +119,7 @@ class _MemberRegistrationDialogState extends State<MemberRegistrationDialog> {
                 children: [
                   TextButton(
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
-                    child: Text(AppLocalizations.of(context)!.translate('common.cancel')),
+                    child: Text(loc.translate('common.cancel')),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
@@ -125,7 +129,7 @@ class _MemberRegistrationDialogState extends State<MemberRegistrationDialog> {
                     ),
                     child: _isLoading 
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('등록'),
+                      : Text(loc.translate('common.register') ?? '등록'),
                   ),
                 ],
               ),

@@ -26,6 +26,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
   bool _isLoading = false;
 
   Future<void> _search() async {
+    final loc = AppLocalizations.of(context)!;
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
 
@@ -66,13 +67,12 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
     if (mounted && results.isEmpty) {
       String message;
       if (onlineSearchError != null) {
-        message = '⚠️ 검색 결과가 없습니다.\n\n'
-                  '로컬: 결과 없음\n'
-                  '서버: 연결 실패 ($onlineSearchError)\n\n'
-                  '신규 회원으로 등록하시겠습니까?';
+        message = '${loc.translate('customers.noSearchResults')}\n\n'
+                  '${loc.translate('customers.searchErrorNotice')}\n\n'
+                  '${loc.translate('customers.registerPrompt')}';
       } else {
-        message = '검색 결과가 없습니다.\n\n'
-                  '신규 회원으로 등록하시겠습니까?';
+        message = '${loc.translate('customers.noSearchResults')}\n\n'
+                  '${loc.translate('customers.registerPrompt')}';
       }
       
       final confirm = await showDialog<bool>(
@@ -82,18 +82,18 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
             children: [
               Icon(Icons.info_outline, color: Colors.blue),
               SizedBox(width: 8),
-              Text(AppLocalizations.of(context)!.translate('sales.noSearchResults')),
+              Text(loc.translate('customers.noSearchResultsTitle')),
             ],
           ),
           content: Text(message),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text(AppLocalizations.of(context)!.translate('common.cancel')),
+              child: Text(loc.translate('common.cancel')),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text(AppLocalizations.of(context)!.translate('sales.registerNewMember')),
+              child: Text(loc.translate('sales.registerNewMember')),
             ),
           ],
         ),
@@ -118,6 +118,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
@@ -131,9 +132,9 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
               children: [
                 Icon(Icons.person_search_outlined, color: AppTheme.primary),
                 const SizedBox(width: 12),
-                const Text(
-                  '회원 찾기',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  loc.translate('customers.searchTitle'),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 IconButton(
@@ -149,7 +150,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: '휴대폰 번호 뒷자리 (예: 1234)',
+                      hintText: loc.translate('customers.searchHint'),
                       prefixIcon: const Icon(Icons.phone),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -164,7 +165,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: Text(AppLocalizations.of(context)!.translate('common.search')),
+                  child: Text(loc.translate('common.search')),
                 ),
               ],
             ),

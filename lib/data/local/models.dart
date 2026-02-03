@@ -304,12 +304,18 @@ class MemberModel {
   }
 
   factory MemberModel.fromMap(Map<String, dynamic> map) {
+    // points can be Decimal (String) or int
+    final pointsValue = map['points'];
+    final points = pointsValue is String
+        ? (double.tryParse(pointsValue)?.round() ?? 0)
+        : (pointsValue as num?)?.round() ?? 0;
+
     return MemberModel(
       id: map['id'] as String,
       storeId: map['storeId'] as String,
       name: map['name'] as String,
       phone: map['phone'] as String,
-      points: map['points'] as int? ?? 0,
+      points: points,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
     );

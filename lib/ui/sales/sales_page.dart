@@ -708,16 +708,85 @@ class _SalesPageState extends State<SalesPage> {
 
   /// 보류 거래 복원 (장바구니 확인 포함)
   Future<void> _handleSuspendedSalesRestore() async {
-    final suspendedId = await showDialog<String>(
+    final dynamic sale = await showDialog<dynamic>(
       context: context,
       builder: (context) => SuspendedSalesDialog(database: widget.database),
     );
     
-    if (suspendedId != null) {
-      // TODO: 보류 거래 복원 로직 구현
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('보류 거래 복원: $suspendedId')),
-      );
+    if (sale != null) {
+      try {
+        setState(() => _isLoading = true);
+        
+        final String saleId = sale['id'];
+        final List<dynamic> itemsData = sale['items'] ?? [];
+        final String? memberId = sale['memberId'];
+        final List<dynamic> discountIds = sale['discountIds'] ?? [];
+
+        // 1. 상품 정보 로드하여 CartItem 구성
+        final List<CartItem> restoredItems = [];
+        for (final itemData in itemsData) {
+          final String productId = itemData['productId'];
+          final product = await widget.database.getProductById(productId);
+          
+          if (product != null) {
+            // 옵션 복원
+            final List<dynamic> optionsData = itemData['options'] ?? [];
+            final List<ProductOptionModel> selectedOptions = optionsData.map((o) => ProductOptionModel.fromMap(o)).toList();
+
+            restoredItems.add(CartItem(
+              product: product,
+              quantity: itemData['qty'] ?? 1,
+              selectedOptions: selectedOptions,
+            ));
+          }
+        }
+
+        // 2. 회원 정보 복원
+        MemberModel? restoredMember;
+        if (memberId != null) {
+          restoredMember = await widget.database.getMemberById(memberId);
+        }
+
+        // 3. 상태 업데이트
+        if (mounted) {
+          setState(() {
+            _cart = Cart(items: restoredItems);
+            _selectedMember = restoredMember;
+            _selectedManualDiscountIds = Set<String>.from(discountIds.map((id) => id.toString()));
+            _isLoading = false;
+          });
+          
+          _updateCartDiscounts(); // 할인 정보 등 갱신
+        }
+
+        // 4. 서버/로컬에서 보류 거래 삭제 (중복 방지)
+        final auth = AuthStorage();
+        final token = await auth.getAccessToken();
+        final session = await auth.getSessionInfo();
+        if (token != null && session?['storeId'] != null) {
+          final api = PosSuspendedApi(accessToken: token);
+          await api.deleteSuspendedSale(session!['storeId'] as String, saleId);
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('보류된 거래를 성공적으로 불러왔습니다.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('거래 복원 중 오류 발생: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -833,14 +902,17 @@ class _SalesPageState extends State<SalesPage> {
     }
   }
 
-  void _onSplitCheckout() {
-    showDialog(
+  void _onSplitCheckout() async {
+    final List<SalePaymentModel>? result = await showDialog<List<SalePaymentModel>>(
       context: context,
       builder: (context) => SplitPaymentDialog(
         totalAmount: _cart.total, 
+        initialMemberPoints: _selectedMember?.points ?? 0,
+        countryCode: _countryCode,
       ),
-    ).then((result) async {
-       if (result != null && result is List) {
+    );
+    
+    if (result != null) {
           final payments = result.cast<SalePaymentModel>();
           // 복합 결제 (Split Payment)
           await _processPaymentSuccess(
@@ -849,9 +921,8 @@ class _SalesPageState extends State<SalesPage> {
             paidAmount: _cart.total, 
             payments: payments, // Add this parameter
           );
-       }
-       _searchFocusNode.requestFocus();
-    });
+    }
+    _searchFocusNode.requestFocus();
   }
   
   Future<void> _processPaymentSuccess(

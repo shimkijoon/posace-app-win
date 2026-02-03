@@ -86,21 +86,21 @@ class LocaleHelper {
   static NumberFormat getCurrencyFormat(String countryCode) {
     switch (countryCode) {
       case 'KR':
-        return NumberFormat.currency(locale: 'ko_KR', symbol: '₩', decimalDigits: 0);
+        return NumberFormat.currency(locale: 'ko_KR', symbol: '', decimalDigits: 0);
       case 'JP':
-        return NumberFormat.currency(locale: 'ja_JP', symbol: '¥', decimalDigits: 0);
+        return NumberFormat.currency(locale: 'ja_JP', symbol: '', decimalDigits: 0);
       case 'TW':
-        return NumberFormat.currency(locale: 'zh_TW', symbol: 'NT\$', decimalDigits: 0);
+        return NumberFormat.currency(locale: 'zh_TW', symbol: '', decimalDigits: 0);
       case 'HK':
-        return NumberFormat.currency(locale: 'zh_HK', symbol: 'HK\$', decimalDigits: 2);
+        return NumberFormat.currency(locale: 'zh_HK', symbol: '', decimalDigits: 2);
       case 'SG':
-        return NumberFormat.currency(locale: 'en_SG', symbol: 'S\$', decimalDigits: 2);
+        return NumberFormat.currency(locale: 'en_SG', symbol: '', decimalDigits: 2);
       case 'AU':
-        return NumberFormat.currency(locale: 'en_AU', symbol: 'A\$', decimalDigits: 2);
+        return NumberFormat.currency(locale: 'en_AU', symbol: '', decimalDigits: 2);
       case 'US':
-        return NumberFormat.currency(locale: 'en_US', symbol: '\$', decimalDigits: 2);
+        return NumberFormat.currency(locale: 'en_US', symbol: '', decimalDigits: 2);
       default:
-        return NumberFormat.currency(locale: 'en_US', symbol: '\$', decimalDigits: 2);
+        return NumberFormat.currency(locale: 'en_US', symbol: '', decimalDigits: 2);
     }
   }
 

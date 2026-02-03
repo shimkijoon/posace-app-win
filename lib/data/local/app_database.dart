@@ -725,6 +725,13 @@ class AppDatabase {
     });
   }
 
+  Future<ProductModel?> getProductById(String id) async {
+    final db = await database;
+    final maps = await db.query('products', where: 'id = ?', whereArgs: [id]);
+    if (maps.isEmpty) return null;
+    return await _populateProduct(db, maps.first);
+  }
+
   Future<List<ProductModel>> getProducts() async {
     final db = await database;
     final maps = await db.query('products', orderBy: 'createdAt DESC');
@@ -944,6 +951,13 @@ class AppDatabase {
   }
 
   // Members
+  Future<MemberModel?> getMemberById(String id) async {
+    final db = await database;
+    final maps = await db.query('members', where: 'id = ?', whereArgs: [id]);
+    if (maps.isEmpty) return null;
+    return MemberModel.fromMap(maps.first);
+  }
+
   Future<List<MemberModel>> getMembers() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('members', orderBy: 'name ASC');
