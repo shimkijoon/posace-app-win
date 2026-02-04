@@ -129,7 +129,7 @@ class _MemberRegistrationDialogState extends State<MemberRegistrationDialog> {
                     ),
                     child: _isLoading 
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : Text(loc.translate('common.register') ?? '등록'),
+                      : Text(loc.translate('common.confirm') ?? '등록'),
                   ),
                 ],
               ),

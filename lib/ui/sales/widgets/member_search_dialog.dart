@@ -65,27 +65,17 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
     
     // ✅ 3. 결과 없을 때 명확한 메시지 및 등록 제안
     if (mounted && results.isEmpty) {
-      String message;
-      if (onlineSearchError != null) {
-        message = '${loc.translate('customers.noSearchResults')}\n\n'
-                  '${loc.translate('customers.searchErrorNotice')}\n\n'
-                  '${loc.translate('customers.registerPrompt')}';
-      } else {
-        message = '${loc.translate('customers.noSearchResults')}\n\n'
-                  '${loc.translate('customers.registerPrompt')}';
-      }
-      
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.blue),
-              SizedBox(width: 8),
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
               Text(loc.translate('customers.noSearchResultsTitle')),
             ],
           ),
-          content: Text(message),
+          content: Text(loc.translate('customers.registerPrompt')),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -93,7 +83,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text(loc.translate('sales.registerNewMember')),
+              child: Text(loc.translate('customers.registerNew')),
             ),
           ],
         ),
@@ -239,14 +229,14 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
-                  child: Text(AppLocalizations.of(context)!.translate('sales.noSearchResults'), style: const TextStyle(color: Colors.grey)),
+                  child: Text(AppLocalizations.of(context)!.translate('customers.noSearchResults'), style: const TextStyle(color: Colors.grey)),
                 ),
               ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: _openRegistration,
               icon: const Icon(Icons.person_add_outlined),
-              label: Text(AppLocalizations.of(context)!.translate('sales.registerNewMember')),
+              label: Text(AppLocalizations.of(context)!.translate('customers.registerNew')),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

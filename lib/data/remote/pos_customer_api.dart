@@ -9,7 +9,7 @@ class PosCustomerApi {
   final ApiClient apiClient;
 
   Future<MemberModel> searchOnlineMember(String storeId, String phone) async {
-    final uri = apiClient.buildUri('/customers/search/$storeId', {'phone': phone});
+    final uri = apiClient.buildUri('/pos/customers/search', {'phone': phone});
     
     final response = await http.get(
       uri,
@@ -27,7 +27,7 @@ class PosCustomerApi {
   }
 
   Future<MemberModel> registerMember(String storeId, String name, String phone) async {
-    final uri = apiClient.buildUri('/customers/register/$storeId');
+    final uri = apiClient.buildUri('/pos/customers/register');
     
     final response = await http.post(
       uri,
@@ -47,16 +47,31 @@ class PosCustomerApi {
   }
 
   MemberModel _mapToMember(Map<String, dynamic> data, String storeId) {
-    // API returns Membership object with Customer included
+    // Handling both Membership object (search) and Member-summary object (register)
     final customer = data['customer'];
-    return MemberModel(
-      id: data['id'],
-      storeId: storeId,
-      name: customer['name'] ?? '고객',
-      phone: customer['phoneNumber'],
-      points: (data['pointsBalance'] as num?)?.toInt() ?? 0,
-      createdAt: DateTime.parse(data['createdAt']),
-      updatedAt: DateTime.parse(data['updatedAt']),
-    );
+    
+    if (customer != null) {
+      // Membership with nested customer (from search)
+      return MemberModel(
+        id: data['id'],
+        storeId: storeId,
+        name: customer['name'] ?? '고객',
+        phone: customer['phoneNumber'],
+        points: (data['pointsBalance'] as num?)?.toInt() ?? 0,
+        createdAt: DateTime.parse(data['createdAt']),
+        updatedAt: DateTime.parse(data['updatedAt']),
+      );
+    } else {
+      // Member-summary object (from registerFromPos)
+      return MemberModel(
+        id: data['membershipId'] ?? data['id'],
+        storeId: storeId,
+        name: data['name'] ?? '고객',
+        phone: data['phoneNumber'],
+        points: (data['pointsBalance'] as num?)?.toInt() ?? 0,
+        createdAt: DateTime.parse(data['createdAt']),
+        updatedAt: DateTime.now(), // Fallback for register response if updatedAt is missing
+      );
+    }
   }
 }
