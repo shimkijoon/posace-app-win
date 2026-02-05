@@ -60,6 +60,7 @@ void main() {
             onItemRemove: (productId) {},
             onClear: () {},
             onCheckout: () {},
+            onTakeoutOrder: () {},
           ),
         ),
       );
@@ -303,6 +304,7 @@ void main() {
             onItemRemove: (productId) {},
             onClear: () {},
             onCheckout: () {},
+            onTakeoutOrder: () {},
           ),
         ),
       ));
@@ -339,6 +341,7 @@ void main() {
             onItemRemove: (productId) {},
             onClear: () {},
             onCheckout: () {},
+            onTakeoutOrder: () {},
           ),
         ),
       ));

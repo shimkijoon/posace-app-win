@@ -14,6 +14,7 @@ import '../auth/login_page.dart';
 import '../sales/sales_page.dart';
 import '../sales/sales_inquiry_page.dart';
 import '../tables/table_layout_page.dart';
+import '../orders/unified_order_management_page.dart';
 import 'settings_page.dart';
 import '../../core/version_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -550,6 +551,19 @@ class _HomePageState extends State<HomePage> {
                           icon: Icons.table_restaurant,
                           label: AppLocalizations.of(context)!.tableOrder,
                           color: AppTheme.secondary,
+                          height: double.infinity,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: _buildMainActionButton(
+                          onPressed: (!_usePosSession || _isSessionActive)
+                              ? () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => UnifiedOrderManagementPage(database: widget.database)))
+                              : null,
+                          icon: Icons.restaurant_menu,
+                          label: '통합 주문 관리',
+                          color: Colors.orange,
                           height: double.infinity,
                         ),
                       ),

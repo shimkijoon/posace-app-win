@@ -9,7 +9,6 @@ import '../../data/local/app_database.dart';
 import '../../data/local/models.dart';
 import 'package:uuid/uuid.dart';
 import '../../common/services/error_diagnostic_service.dart';
-import '../../common/models/diagnostic_error_response.dart';
 import '../common/diagnostic_error_dialog.dart';
 import '../../core/storage/auth_storage.dart';
 import '../home/home_page.dart';
@@ -38,6 +37,9 @@ import '../../data/remote/pos_master_api.dart';
 import '../../sync/sync_service.dart';
 import '../../data/remote/api_client.dart';
 import '../../ui/widgets/virtual_keypad.dart';
+import 'widgets/customer_info_dialog.dart';
+import '../../data/remote/unified_order_api.dart';
+import '../../data/models/unified_order.dart';
 
 enum PaymentMethod { card, cash, point, easy_payment }
 
@@ -837,6 +839,104 @@ class _SalesPageState extends State<SalesPage> {
        _searchFocusNode.requestFocus();
     });
   }
+
+  Future<void> _handleTakeoutOrder() async {
+    try {
+      // 고객 정보 수집 다이얼로그 표시
+      final customerInfo = await showDialog<CustomerInfo>(
+        context: context,
+        builder: (context) => const CustomerInfoDialog(),
+      );
+
+      if (customerInfo == null) {
+        // 사용자가 취소한 경우
+        return;
+      }
+
+      // 로딩 표시
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // 인증 정보 가져오기
+      final auth = AuthStorage();
+      final accessToken = await auth.getAccessToken();
+      final session = await auth.getSessionInfo();
+
+      if (accessToken == null || session['storeId'] == null) {
+        Navigator.of(context).pop(); // 로딩 다이얼로그 닫기
+        _showErrorDialog('인증 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      // 통합 주문 API 클라이언트 생성
+      final apiClient = ApiClient(accessToken: accessToken);
+      final orderApi = UnifiedOrderApi(apiClient);
+
+      // 주문 아이템 변환
+      final orderItems = _cart.items.map((cartItem) => CreateOrderItemRequest(
+        productId: cartItem.product.id,
+        quantity: cartItem.quantity,
+        unitPrice: cartItem.product.price.toDouble(),
+        note: null, // CartItem에 note 속성이 없으므로 null로 처리
+      )).toList();
+
+      // 통합 주문 생성
+      final order = await orderApi.createOrder(
+        storeId: session['storeId']!,
+        type: OrderType.TAKEOUT,
+        totalAmount: _cart.total.toDouble(),
+        items: orderItems,
+        note: null, // 현재 CustomerInfo에는 note가 없으므로 null로 처리
+        customerName: customerInfo.name,
+        customerPhone: customerInfo.phone,
+        scheduledTime: customerInfo.scheduledTime,
+      );
+
+      Navigator.of(context).pop(); // 로딩 다이얼로그 닫기
+
+      // 성공 메시지 표시
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('테이크아웃 주문이 등록되었습니다. 주문번호: ${order.orderNumber}'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+
+      // 장바구니 초기화
+      setState(() {
+        _cart.clear();
+      });
+
+      // 포커스 복원
+      _searchFocusNode.requestFocus();
+
+    } catch (e) {
+      Navigator.of(context).pop(); // 로딩 다이얼로그 닫기 (있는 경우)
+      _showErrorDialog('테이크아웃 주문 처리 중 오류가 발생했습니다: $e');
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('오류'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
   
   Future<void> _processPaymentSuccess(
     PaymentMethod method, 
@@ -1075,34 +1175,65 @@ class _SalesPageState extends State<SalesPage> {
                           onItemRemove: _onCartItemRemove,
                         ),
                       ),
-                      // Toast-style Big Pay Button
+                      // 분리된 결제 버튼들
                       Container(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         color: AppTheme.surface,
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 80,
-                          child: ElevatedButton(
-                            onPressed: !_cart.isEmpty ? _onSplitCheckout : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primary,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              elevation: 4,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  AppLocalizations.of(context)!.proceedToPayment,
-                                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                        child: Row(
+                          children: [
+                            // 즉시 결제 버튼
+                            Expanded(
+                              flex: 1,
+                              child: SizedBox(
+                                height: 70,
+                                child: ElevatedButton.icon(
+                                  onPressed: !_cart.isEmpty ? _onSplitCheckout : null,
+                                  icon: const Icon(Icons.payment, size: 20),
+                                  label: const Text(
+                                    '즉시 결제',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primary,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 4,
+                                  ),
                                 ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  '|   ₩${_cart.total.toString().replaceAllMapped(RegExp(r"(\d)(?=(\d{3})+(?!\d))"), (match) => "${match[1]},")}',
-                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: Colors.white70),
-                                ),
-                              ],
+                              ),
                             ),
+                            const SizedBox(width: 12),
+                            // 테이크아웃 주문 버튼
+                            Expanded(
+                              flex: 1,
+                              child: SizedBox(
+                                height: 70,
+                                child: ElevatedButton.icon(
+                                  onPressed: !_cart.isEmpty ? _handleTakeoutOrder : null,
+                                  icon: const Icon(Icons.restaurant_menu, size: 20),
+                                  label: const Text(
+                                    '테이크아웃',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 4,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -1145,6 +1276,7 @@ class _SalesPageState extends State<SalesPage> {
       ),
     );
   }
+
   Widget _buildTableInfoBar() {
     final String duration = _orderStartTime != null 
       ? _formatDuration(DateTime.now().difference(_orderStartTime!))

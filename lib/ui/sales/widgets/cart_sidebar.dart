@@ -14,6 +14,7 @@ class CartSidebar extends StatelessWidget {
     required this.onItemRemove,
     required this.onClear,
     required this.onCheckout,
+    required this.onTakeoutOrder,
   });
 
   final Cart cart;
@@ -21,6 +22,7 @@ class CartSidebar extends StatelessWidget {
   final ValueChanged<String> onItemRemove;
   final VoidCallback onClear;
   final VoidCallback onCheckout;
+  final VoidCallback onTakeoutOrder;
 
   String _formatPrice(int price) {
     return '₩${price.toString().replaceAllMapped(
@@ -171,40 +173,66 @@ class CartSidebar extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   
-                  // 결제 버튼
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: onCheckout,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 12,
-                        shadowColor: AppTheme.primary.withOpacity(0.4),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.payment, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            AppLocalizations.of(context)!.proceedToPayment,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                  // 분리된 결제 버튼들
+                  Row(
+                    children: [
+                      // 즉시 결제 버튼
+                      Expanded(
+                        flex: 1,
+                        child: ElevatedButton.icon(
+                          onPressed: onCheckout,
+                          icon: const Icon(Icons.payment, size: 18),
+                          label: const Text(
+                            '즉시 결제',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
-                        ],
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 8,
+                            shadowColor: AppTheme.primary.withOpacity(0.4),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      // 테이크아웃 주문 버튼
+                      Expanded(
+                        flex: 1,
+                        child: ElevatedButton.icon(
+                          onPressed: onTakeoutOrder,
+                          icon: const Icon(Icons.restaurant_menu, size: 18),
+                          label: const Text(
+                            '테이크아웃',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 8,
+                            shadowColor: Colors.orange.withOpacity(0.4),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
-        ],
       ),
     );
   }
