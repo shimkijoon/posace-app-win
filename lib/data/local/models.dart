@@ -131,9 +131,15 @@ class ProductModel {
   factory ProductModel.fromMap(Map<String, dynamic> map) {
     // price는 Decimal이므로 문자열 또는 숫자로 올 수 있음
     final priceValue = map['price'];
-    final price = priceValue is String
-        ? (double.parse(priceValue)).round()
-        : (priceValue as num).round();
+    int price;
+    if (priceValue is String) {
+      final parsed = double.tryParse(priceValue);
+      price = parsed?.round() ?? 0;
+    } else if (priceValue is num) {
+      price = priceValue.round();
+    } else {
+      price = 0;
+    }
 
     return ProductModel(
       id: map['id'] as String,
