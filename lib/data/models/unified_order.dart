@@ -82,13 +82,24 @@ class UnifiedOrder {
   });
 
   factory UnifiedOrder.fromJson(Map<String, dynamic> json) {
+    // 안전한 숫자 변환 헬퍼 함수
+    double safeToDouble(dynamic value) {
+      if (value is num) {
+        return value.toDouble();
+      } else if (value is String) {
+        return double.tryParse(value) ?? 0.0;
+      } else {
+        return 0.0;
+      }
+    }
+
     return UnifiedOrder(
       id: json['id'],
       orderNumber: json['orderNumber'],
       storeId: json['storeId'],
       type: OrderType.values.firstWhere((e) => e.name == json['type']),
       status: UnifiedOrderStatus.values.firstWhere((e) => e.name == json['status']),
-      totalAmount: (json['totalAmount'] as num).toDouble(),
+      totalAmount: safeToDouble(json['totalAmount']),
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
       note: json['note'],
@@ -329,12 +340,35 @@ class UnifiedOrderItem {
   });
 
   factory UnifiedOrderItem.fromJson(Map<String, dynamic> json) {
+    // 안전한 숫자 변환 헬퍼 함수
+    double safeToDouble(dynamic value) {
+      if (value is num) {
+        return value.toDouble();
+      } else if (value is String) {
+        return double.tryParse(value) ?? 0.0;
+      } else {
+        return 0.0;
+      }
+    }
+
+    int safeToInt(dynamic value) {
+      if (value is int) {
+        return value;
+      } else if (value is num) {
+        return value.toInt();
+      } else if (value is String) {
+        return int.tryParse(value) ?? 0;
+      } else {
+        return 0;
+      }
+    }
+
     return UnifiedOrderItem(
       id: json['id'],
       orderId: json['orderId'],
       productId: json['productId'],
-      qty: json['qty'],
-      price: (json['price'] as num).toDouble(),
+      qty: safeToInt(json['qty']),
+      price: safeToDouble(json['price']),
       options: json['options'],
       note: json['note'],
       status: OrderItemStatus.values.firstWhere((e) => e.name == json['status']),

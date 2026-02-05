@@ -865,19 +865,34 @@ class _SalesPageState extends State<SalesPage> {
       final apiClient = ApiClient(accessToken: accessToken);
       final orderApi = UnifiedOrderApi(apiClient);
 
+      // 안전한 숫자 변환 헬퍼 함수
+      double safeToDouble(dynamic value) {
+        if (value is num) {
+          return value.toDouble();
+        } else if (value is String) {
+          return double.tryParse(value) ?? 0.0;
+        } else {
+          return 0.0;
+        }
+      }
+
       // 주문 아이템 변환
-      final orderItems = _cart.items.map((cartItem) => CreateOrderItemRequest(
-        productId: cartItem.product.id,
-        quantity: cartItem.quantity,
-        unitPrice: cartItem.product.price.toDouble(),
-        note: null, // CartItem에 note 속성이 없으므로 null로 처리
-      )).toList();
+      final orderItems = _cart.items.map((cartItem) {
+        // CartItem의 unitPrice를 사용하거나, 안전하게 변환
+        final price = cartItem.unitPrice;
+        return CreateOrderItemRequest(
+          productId: cartItem.product.id,
+          quantity: cartItem.quantity,
+          unitPrice: safeToDouble(price),
+          note: null, // CartItem에 note 속성이 없으므로 null로 처리
+        );
+      }).toList();
 
       // 통합 주문 생성
       final order = await orderApi.createOrder(
         storeId: session['storeId']!,
         type: OrderType.TAKEOUT,
-        totalAmount: _cart.total.toDouble(),
+        totalAmount: safeToDouble(_cart.total),
         items: orderItems,
         note: null,
         customerName: null, // 고객 이름 없이 주문
