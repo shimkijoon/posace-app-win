@@ -484,7 +484,9 @@ class _HomePageState extends State<HomePage> {
                         flex: 2,
                         child: _buildMainActionButton(
                           onPressed: (!_usePosSession || _isSessionActive)
-                              ? () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SalesPage(database: widget.database)))
+                              ? () => Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (_) => SalesPage(database: widget.database)
+                                ))
                               : null,
                           icon: Icons.receipt_long,
                           label: AppLocalizations.of(context)!.startSale,

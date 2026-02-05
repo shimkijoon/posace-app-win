@@ -123,4 +123,5 @@ class SettingsStorage {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getStringList(_keyScheduledSyncTimes) ?? ['08:00', '14:00', '22:00'];
   }
+
 }
