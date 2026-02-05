@@ -4,7 +4,10 @@ This document describes the standard procedure for building and releasing new ve
 
 ## 📋 Prerequisites
 - **Flutter SDK**: Ensure you have the stable channel installed.
-- **Inno Setup**: Version 6 must be installed at `C:\Program Files (x86)\Inno Setup 6\ISCC.exe`.
+- **Inno Setup**: Version 5 or 6 must be installed at:
+  - `C:\Program Files (x86)\Inno Setup 6\ISCC.exe` (Version 6)
+  - `C:\Program Files (x86)\Inno Setup 5\ISCC.exe` (Version 5)
+  - The script will automatically detect and use the installed version.
 - **GitHub CLI (`gh`)**: For automated release and asset upload.
 - **Git**: For version tagging.
 
@@ -86,7 +89,10 @@ After successful build:
 - Clean build: `flutter clean && flutter pub get`
 
 ### Inno Setup Not Found
-- Ensure Inno Setup 6 is installed at `C:\Program Files (x86)\Inno Setup 6\ISCC.exe`
+- Ensure Inno Setup 5 or 6 is installed at:
+  - `C:\Program Files (x86)\Inno Setup 6\ISCC.exe` (Version 6)
+  - `C:\Program Files (x86)\Inno Setup 5\ISCC.exe` (Version 5)
+- The script will automatically detect and use the installed version.
 - Download from: https://jrsoftware.org/isinfo.php
 
 ### VCRUNTIME140_1.dll Error

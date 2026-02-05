@@ -26,14 +26,19 @@ try {
     exit 1
 }
 
-# Check Inno Setup
+# Check Inno Setup (Version 5 or 6)
 $innoSetupPath = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 if (!(Test-Path $innoSetupPath)) {
-    Write-Error "❌ Inno Setup 6 not found at: $innoSetupPath"
-    Write-Host "💡 Please install Inno Setup 6 from: https://jrsoftware.org/isinfo.php" -ForegroundColor Yellow
-    exit 1
+    $innoSetupPath = "C:\Program Files (x86)\Inno Setup 5\ISCC.exe"
+    if (!(Test-Path $innoSetupPath)) {
+        Write-Error "❌ Inno Setup not found. Please install Inno Setup 5 or 6."
+        Write-Host "💡 Download from: https://jrsoftware.org/isinfo.php" -ForegroundColor Yellow
+        exit 1
+    }
+    Write-Host "✅ Inno Setup 5: Found" -ForegroundColor Green
+} else {
+    Write-Host "✅ Inno Setup 6: Found" -ForegroundColor Green
 }
-Write-Host "✅ Inno Setup 6: Found" -ForegroundColor Green
 
 # Step 1: Flutter Build
 if (!$SkipFlutterBuild) {
