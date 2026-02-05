@@ -106,9 +106,12 @@ if (!(Test-Path $setupScriptPath)) {
 
 try {
     # Read and update version
-    $setupContent = Get-Content $setupScriptPath -Raw
+    $setupContent = Get-Content $setupScriptPath -Raw -Encoding UTF8
     $setupContent = $setupContent -replace '#define MyAppVersion ".*"', "#define MyAppVersion `"$Version`""
-    Set-Content $setupScriptPath $setupContent -Encoding UTF8
+    
+    # Write without BOM (UTF-8) to avoid Inno Setup compilation errors
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText((Resolve-Path $setupScriptPath), $setupContent, $utf8NoBom)
     
     Write-Host "✅ Version updated to: $Version" -ForegroundColor Green
     
