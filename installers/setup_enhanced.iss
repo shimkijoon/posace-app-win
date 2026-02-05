@@ -30,7 +30,7 @@ MinVersion=10.0
 SetupLogging=yes
 ; Custom wizard pages for better user experience
 WizardStyle=modern
-WizardSizePercent=120
+; WizardSizePercent=120  ; Inno Setup 6 only - removed for IS5 compatibility
 
 [Languages]
 Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
@@ -63,6 +63,15 @@ Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: 
 [Code]
 var
   ProgressPage: TOutputProgressWizardPage;
+
+// Helper function: Convert Boolean to String (for Inno Setup 5 compatibility)
+function BoolToStr(Value: Boolean): String;
+begin
+  if Value then
+    Result := 'True'
+  else
+    Result := 'False';
+end;
 
 // Check if Visual C++ Redistributable is installed
 function IsVCRedistInstalled: Boolean;

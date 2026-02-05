@@ -31,10 +31,19 @@ $RequiredDlls = @(
 $SearchPaths = @(
     "$env:SystemRoot\System32",
     "$env:SystemRoot\SysWOW64",
+    # Visual C++ Redistributable installation paths
     "${env:ProgramFiles}\Microsoft Visual Studio\2022\*\VC\Redist\MSVC\*\x64\Microsoft.VC143.CRT",
     "${env:ProgramFiles}\Microsoft Visual Studio\2019\*\VC\Redist\MSVC\*\x64\Microsoft.VC142.CRT",
     "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\*\VC\Redist\MSVC\*\x64\Microsoft.VC143.CRT",
-    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\*\VC\Redist\MSVC\*\x64\Microsoft.VC142.CRT"
+    "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2019\*\VC\Redist\MSVC\*\x64\Microsoft.VC142.CRT",
+    # Common Visual C++ Runtime paths
+    "${env:ProgramFiles}\Common Files\Microsoft Shared\VC",
+    "${env:ProgramFiles(x86)}\Common Files\Microsoft Shared\VC"
+)
+
+# Additional WinSxS search (searched separately due to complexity)
+$WinSxSPaths = @(
+    "$env:SystemRoot\WinSxS"
 )
 
 Write-Host "`n📦 Collecting Visual C++ Runtime DLLs..." -ForegroundColor Cyan
@@ -55,12 +64,31 @@ foreach ($dll in $RequiredDlls) {
     
     Write-Host "🔍 Searching for $dll..." -ForegroundColor White
     
+    # Search standard paths
     foreach ($searchPath in $SearchPaths) {
         # Handle wildcard paths
         if ($searchPath -like "*`**") {
-            $expandedPaths = Get-ChildItem -Path ($searchPath -replace '\*.*$', '') -Directory -ErrorAction SilentlyContinue | 
-                            ForEach-Object { Join-Path $_.FullName ($searchPath -replace '^.*\*', '*') }
-            $pathsToCheck = $expandedPaths | Where-Object { Test-Path $_ }
+            try {
+                $baseDir = $searchPath -replace '\*.*$', ''
+                $remainingPath = $searchPath.Substring($baseDir.Length)
+                if ($remainingPath.StartsWith('\')) {
+                    $remainingPath = $remainingPath.Substring(1)
+                }
+                
+                $expandedPaths = @()
+                if (Test-Path $baseDir) {
+                    $dirs = Get-ChildItem -Path $baseDir -Directory -ErrorAction SilentlyContinue
+                    foreach ($dir in $dirs) {
+                        $fullPath = Join-Path $dir.FullName $remainingPath
+                        if (Test-Path $fullPath) {
+                            $expandedPaths += $fullPath
+                        }
+                    }
+                }
+                $pathsToCheck = $expandedPaths
+            } catch {
+                $pathsToCheck = @()
+            }
         } else {
             $pathsToCheck = @($searchPath)
         }
@@ -83,6 +111,37 @@ foreach ($dll in $RequiredDlls) {
         }
         
         if ($found) { break }
+    }
+    
+    # Search WinSxS if not found in standard paths
+    if (!$found) {
+        foreach ($winSxSPath in $WinSxSPaths) {
+            if (Test-Path $winSxSPath) {
+                try {
+                    # Search for DLL in WinSxS subdirectories matching VC runtime pattern
+                    $matchingDirs = Get-ChildItem -Path $winSxSPath -Directory -Filter "*vc-runtime*" -ErrorAction SilentlyContinue
+                    foreach ($dir in $matchingDirs) {
+                        $fullPath = Join-Path $dir.FullName $dll
+                        if (Test-Path $fullPath) {
+                            try {
+                                Copy-Item $fullPath $targetPath -Force
+                                $fileInfo = Get-Item $fullPath
+                                Write-Host "  ✅ $dll copied from WinSxS: $($dir.Name)" -ForegroundColor Green
+                                Write-Host "     Version: $($fileInfo.VersionInfo.FileVersion)" -ForegroundColor Gray
+                                $CollectedDlls += $dll
+                                $found = $true
+                                break
+                            } catch {
+                                Write-Warning "  ❌ Failed to copy $dll from WinSxS : $_"
+                            }
+                        }
+                    }
+                    if ($found) { break }
+                } catch {
+                    # Silently continue if WinSxS search fails
+                }
+            }
+        }
     }
     
     if (!$found) {
