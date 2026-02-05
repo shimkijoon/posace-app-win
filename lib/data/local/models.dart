@@ -58,7 +58,9 @@ class CategoryModel {
       id: map['id'] as String,
       storeId: map['storeId'] as String,
       name: map['name'] as String,
-      sortOrder: map['sortOrder'] as int,
+      sortOrder: (map['sortOrder'] is int) 
+          ? map['sortOrder'] as int
+          : int.tryParse(map['sortOrder'].toString()) ?? 0,
       allowProductDiscount: map['allowProductDiscount'] == 1 || map['allowProductDiscount'] == true,
       kitchenStationId: map['kitchenStationId'] as String?,
       isKitchenPrintEnabled: map['isKitchenPrintEnabled'] == 1 || map['isKitchenPrintEnabled'] == true || map['isKitchenPrintEnabled'] == null,
@@ -151,11 +153,14 @@ class ProductModel {
       barcode: map['barcode'] as String?,
       stockEnabled: map['stockEnabled'] is bool
           ? map['stockEnabled'] as bool
-          : (map['stockEnabled'] as int) == 1,
-      stockQuantity: map['stockQuantity'] as int?,
+          : (map['stockEnabled'] is int ? map['stockEnabled'] as int : int.tryParse(map['stockEnabled'].toString()) ?? 0) == 1,
+      stockQuantity: (map['stockQuantity'] == null) ? null :
+          (map['stockQuantity'] is int) 
+              ? map['stockQuantity'] as int
+              : int.tryParse(map['stockQuantity'].toString()),
       isActive: map['isActive'] is bool
           ? map['isActive'] as bool
-          : (map['isActive'] as int) == 1,
+          : (map['isActive'] is int ? map['isActive'] as int : int.tryParse(map['isActive'].toString()) ?? 0) == 1,
       kitchenStationId: map['kitchenStationId'] as String?,
       isKitchenPrintEnabled: map['isKitchenPrintEnabled'] == 1 || map['isKitchenPrintEnabled'] == true || map['isKitchenPrintEnabled'] == null,
       createdAt: DateTime.parse(map['createdAt'] as String),
@@ -237,9 +242,15 @@ class DiscountModel {
   factory DiscountModel.fromMap(Map<String, dynamic> map) {
     // rateOrAmount는 Decimal이므로 문자열 또는 숫자로 올 수 있음
     final rateOrAmountValue = map['rateOrAmount'];
-    final rateOrAmount = rateOrAmountValue is String
-        ? (double.parse(rateOrAmountValue)).round()
-        : (rateOrAmountValue as num).round();
+    int rateOrAmount;
+    if (rateOrAmountValue is String) {
+      final parsed = double.tryParse(rateOrAmountValue);
+      rateOrAmount = parsed?.round() ?? 0;
+    } else if (rateOrAmountValue is num) {
+      rateOrAmount = rateOrAmountValue.round();
+    } else {
+      rateOrAmount = 0;
+    }
 
     return DiscountModel(
       id: map['id'] as String,
@@ -248,7 +259,10 @@ class DiscountModel {
       targetId: map['targetId'] as String?,
       name: map['name'] as String,
       rateOrAmount: rateOrAmount,
-      priority: map['priority'] as int? ?? 0,
+      priority: (map['priority'] == null) ? 0 :
+          (map['priority'] is int) 
+              ? map['priority'] as int
+              : int.tryParse(map['priority'].toString()) ?? 0,
       productIds: _parseIds(map['productIds'] ?? map['products']),
       categoryIds: _parseIds(map['categoryIds'] ?? map['categories']),
       startsAt: map['startsAt'] != null ? DateTime.parse(map['startsAt'] as String) : null,
@@ -408,16 +422,29 @@ class SaleModel {
       sessionId: map['sessionId'] as String?,
       employeeId: map['employeeId'] as String?,
       memberId: map['memberId'] as String?,
-      totalAmount: map['totalAmount'] as int,
-      paidAmount: map['paidAmount'] as int,
+      totalAmount: (map['totalAmount'] is int) 
+          ? map['totalAmount'] as int
+          : int.tryParse(map['totalAmount'].toString()) ?? 0,
+      paidAmount: (map['paidAmount'] is int) 
+          ? map['paidAmount'] as int
+          : int.tryParse(map['paidAmount'].toString()) ?? 0,
       paymentMethod: map['paymentMethod'] as String?,
       status: map['status'] as String,
       createdAt: DateTime.parse(map['createdAt'] as String),
       syncedAt: map['syncedAt'] != null ? DateTime.parse(map['syncedAt'] as String) : null,
-      taxAmount: map['taxAmount'] as int? ?? 0,
-      discountAmount: map['discountAmount'] as int? ?? 0,
+      taxAmount: (map['taxAmount'] == null) ? 0 :
+          (map['taxAmount'] is int) 
+              ? map['taxAmount'] as int
+              : int.tryParse(map['taxAmount'].toString()) ?? 0,
+      discountAmount: (map['discountAmount'] == null) ? 0 :
+          (map['discountAmount'] is int) 
+              ? map['discountAmount'] as int
+              : int.tryParse(map['discountAmount'].toString()) ?? 0,
       cartDiscountsJson: map['cartDiscountsJson'] as String?,
-      memberPointsEarned: map['memberPointsEarned'] as int? ?? 0,
+      memberPointsEarned: (map['memberPointsEarned'] == null) ? 0 :
+          (map['memberPointsEarned'] is int) 
+              ? map['memberPointsEarned'] as int
+              : int.tryParse(map['memberPointsEarned'].toString()) ?? 0,
 
       saleDate: map['saleDate'] != null ? DateTime.parse(map['saleDate'] as String) : null,
       saleTime: map['saleTime'] as String?,
@@ -462,9 +489,15 @@ class SaleItemModel {
       id: map['id'] as String,
       saleId: map['saleId'] as String,
       productId: map['productId'] as String,
-      qty: map['qty'] as int,
-      price: map['price'] as int,
-      discountAmount: map['discountAmount'] as int,
+      qty: (map['qty'] is int) 
+          ? map['qty'] as int
+          : int.tryParse(map['qty'].toString()) ?? 0,
+      price: (map['price'] is int) 
+          ? map['price'] as int
+          : int.tryParse(map['price'].toString()) ?? 0,
+      discountAmount: (map['discountAmount'] is int) 
+          ? map['discountAmount'] as int
+          : int.tryParse(map['discountAmount'].toString()) ?? 0,
       discountsJson: map['discountsJson'] as String?,
     );
   }
