@@ -17,6 +17,7 @@ class CartSidebar extends StatelessWidget {
     required this.onCheckout,
     required this.onTakeoutOrder,
     this.countryCode = 'KR',
+    this.isTableOrder = false,
   });
 
   final Cart cart;
@@ -26,6 +27,7 @@ class CartSidebar extends StatelessWidget {
   final VoidCallback onCheckout;
   final VoidCallback onTakeoutOrder;
   final String countryCode;
+  final bool isTableOrder;
 
   String _formatPrice(int price) {
     return LocaleHelper.getCurrencyFormat(countryCode).format(price);
@@ -201,32 +203,35 @@ class CartSidebar extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      // 주문 버튼
-                      Expanded(
-                        flex: 1,
-                        child: ElevatedButton.icon(
-                          onPressed: onTakeoutOrder,
-                          icon: const Icon(Icons.receipt_long, size: 18),
-                          label: const Text(
-                            '주문',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                      // 테이블 주문이 아닐 때만 "주문" 버튼 표시
+                      if (!isTableOrder) ...[
+                        const SizedBox(width: 12),
+                        // 주문 버튼
+                        Expanded(
+                          flex: 1,
+                          child: ElevatedButton.icon(
+                            onPressed: onTakeoutOrder,
+                            icon: const Icon(Icons.receipt_long, size: 18),
+                            label: const Text(
+                              '주문',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 8,
+                              shadowColor: Colors.orange.withOpacity(0.4),
                             ),
-                            elevation: 8,
-                            shadowColor: Colors.orange.withOpacity(0.4),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

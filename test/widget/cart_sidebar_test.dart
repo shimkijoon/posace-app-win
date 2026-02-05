@@ -61,6 +61,7 @@ void main() {
             onClear: () {},
             onCheckout: () {},
             onTakeoutOrder: () {},
+        isTableOrder: false,
           ),
         ),
       );
@@ -169,6 +170,7 @@ void main() {
             onClear: () => clearCalled = true,
             onCheckout: () {},
             onTakeoutOrder: () {},
+        isTableOrder: false,
           ),
         ),
       ));
@@ -206,6 +208,7 @@ void main() {
             onClear: () {},
             onCheckout: () => checkoutCalled = true,
             onTakeoutOrder: () {},
+        isTableOrder: false,
           ),
         ),
       ));
@@ -243,6 +246,7 @@ void main() {
             onClear: () {},
             onCheckout: () {},
             onTakeoutOrder: () {},
+        isTableOrder: false,
           ),
         ),
       ));
@@ -308,6 +312,7 @@ void main() {
             onClear: () {},
             onCheckout: () {},
             onTakeoutOrder: () {},
+        isTableOrder: false,
           ),
         ),
       ));
@@ -345,6 +350,7 @@ void main() {
             onClear: () {},
             onCheckout: () {},
             onTakeoutOrder: () {},
+        isTableOrder: false,
           ),
         ),
       ));

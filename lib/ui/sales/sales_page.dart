@@ -1247,33 +1247,36 @@ class _SalesPageState extends State<SalesPage> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            // 주문 버튼
-                            Expanded(
-                              flex: 1,
-                              child: SizedBox(
-                                height: 70,
-                                child: ElevatedButton.icon(
-                                  onPressed: !_cart.isEmpty ? _handleTakeoutOrder : null,
-                                  icon: const Icon(Icons.receipt_long, size: 20),
-                                  label: const Text(
-                                    '주문',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                            // 테이블 주문이 아닐 때만 "주문" 버튼 표시
+                            if (_selectedTableOrder == null) ...[
+                              const SizedBox(width: 12),
+                              // 주문 버튼
+                              Expanded(
+                                flex: 1,
+                                child: SizedBox(
+                                  height: 70,
+                                  child: ElevatedButton.icon(
+                                    onPressed: !_cart.isEmpty ? _handleTakeoutOrder : null,
+                                    icon: const Icon(Icons.receipt_long, size: 20),
+                                    label: const Text(
+                                      '주문',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.orange,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      elevation: 4,
                                     ),
-                                    elevation: 4,
                                   ),
                                 ),
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
