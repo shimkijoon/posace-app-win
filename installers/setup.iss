@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "POSAce"
-#define MyAppVersion "1.0.17" 
+#define MyAppVersion "1.0.25" 
 #define MyAppPublisher "Ihan Soft"
 #define MyAppURL "https://www.posace.com"
 #define MyAppExeName "posace_app_win.exe"
