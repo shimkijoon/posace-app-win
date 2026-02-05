@@ -202,14 +202,14 @@ class CartSidebar extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // 테이크아웃 주문 버튼
+                      // 주문 버튼
                       Expanded(
                         flex: 1,
                         child: ElevatedButton.icon(
                           onPressed: onTakeoutOrder,
-                          icon: const Icon(Icons.restaurant_menu, size: 18),
+                          icon: const Icon(Icons.receipt_long, size: 18),
                           label: const Text(
-                            '테이크아웃',
+                            '주문',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,

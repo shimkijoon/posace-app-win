@@ -37,7 +37,6 @@ import '../../data/remote/pos_master_api.dart';
 import '../../sync/sync_service.dart';
 import '../../data/remote/api_client.dart';
 import '../../ui/widgets/virtual_keypad.dart';
-import 'widgets/customer_info_dialog.dart';
 import '../../data/remote/unified_order_api.dart';
 import '../../data/models/unified_order.dart';
 
@@ -842,17 +841,6 @@ class _SalesPageState extends State<SalesPage> {
 
   Future<void> _handleTakeoutOrder() async {
     try {
-      // 고객 정보 수집 다이얼로그 표시
-      final customerInfo = await showDialog<CustomerInfo>(
-        context: context,
-        builder: (context) => const CustomerInfoDialog(),
-      );
-
-      if (customerInfo == null) {
-        // 사용자가 취소한 경우
-        return;
-      }
-
       // 로딩 표시
       showDialog(
         context: context,
@@ -891,34 +879,86 @@ class _SalesPageState extends State<SalesPage> {
         type: OrderType.TAKEOUT,
         totalAmount: _cart.total.toDouble(),
         items: orderItems,
-        note: null, // 현재 CustomerInfo에는 note가 없으므로 null로 처리
-        customerName: customerInfo.name,
-        customerPhone: customerInfo.phone,
-        scheduledTime: customerInfo.scheduledTime,
+        note: null,
+        customerName: null, // 고객 이름 없이 주문
+        customerPhone: null, // 고객 전화번호 없이 주문
+        scheduledTime: null, // 예약 시간 없이 주문
       );
 
       Navigator.of(context).pop(); // 로딩 다이얼로그 닫기
 
-      // 성공 메시지 표시
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('테이크아웃 주문이 등록되었습니다. 주문번호: ${order.orderNumber}'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
+      // 주문번호 확인 다이얼로그 표시
+      final confirmed = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: const Text('주문 완료'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.check_circle,
+                color: Colors.green,
+                size: 64,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                '주문이 성공적으로 등록되었습니다.',
+                style: TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      '주문번호',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      order.orderNumber,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('확인'),
+            ),
+          ],
         ),
       );
 
-      // 장바구니 초기화
-      setState(() {
-        _cart.clear();
-      });
+      if (confirmed == true) {
+        // 장바구니 초기화
+        setState(() {
+          _cart.clear();
+        });
 
-      // 포커스 복원
-      _searchFocusNode.requestFocus();
+        // 포커스 복원
+        _searchFocusNode.requestFocus();
+      }
 
     } catch (e) {
       Navigator.of(context).pop(); // 로딩 다이얼로그 닫기 (있는 경우)
-      _showErrorDialog('테이크아웃 주문 처리 중 오류가 발생했습니다: $e');
+      _showErrorDialog('주문 처리 중 오류가 발생했습니다: $e');
     }
   }
 
@@ -1208,16 +1248,16 @@ class _SalesPageState extends State<SalesPage> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            // 테이크아웃 주문 버튼
+                            // 주문 버튼
                             Expanded(
                               flex: 1,
                               child: SizedBox(
                                 height: 70,
                                 child: ElevatedButton.icon(
                                   onPressed: !_cart.isEmpty ? _handleTakeoutOrder : null,
-                                  icon: const Icon(Icons.restaurant_menu, size: 20),
+                                  icon: const Icon(Icons.receipt_long, size: 20),
                                   label: const Text(
-                                    '테이크아웃',
+                                    '주문',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
