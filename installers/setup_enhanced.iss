@@ -33,12 +33,11 @@ WizardStyle=modern
 ; WizardSizePercent=120  ; Inno Setup 6 only - removed for IS5 compatibility
 
 [Languages]
-Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "startmenuicon"; Description: "시작 메뉴에 바로가기 만들기"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "startmenuicon"; Description: "Create Start Menu shortcut"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
 ; Main application files
@@ -249,12 +248,6 @@ Type: filesandordirs; Name: "{app}\data"
 Type: filesandordirs; Name: "{app}\*.log"
 
 [Messages]
-; Korean messages
-korean.WelcomeLabel2=컴퓨터에 [name]을(를) 설치합니다.%n%n시스템 요구사항을 확인하고 필요한 런타임 구성 요소를 자동으로 설치합니다.%n%n계속하기 전에 다른 모든 응용 프로그램을 닫는 것이 좋습니다.
-korean.FinishedHeadingLabel=[name] 설치 완료
-korean.FinishedLabelNoIcons=[name] 설치가 완료되었습니다.
-korean.FinishedLabel=[name] 설치가 완료되었습니다. 바탕 화면의 아이콘을 클릭하여 응용 프로그램을 시작할 수 있습니다.
-
 ; English messages  
 english.WelcomeLabel2=This will install [name] on your computer.%n%nSystem requirements will be checked and necessary runtime components will be installed automatically.%n%nIt is recommended that you close all other applications before continuing.
 english.FinishedHeadingLabel=Completing the [name] Setup Wizard

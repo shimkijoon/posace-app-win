@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_client.dart';
+import '../../common/services/error_diagnostic_service.dart';
+import '../../common/exceptions/diagnostic_exception.dart';
 
 class PosSalesApi {
   PosSalesApi(this.apiClient);
@@ -47,6 +49,12 @@ class PosSalesApi {
     print('[PosSalesApi] Response body: ${response.body}');
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to upload sale: ${response.statusCode} - ${response.body}');
     }
 

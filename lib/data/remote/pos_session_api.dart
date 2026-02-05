@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_client.dart';
+import '../../common/services/error_diagnostic_service.dart';
+import '../../common/exceptions/diagnostic_exception.dart';
 
 class PosSessionApi {
   PosSessionApi(this.apiClient);
@@ -20,6 +22,12 @@ class PosSessionApi {
     );
 
     if (response.statusCode != 201) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to open session: ${response.statusCode} ${response.body}');
     }
 
@@ -40,6 +48,12 @@ class PosSessionApi {
     );
 
     if (response.statusCode != 201) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to close session: ${response.statusCode} ${response.body}');
     }
 

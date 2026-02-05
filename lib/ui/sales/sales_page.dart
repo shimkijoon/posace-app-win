@@ -31,6 +31,7 @@ import '../../data/remote/pos_suspended_api.dart';
 import 'widgets/split_payment_dialog.dart';
 import '../../data/local/models/payment_model.dart';
 import '../../data/remote/pos_sales_api.dart';
+import '../../common/exceptions/diagnostic_exception.dart';
 import '../../data/remote/table_management_api.dart';
 import '../../data/remote/api_client.dart';
 import '../../data/remote/pos_master_api.dart';
@@ -39,6 +40,8 @@ import '../../data/remote/api_client.dart';
 import '../../ui/widgets/virtual_keypad.dart';
 import '../../data/remote/unified_order_api.dart';
 import '../../data/models/unified_order.dart';
+import '../../common/enums/error_code.dart';
+import '../../common/models/diagnostic_error_response.dart';
 
 enum PaymentMethod { card, cash, point, easy_payment }
 
@@ -528,6 +531,128 @@ class _SalesPageState extends State<SalesPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('동기화 실패: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  /// 데이터베이스 초기화 및 재동기화
+  Future<void> _resetDatabaseAndSync() async {
+    try {
+      if (!mounted) return;
+      
+      // 로딩 표시
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => WillPopScope(
+          onWillPop: () async => false,
+          child: const Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('데이터베이스 초기화 중...'),
+                    SizedBox(height: 8),
+                    Text(
+                      '잠시만 기다려주세요',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final storage = AuthStorage();
+      final session = await storage.getSessionInfo();
+      final accessToken = await storage.getAccessToken();
+      
+      if (session == null || accessToken == null) {
+        throw Exception('세션 정보가 없습니다');
+      }
+
+      // 데이터베이스 초기화
+      print('[SalesPage] 🗑️ 데이터베이스 초기화 시작...');
+      await widget.database.clearAll();
+      print('[SalesPage] ✅ 데이터베이스 초기화 완료');
+
+      final apiClient = ApiClient(accessToken: accessToken);
+      final masterApi = PosMasterApi(apiClient);
+      final syncService = SyncService(
+        database: widget.database,
+        masterApi: masterApi,
+        salesApi: PosSalesApi(apiClient),
+      );
+
+      // 전체 동기화 실행
+      print('[SalesPage] 🔄 재동기화 시작...');
+      final result = await syncService.syncMaster(
+        storeId: session['storeId'] as String,
+        manual: true,
+      );
+
+      if (mounted) {
+        Navigator.of(context).pop(); // 로딩 다이얼로그 닫기
+      }
+
+      if (result.success) {
+        print('[SalesPage] ✅ 재동기화 성공: ${result.categoriesCount}개 카테고리, ${result.productsCount}개 상품');
+        
+        // 데이터 다시 로드
+        await _loadData();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('초기화 및 동기화 완료!'),
+                        Text(
+                          '${result.categoriesCount}개 카테고리, ${result.productsCount}개 상품',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        throw Exception(result.error ?? '재동기화 실패');
+      }
+    } catch (e) {
+      print('[SalesPage] ❌ 초기화 및 재동기화 오류: $e');
+      
+      if (mounted) {
+        Navigator.of(context).pop(); // 로딩 다이얼로그 닫기
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('초기화 및 재동기화 실패: $e'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
           ),
@@ -1081,61 +1206,286 @@ class _SalesPageState extends State<SalesPage> {
         
       } catch (e) {
         if (mounted) {
-          // HTTP 응답인 경우 진단 가능한 에러로 처리
-          if (e is http.Response) {
-            final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(e);
+          DiagnosticErrorResponse? diagnosticError;
+          
+          // DiagnosticException 처리 (새로운 방식)
+          if (e is DiagnosticException) {
+            diagnosticError = e.error;
+          }
+          // HTTP 응답인 경우 진단 가능한 에러로 처리 (구형 방식)
+          else if (e is http.Response) {
+            diagnosticError = ErrorDiagnosticService.parseDiagnosticError(e);
+          }
+          
+          if (diagnosticError != null) {
+            // 시스템 정보 수집
+            final products = await widget.database.getProducts();
+            final categories = await widget.database.getCategories();
+            final productCount = products.length;
+            final categoryCount = categories.length;
+            final lastSyncStr = await widget.database.getSyncMetadata('lastMasterSync');
+            final lastSync = lastSyncStr != null ? DateTime.parse(lastSyncStr) : null;
             
-            if (diagnosticError != null) {
-              // 시스템 정보 수집
-              final products = await widget.database.getProducts();
-              final categories = await widget.database.getCategories();
-              final productCount = products.length;
-              final categoryCount = categories.length;
-              final lastSyncStr = await widget.database.getSyncMetadata('lastMasterSync');
-              final lastSync = lastSyncStr != null ? DateTime.parse(lastSyncStr) : null;
+            // ⚠️ 중복 결제 위험 체크
+            final isDuplicateRisk = diagnosticError.statusCode >= 500 || 
+                                   diagnosticError.errorCode.code.contains('TIMEOUT');
+            
+            // SALE_PRODUCT_NOT_FOUND 오류인 경우 자동 동기화 시도
+            if (diagnosticError.errorCode == ErrorCode.saleProductNotFound) {
+              print('[SalesPage] 🔄 SALE_PRODUCT_NOT_FOUND 감지 - 자동 동기화 시작');
               
-              // ⚠️ 중복 결제 위험 체크
-              final isDuplicateRisk = diagnosticError.statusCode >= 500 || 
-                                     diagnosticError.errorCode.code.contains('TIMEOUT');
+              // 현재 결제 정보 저장
+              final savedPaymentInfo = {
+                'method': method,
+                'totalAmount': totalAmount,
+                'paidAmount': paidAmount,
+                'cardApprovalNumber': cardApprovalNumber,
+                'cardCompany': cardCompany,
+                'cardNumber': cardNumber,
+                'installmentMonths': installmentMonths,
+                'payments': payments,
+              };
               
-              await DiagnosticErrorDialog.show(
-                context: context,
-                error: diagnosticError,
-                onSyncPressed: () async {
-                  // 자동 동기화 실행
-                  await _performAutoSync();
-                },
-                onRetryPressed: isDuplicateRisk ? null : () async {
-                  // ⚠️ 서버 오류나 타임아웃일 경우 재시도 버튼 비활성화
-                  // (결제가 성공했는데 응답만 실패했을 수 있음)
-                  await _processPaymentSuccess(
-                    method,
-                    totalAmount,
-                    paidAmount: paidAmount,
-                    cardApprovalNumber: cardApprovalNumber,
-                    cardCompany: cardCompany,
-                    cardNumber: cardNumber,
-                    installmentMonths: installmentMonths,
-                    payments: payments,
+              // 자동 동기화 실행 (확인 없이)
+              try {
+                final auth = AuthStorage();
+                final accessToken = await auth.getAccessToken();
+                final sessionInfo = await auth.getSessionInfo();
+                
+                if (accessToken != null && sessionInfo != null) {
+                  final apiClient = ApiClient(accessToken: accessToken);
+                  final masterApi = PosMasterApi(apiClient);
+                  final syncService = SyncService(
+                    database: widget.database,
+                    masterApi: masterApi,
+                    salesApi: PosSalesApi(apiClient),
                   );
-                },
-                systemInfo: {
-                  'storeId': session['storeId'],
-                  'posId': session['posId'],
-                  'appVersion': '1.0.0',
-                  'lastSyncAt': lastSync?.toIso8601String() ?? 'Never',
-                  'productCount': productCount,
-                  'categoryCount': categoryCount,
-                  'cartItemCount': _cart.items.length,
-                  'totalAmount': totalAmount,
-                  'isDuplicateRisk': isDuplicateRisk,
-                  'warning': isDuplicateRisk 
-                    ? '서버 오류 또는 타임아웃: 결제가 실제로는 성공했을 수 있음' 
-                    : null,
-                },
-              );
-              return;
+                  
+                  // 로딩 표시
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => WillPopScope(
+                      onWillPop: () async => false,
+                      child: const Center(
+                        child: Card(
+                          child: Padding(
+                            padding: EdgeInsets.all(24.0),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(),
+                                SizedBox(height: 16),
+                                Text('상품 정보 동기화 중...'),
+                                SizedBox(height: 8),
+                                Text(
+                                  '동기화 후 자동으로 결제를 재시도합니다',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                  
+                  // 동기화 실행
+                  final syncResult = await syncService.syncMaster(
+                    storeId: sessionInfo['storeId'] as String,
+                    manual: true,
+                  );
+                  
+                  if (mounted) {
+                    Navigator.of(context).pop(); // 로딩 다이얼로그 닫기
+                  }
+                  
+                  if (syncResult.success) {
+                    // 동기화 성공 - 데이터 다시 로드
+                    await _loadData();
+                    
+                    // 자동으로 결제 재시도
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.check_circle, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('동기화 완료'),
+                                    Text(
+                                      '결제를 재시도합니다...',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                      
+                      // 결제 재시도
+                      await Future.delayed(const Duration(milliseconds: 500));
+                      await _processPaymentSuccess(
+                        savedPaymentInfo['method'] as PaymentMethod,
+                        savedPaymentInfo['totalAmount'] as int,
+                        paidAmount: savedPaymentInfo['paidAmount'] as int?,
+                        cardApprovalNumber: savedPaymentInfo['cardApprovalNumber'] as String?,
+                        cardCompany: savedPaymentInfo['cardCompany'] as String?,
+                        cardNumber: savedPaymentInfo['cardNumber'] as String?,
+                        installmentMonths: savedPaymentInfo['installmentMonths'] as int?,
+                        payments: savedPaymentInfo['payments'] as List<SalePaymentModel>?,
+                      );
+                      return; // 성공적으로 재시도했으므로 종료
+                    }
+                  } else {
+                    // 동기화 실패 - DB 초기화 옵션 제공
+                    if (mounted) {
+                      Navigator.of(context).pop(); // 로딩 다이얼로그 닫기
+                      
+                      final shouldReset = await showDialog<bool>(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => AlertDialog(
+                          title: const Row(
+                            children: [
+                              Icon(Icons.warning_amber, color: Colors.orange),
+                              SizedBox(width: 8),
+                              Text('동기화 실패'),
+                            ],
+                          ),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('마스터 데이터 동기화에 실패했습니다.'),
+                              const SizedBox(height: 12),
+                              const Text(
+                                '데이터베이스를 초기화하고 다시 동기화하시겠습니까?',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '⚠️ 주의사항',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      '• 로컬에 저장된 모든 데이터가 삭제됩니다\n• 동기화 후 다시 시도해야 합니다',
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('취소'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.of(context).pop(true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('초기화 및 동기화'),
+                            ),
+                          ],
+                        ),
+                      );
+                      
+                      if (shouldReset == true) {
+                        // DB 초기화 및 재동기화
+                        await _resetDatabaseAndSync();
+                        
+                        // 재시도
+                        await Future.delayed(const Duration(milliseconds: 500));
+                        await _processPaymentSuccess(
+                          savedPaymentInfo['method'] as PaymentMethod,
+                          savedPaymentInfo['totalAmount'] as int,
+                          paidAmount: savedPaymentInfo['paidAmount'] as int?,
+                          cardApprovalNumber: savedPaymentInfo['cardApprovalNumber'] as String?,
+                          cardCompany: savedPaymentInfo['cardCompany'] as String?,
+                          cardNumber: savedPaymentInfo['cardNumber'] as String?,
+                          installmentMonths: savedPaymentInfo['installmentMonths'] as int?,
+                          payments: savedPaymentInfo['payments'] as List<SalePaymentModel>?,
+                        );
+                        return;
+                      }
+                    }
+                  }
+                }
+              } catch (syncError) {
+                print('[SalesPage] ❌ 자동 동기화 실패: $syncError');
+                if (mounted) {
+                  Navigator.of(context).pop(); // 로딩 다이얼로그 닫기
+                }
+              }
             }
+            
+            // 일반 오류 다이얼로그 표시
+            await DiagnosticErrorDialog.show(
+              context: context,
+              error: diagnosticError,
+              onSyncPressed: () async {
+                // 수동 동기화 실행
+                await _performAutoSync();
+              },
+              onRetryPressed: isDuplicateRisk ? null : () async {
+                // ⚠️ 서버 오류나 타임아웃일 경우 재시도 버튼 비활성화
+                // (결제가 성공했는데 응답만 실패했을 수 있음)
+                await _processPaymentSuccess(
+                  method,
+                  totalAmount,
+                  paidAmount: paidAmount,
+                  cardApprovalNumber: cardApprovalNumber,
+                  cardCompany: cardCompany,
+                  cardNumber: cardNumber,
+                  installmentMonths: installmentMonths,
+                  payments: payments,
+                );
+              },
+              systemInfo: {
+                'storeId': session['storeId'],
+                'posId': session['posId'],
+                'appVersion': '1.0.0',
+                'lastSyncAt': lastSync?.toIso8601String() ?? 'Never',
+                'productCount': productCount,
+                'categoryCount': categoryCount,
+                'cartItemCount': _cart.items.length,
+                'totalAmount': totalAmount,
+                'isDuplicateRisk': isDuplicateRisk,
+                'warning': isDuplicateRisk 
+                  ? '서버 오류 또는 타임아웃: 결제가 실제로는 성공했을 수 있음' 
+                  : null,
+              },
+            );
+            return;
           }
           
           // 구형 에러 처리 (fallback)

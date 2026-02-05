@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'api_client.dart';
 import '../local/models.dart';
 import '../local/models/taxes_models.dart';
+import '../../common/services/error_diagnostic_service.dart';
+import '../../common/exceptions/diagnostic_exception.dart';
 
 class PosMasterApi {
   PosMasterApi(this.apiClient);
@@ -26,8 +28,14 @@ class PosMasterApi {
 
     print('[POS] Master Data Response Status: ${response.statusCode}');
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to fetch master data: ${response.statusCode}');
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
+      throw Exception('Failed to fetch master data: ${response.statusCode} - ${response.body}');
     }
 
     final data = json.decode(response.body) as Map<String, dynamic>;

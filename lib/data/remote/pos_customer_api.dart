@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_client.dart';
 import '../local/models.dart';
+import '../../common/services/error_diagnostic_service.dart';
+import '../../common/exceptions/diagnostic_exception.dart';
 
 class PosCustomerApi {
   PosCustomerApi(this.apiClient);
@@ -19,10 +21,18 @@ class PosCustomerApi {
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return _mapToMember(data, storeId);
-    } else if (response.statusCode == 404) {
-      throw Exception('회원을 찾을 수 없습니다.');
     } else {
-      throw Exception('회원 검색 실패: ${response.statusCode}');
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
+      if (response.statusCode == 404) {
+        throw Exception('회원을 찾을 수 없습니다.');
+      } else {
+        throw Exception('회원 검색 실패: ${response.statusCode} - ${response.body}');
+      }
     }
   }
 
@@ -42,7 +52,13 @@ class PosCustomerApi {
       final data = json.decode(response.body);
       return _mapToMember(data, storeId);
     } else {
-      throw Exception('회원 등록 실패: ${response.statusCode}');
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
+      throw Exception('회원 등록 실패: ${response.statusCode} - ${response.body}');
     }
   }
 

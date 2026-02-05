@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_client.dart';
+import '../../common/services/error_diagnostic_service.dart';
+import '../../common/exceptions/diagnostic_exception.dart';
 
 class PosTableApi {
   PosTableApi(this.apiClient);
@@ -19,7 +21,13 @@ class PosTableApi {
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to fetch layouts: ${response.statusCode}');
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
+      throw Exception('Failed to fetch layouts: ${response.statusCode} - ${response.body}');
     }
 
     final data = json.decode(response.body) as List;
@@ -39,7 +47,13 @@ class PosTableApi {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Failed to update table order: ${response.statusCode}');
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
+      throw Exception('Failed to update table order: ${response.statusCode} - ${response.body}');
     }
 
     return json.decode(response.body) as Map<String, dynamic>;
@@ -58,7 +72,13 @@ class PosTableApi {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('Failed to close table order: ${response.statusCode}');
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
+      throw Exception('Failed to close table order: ${response.statusCode} - ${response.body}');
     }
   }
 }

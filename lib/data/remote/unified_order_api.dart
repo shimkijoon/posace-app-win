@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import '../models/unified_order.dart';
 import 'api_client.dart';
 import '../../core/cache/order_cache_service.dart';
+import '../../common/services/error_diagnostic_service.dart';
+import '../../common/exceptions/diagnostic_exception.dart';
 
 class UnifiedOrderApi {
   final ApiClient _apiClient;
@@ -56,6 +58,12 @@ class UnifiedOrderApi {
     if (response.statusCode == 200 || response.statusCode == 201) {
       return UnifiedOrder.fromJson(jsonDecode(response.body));
     } else {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to create order: ${response.statusCode} ${response.body}');
     }
   }
@@ -108,6 +116,12 @@ class UnifiedOrderApi {
       
       return orders;
     } else {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to get orders: ${response.statusCode} ${response.body}');
     }
   }
@@ -136,6 +150,12 @@ class UnifiedOrderApi {
       
       return orders;
     } else {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to get cooking queue: ${response.statusCode} ${response.body}');
     }
   }
@@ -152,6 +172,12 @@ class UnifiedOrderApi {
       final List<dynamic> jsonList = jsonDecode(response.body);
       return jsonList.map((json) => UnifiedOrder.fromJson(json)).toList();
     } else {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to get takeout orders: ${response.statusCode} ${response.body}');
     }
   }
@@ -168,6 +194,12 @@ class UnifiedOrderApi {
       final List<dynamic> jsonList = jsonDecode(response.body);
       return jsonList.map((json) => UnifiedOrder.fromJson(json)).toList();
     } else {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to get table orders: ${response.statusCode} ${response.body}');
     }
   }
@@ -180,6 +212,12 @@ class UnifiedOrderApi {
     if (response.statusCode == 200) {
       return UnifiedOrder.fromJson(jsonDecode(response.body));
     } else {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to get order: ${response.statusCode} ${response.body}');
     }
   }
@@ -192,6 +230,12 @@ class UnifiedOrderApi {
     if (response.statusCode == 200) {
       return UnifiedOrder.fromJson(jsonDecode(response.body));
     } else {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to get order by number: ${response.statusCode} ${response.body}');
     }
   }
@@ -214,6 +258,12 @@ class UnifiedOrderApi {
       
       return updatedOrder;
     } else {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to update order status: ${response.statusCode} ${response.body}');
     }
   }
@@ -236,6 +286,12 @@ class UnifiedOrderApi {
       
       return updatedOrder;
     } else {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to update cooking status: ${response.statusCode} ${response.body}');
     }
   }
@@ -253,6 +309,12 @@ class UnifiedOrderApi {
     if (response.statusCode == 200) {
       return UnifiedOrder.fromJson(jsonDecode(response.body));
     } else {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to link sale: ${response.statusCode} ${response.body}');
     }
   }
@@ -263,6 +325,12 @@ class UnifiedOrderApi {
     final response = await http.delete(uri, headers: _apiClient.headers);
 
     if (response.statusCode != 200 && response.statusCode != 204) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to delete order: ${response.statusCode} ${response.body}');
     }
   }

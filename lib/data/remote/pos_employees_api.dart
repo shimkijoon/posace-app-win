@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_client.dart';
 import '../local/models/employee_model.dart';
+import '../../common/services/error_diagnostic_service.dart';
+import '../../common/exceptions/diagnostic_exception.dart';
 
 class PosEmployeesApi {
   PosEmployeesApi(this.apiClient);
@@ -20,7 +22,13 @@ class PosEmployeesApi {
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to fetch employees: ${response.statusCode}');
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
+      throw Exception('Failed to fetch employees: ${response.statusCode} - ${response.body}');
     }
 
     final List<dynamic> data = json.decode(response.body);
@@ -43,7 +51,13 @@ class PosEmployeesApi {
     );
 
     if (response.statusCode != 200 && response.statusCode != 201) {
-      throw Exception('PIN verification failed: ${response.statusCode}');
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
+      throw Exception('PIN verification failed: ${response.statusCode} - ${response.body}');
     }
 
     final Map<String, dynamic> data = json.decode(response.body);

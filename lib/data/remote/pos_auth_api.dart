@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../core/app_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
+import '../../common/services/error_diagnostic_service.dart';
+import '../../common/exceptions/diagnostic_exception.dart';
 
 class PosAuthApi {
   final _supabase = supabase.Supabase.instance.client;
@@ -18,7 +20,13 @@ class PosAuthApi {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('POS 로그인에 실패했습니다. (${response.statusCode})');
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
+      throw Exception('POS 로그인에 실패했습니다. (${response.statusCode}) - ${response.body}');
     }
 
     return jsonDecode(response.body) as Map<String, dynamic>;
@@ -39,6 +47,12 @@ class PosAuthApi {
       );
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        // Try to parse as diagnostic error
+        final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+        if (diagnosticError != null) {
+          throw DiagnosticException(diagnosticError, response);
+        }
+        // Fallback to generic exception
         final errorBody = response.body.isNotEmpty 
             ? jsonDecode(response.body) 
             : null;
@@ -75,7 +89,13 @@ class PosAuthApi {
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw Exception('POS 선택에 실패했습니다. (${response.statusCode})');
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
+      throw Exception('POS 선택에 실패했습니다. (${response.statusCode}) - ${response.body}');
     }
 
     return jsonDecode(response.body) as Map<String, dynamic>;

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import './api_client.dart';
+import '../../common/services/error_diagnostic_service.dart';
+import '../../common/exceptions/diagnostic_exception.dart';
 
 class PosSuspendedApi extends ApiClient {
   PosSuspendedApi({super.accessToken});
@@ -14,6 +16,12 @@ class PosSuspendedApi extends ApiClient {
     );
 
     if (response.statusCode != 200) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('보류 주문을 불러오지 못했습니다: ${response.body}');
     }
 
@@ -31,6 +39,12 @@ class PosSuspendedApi extends ApiClient {
     );
 
     if (response.statusCode != 201) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('보류 주문 저장 실패: ${response.body}');
     }
 
@@ -46,6 +60,12 @@ class PosSuspendedApi extends ApiClient {
     );
 
     if (response.statusCode != 200 && response.statusCode != 204) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('보류 주문 삭제 실패: ${response.body}');
     }
   }

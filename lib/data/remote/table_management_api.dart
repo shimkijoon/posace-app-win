@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_client.dart';
+import '../../common/services/error_diagnostic_service.dart';
+import '../../common/exceptions/diagnostic_exception.dart';
 
 class TableManagementApi {
   TableManagementApi(this.apiClient);
@@ -21,6 +23,12 @@ class TableManagementApi {
       }),
     );
     if (response.statusCode != 201) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to move order: ${response.statusCode} ${response.body}');
     }
   }
@@ -40,6 +48,12 @@ class TableManagementApi {
       }),
     );
     if (response.statusCode != 201) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to merge orders: ${response.statusCode} ${response.body}');
     }
   }
@@ -61,6 +75,12 @@ class TableManagementApi {
       }),
     );
     if (response.statusCode != 201) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to split order: ${response.statusCode} ${response.body}');
     }
   }
@@ -80,6 +100,12 @@ class TableManagementApi {
       }),
     );
     if (response.statusCode != 201) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to process group payment: ${response.statusCode} ${response.body}');
     }
   }
@@ -90,6 +116,12 @@ class TableManagementApi {
       body: jsonEncode(payload),
     );
     if (response.statusCode != 201) {
+      // Try to parse as diagnostic error
+      final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(response);
+      if (diagnosticError != null) {
+        throw DiagnosticException(diagnosticError, response);
+      }
+      // Fallback to generic exception
       throw Exception('Failed to send table order: ${response.statusCode} ${response.body}');
     }
     return jsonDecode(response.body);
