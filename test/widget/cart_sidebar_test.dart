@@ -168,6 +168,7 @@ void main() {
             onItemRemove: (productId) {},
             onClear: () => clearCalled = true,
             onCheckout: () {},
+            onTakeoutOrder: () {},
           ),
         ),
       ));
@@ -204,6 +205,7 @@ void main() {
             onItemRemove: (productId) {},
             onClear: () {},
             onCheckout: () => checkoutCalled = true,
+            onTakeoutOrder: () {},
           ),
         ),
       ));
@@ -240,6 +242,7 @@ void main() {
             onItemRemove: (productId) => removedProductId = productId,
             onClear: () {},
             onCheckout: () {},
+            onTakeoutOrder: () {},
           ),
         ),
       ));
