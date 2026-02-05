@@ -74,6 +74,19 @@ flutter run -d windows --dart-define=API_BASE_URL=http://localhost:3000/api/v1
 
 ## 프로덕션 빌드
 
+### 설치파일 빌드 및 배포
+
+**권장 방법**: Enhanced 빌드 스크립트 사용
+
+```powershell
+# 프로젝트 루트에서 실행
+powershell -ExecutionPolicy Bypass -File .\scripts\build_setup_enhanced.ps1 -Version "1.0.25"
+```
+
+**출력**: `installers\Output\POSAce_Setup_Enhanced.exe`
+
+자세한 빌드 및 배포 가이드는 [docs/BUILD_RELEASE_GUIDE.md](docs/BUILD_RELEASE_GUIDE.md)를 참고하세요.
+
 ### 릴리즈 빌드 (.exe)
 
 ```bash

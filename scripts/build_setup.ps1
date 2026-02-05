@@ -1,4 +1,8 @@
 # Build POSAce Windows App & Installer
+# 
+# ⚠️ DEPRECATED: This script is deprecated. Please use build_setup_enhanced.ps1 instead.
+# The enhanced script includes Visual C++ Runtime support and automatic version updates.
+#
 # Usage: .\scripts\build_setup.ps1
 
 $ErrorActionPreference = "Stop"
