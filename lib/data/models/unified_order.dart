@@ -426,8 +426,8 @@ class CreateOrderItemRequest {
   Map<String, dynamic> toJson() {
     return {
       'productId': productId,
-      'quantity': quantity,
-      'unitPrice': unitPrice,
+      'qty': quantity,
+      'price': unitPrice,
       if (note != null) 'note': note,
     };
   }
