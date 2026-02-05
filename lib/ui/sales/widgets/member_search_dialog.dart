@@ -26,6 +26,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
   bool _isLoading = false;
 
   Future<void> _search() async {
+    final loc = AppLocalizations.of(context)!;
     final query = _searchController.text.trim();
     if (query.isEmpty) return;
 
@@ -64,36 +65,25 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
     
     // ✅ 3. 결과 없을 때 명확한 메시지 및 등록 제안
     if (mounted && results.isEmpty) {
-      String message;
-      if (onlineSearchError != null) {
-        message = '⚠️ 검색 결과가 없습니다.\n\n'
-                  '로컬: 결과 없음\n'
-                  '서버: 연결 실패 ($onlineSearchError)\n\n'
-                  '신규 회원으로 등록하시겠습니까?';
-      } else {
-        message = '검색 결과가 없습니다.\n\n'
-                  '신규 회원으로 등록하시겠습니까?';
-      }
-      
       final confirm = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.blue),
-              SizedBox(width: 8),
-              Text('검색 결과 없음'),
+              const Icon(Icons.info_outline, color: Colors.blue),
+              const SizedBox(width: 8),
+              Text(loc.translate('customers.noSearchResultsTitle')),
             ],
           ),
-          content: Text(message),
+          content: Text(loc.translate('customers.registerPrompt')),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('취소'),
+              child: Text(loc.translate('common.cancel')),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('신규 등록'),
+              child: Text(loc.translate('customers.registerNew')),
             ),
           ],
         ),
@@ -118,6 +108,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
@@ -131,9 +122,9 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
               children: [
                 Icon(Icons.person_search_outlined, color: AppTheme.primary),
                 const SizedBox(width: 12),
-                const Text(
-                  '회원 찾기',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  loc.translate('customers.searchTitle'),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 IconButton(
@@ -149,7 +140,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: '휴대폰 번호 뒷자리 (예: 1234)',
+                      hintText: loc.translate('customers.searchHint'),
                       prefixIcon: const Icon(Icons.phone),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -164,7 +155,7 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: Text(AppLocalizations.of(context)!.translate('common.search')),
+                  child: Text(loc.translate('common.search')),
                 ),
               ],
             ),
@@ -238,14 +229,14 @@ class _MemberSearchDialogState extends State<MemberSearchDialog> {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
-                  child: Text(AppLocalizations.of(context)!.translate('sales.noSearchResults'), style: const TextStyle(color: Colors.grey)),
+                  child: Text(AppLocalizations.of(context)!.translate('customers.noSearchResults'), style: const TextStyle(color: Colors.grey)),
                 ),
               ),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: _openRegistration,
               icon: const Icon(Icons.person_add_outlined),
-              label: Text(AppLocalizations.of(context)!.translate('sales.registerNewMember')),
+              label: Text(AppLocalizations.of(context)!.translate('customers.registerNew')),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

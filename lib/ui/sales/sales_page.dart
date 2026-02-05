@@ -40,6 +40,7 @@ import '../../ui/widgets/virtual_keypad.dart';
 import 'widgets/customer_info_dialog.dart';
 import '../../data/remote/unified_order_api.dart';
 import '../../data/models/unified_order.dart';
+import '../../core/i18n/locale_helper.dart';
 
 enum PaymentMethod { card, cash, point, easy_payment }
 
@@ -75,6 +76,7 @@ class _SalesPageState extends State<SalesPage> {
 
   bool _showBarcodeInGrid = false;
   final FocusNode _searchFocusNode = FocusNode();
+  String _countryCode = 'KR';
 
   @override
   void initState() {
@@ -103,6 +105,18 @@ class _SalesPageState extends State<SalesPage> {
       // Load store settings for barcode display
       final auth = AuthStorage();
       final session = await auth.getSessionInfo();
+      final sessionCountry = (session['country'] as String?)?.trim();
+      final uiLanguage = (session['uiLanguage'] as String?)?.trim() ?? '';
+      final derivedCountry = () {
+        if (uiLanguage.startsWith('ja')) return 'JP';
+        if (uiLanguage == 'zh-TW') return 'TW';
+        if (uiLanguage == 'zh-HK') return 'HK';
+        if (uiLanguage == 'en-SG') return 'SG';
+        if (uiLanguage == 'en-AU') return 'AU';
+        return 'KR';
+      }();
+      final countryCode =
+          (sessionCountry != null && sessionCountry.isNotEmpty) ? sessionCountry : derivedCountry;
       // Assuming 'saleShowBarcodeInGrid' is/will be available in session info or we fetch it
       // If currently not in session, might need to fetch settings or update session logic.
       // For now, let's assume it gets synced into session or we default to false.
@@ -163,6 +177,7 @@ class _SalesPageState extends State<SalesPage> {
           _discounts = discounts;
           _selectedCategoryId = categories.isNotEmpty ? categories.first.id : null;
           _showBarcodeInGrid = showBarcode;
+          _countryCode = countryCode;
           _isLoading = false;
         });
         _updateCartDiscounts();
@@ -392,7 +407,7 @@ class _SalesPageState extends State<SalesPage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('취소'),
+                child: Text(AppLocalizations.of(context)!.translate('common.cancel')),
               ),
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
@@ -623,6 +638,7 @@ class _SalesPageState extends State<SalesPage> {
       builder: (context) => DiscountSelectionDialog(
         availableDiscounts: _discounts.where((d) => d.type == 'CART' && d.status == 'ACTIVE').toList(),
         selectedDiscountIds: _selectedManualDiscountIds,
+        countryCode: _countryCode,
       ),
     ).then((result) {
       if (result != null && result is Set<String>) {
@@ -675,7 +691,7 @@ class _SalesPageState extends State<SalesPage> {
               });
               _searchFocusNode.requestFocus();
             },
-            child: const Text('비우기'),
+            child: Text(AppLocalizations.of(context)!.clear),
           ),
         ],
       ),
@@ -694,16 +710,85 @@ class _SalesPageState extends State<SalesPage> {
 
   /// 보류 거래 복원 (장바구니 확인 포함)
   Future<void> _handleSuspendedSalesRestore() async {
-    final suspendedId = await showDialog<String>(
+    final dynamic sale = await showDialog<dynamic>(
       context: context,
       builder: (context) => SuspendedSalesDialog(database: widget.database),
     );
     
-    if (suspendedId != null) {
-      // TODO: 보류 거래 복원 로직 구현
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('보류 거래 복원: $suspendedId')),
-      );
+    if (sale != null) {
+      try {
+        setState(() => _isLoading = true);
+        
+        final String saleId = sale['id'];
+        final List<dynamic> itemsData = sale['items'] ?? [];
+        final String? memberId = sale['memberId'];
+        final List<dynamic> discountIds = sale['discountIds'] ?? [];
+
+        // 1. 상품 정보 로드하여 CartItem 구성
+        final List<CartItem> restoredItems = [];
+        for (final itemData in itemsData) {
+          final String productId = itemData['productId'];
+          final product = await widget.database.getProductById(productId);
+          
+          if (product != null) {
+            // 옵션 복원
+            final List<dynamic> optionsData = itemData['options'] ?? [];
+            final List<ProductOptionModel> selectedOptions = optionsData.map((o) => ProductOptionModel.fromMap(o)).toList();
+
+            restoredItems.add(CartItem(
+              product: product,
+              quantity: itemData['qty'] ?? 1,
+              selectedOptions: selectedOptions,
+            ));
+          }
+        }
+
+        // 2. 회원 정보 복원
+        MemberModel? restoredMember;
+        if (memberId != null) {
+          restoredMember = await widget.database.getMemberById(memberId);
+        }
+
+        // 3. 상태 업데이트
+        if (mounted) {
+          setState(() {
+            _cart = Cart(items: restoredItems);
+            _selectedMember = restoredMember;
+            _selectedManualDiscountIds = Set<String>.from(discountIds.map((id) => id.toString()));
+            _isLoading = false;
+          });
+          
+          _updateCartDiscounts(); // 할인 정보 등 갱신
+        }
+
+        // 4. 서버/로컬에서 보류 거래 삭제 (중복 방지)
+        final auth = AuthStorage();
+        final token = await auth.getAccessToken();
+        final session = await auth.getSessionInfo();
+        if (token != null && session?['storeId'] != null) {
+          final api = PosSuspendedApi(accessToken: token);
+          await api.deleteSuspendedSale(session!['storeId'] as String, saleId);
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('보류된 거래를 성공적으로 불러왔습니다.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('거래 복원 중 오류 발생: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -819,14 +904,17 @@ class _SalesPageState extends State<SalesPage> {
     }
   }
 
-  void _onSplitCheckout() {
-    showDialog(
+  void _onSplitCheckout() async {
+    final List<SalePaymentModel>? result = await showDialog<List<SalePaymentModel>>(
       context: context,
       builder: (context) => SplitPaymentDialog(
         totalAmount: _cart.total, 
+        initialMemberPoints: _selectedMember?.points ?? 0,
+        countryCode: _countryCode,
       ),
-    ).then((result) async {
-       if (result != null && result is List) {
+    );
+    
+    if (result != null) {
           final payments = result.cast<SalePaymentModel>();
           // 복합 결제 (Split Payment)
           await _processPaymentSuccess(
@@ -835,9 +923,8 @@ class _SalesPageState extends State<SalesPage> {
             paidAmount: _cart.total, 
             payments: payments, // Add this parameter
           );
-       }
-       _searchFocusNode.requestFocus();
-    });
+    }
+    _searchFocusNode.requestFocus();
   }
 
   Future<void> _handleTakeoutOrder() async {
@@ -962,53 +1049,47 @@ class _SalesPageState extends State<SalesPage> {
       try {
         final clientSaleId = const Uuid().v4();
         
-        await salesApi.createSale({
-          'clientSaleId': clientSaleId,
-          'storeId': session['storeId'],
-          'posId': session['posId'],
-          'totalAmount': totalAmount,
-          'paidAmount': paidAmount ?? totalAmount,
-          'items': _cart.items.map((i) => {
-            'productId': i.product.id,
-            'qty': i.quantity,
-            'price': i.product.price,
-            'discountAmount': i.discountAmount,
-          }).toList(),
-          'payments': payments != null
-              ? payments.map((p) => {
-                  'method': p.method,
-                  'amount': p.amount,
-                  if (p.cardApproval != null) 'cardApproval': p.cardApproval,
-                  if (p.cardLast4 != null) 'cardLast4': p.cardLast4,
-                }).toList()
-              : [
-                  {
-                    'method': method.toString().split('.').last.toUpperCase(),
-                    'amount': paidAmount ?? totalAmount,
-                    if (cardApprovalNumber != null) 'cardApproval': cardApprovalNumber,
-                  }
-                ],
-          if (_selectedMember?.id != null) 'membershipId': _selectedMember!.id,
-        });
+        // 1. Construct Sale Model for Local Save
+        final sale = SaleModel(
+          id: clientSaleId,
+          storeId: session['storeId'],
+          posId: session['posId'],
+          totalAmount: totalAmount,
+          paidAmount: paidAmount ?? totalAmount,
+          paymentMethod: method.toString().split('.').last.toUpperCase(), // Main method
+          status: 'COMPLETED', // Optimization: Assume success locally
+          createdAt: DateTime.now(),
+          saleDate: DateTime.now(), // Stores full DateTime, toMap/Sync will format
+          saleTime: DateTime.now().toIso8601String().split('T')[1].substring(0, 8),
+          syncedAt: null, // Not yet synced
+          taxAmount: 0, // TODO: Calculate if needed locally
+          discountAmount: _cart.totalDiscountAmount,
+          memberId: _selectedMember?.id,
+          payments: payments ?? [ // Use provided payments or single payment
+            SalePaymentModel(
+              id: const Uuid().v4(),
+              saleId: clientSaleId,
+              method: method.toString().split('.').last.toUpperCase(),
+              amount: paidAmount ?? totalAmount,
+              cardApproval: cardApprovalNumber,
+              cardLast4: cardNumber?.substring(cardNumber.length - 4),
+            )
+          ],
+        );
 
-        // 테이블 주문인 경우 주문 완료 처리
-        if (widget.tableId != null) {
-            // Note: Server usually clears active order when sale is created linked to tableId
-            // If explicit clear is needed:
-            // final tableApi = TableManagementApi(ApiClient(accessToken: token));
-            // await tableApi.clearTable(session['storeId'] as String, widget.tableId!);
-        }
-        
-        // Print Receipt (if configured)
-        try {
-          // TODO: Fetch settings?
-          // For now, auto-print if serial printer is connected? 
-          // Or just let user decide via dialog?
-          // Usually we print automatically here.
-        } catch (e) {
-          print('Print failed: $e');
-        }
+        final saleItems = _cart.items.map((i) => SaleItemModel(
+          id: const Uuid().v4(),
+          saleId: clientSaleId,
+          productId: i.product.id,
+          qty: i.quantity,
+          price: i.product.price,
+          discountAmount: i.discountAmount,
+        )).toList();
 
+        // 2. Save to Local Database (Synchronous/Fast)
+        await widget.database.insertSale(sale, saleItems);
+
+        // 3. Reset UI Immediately (Optimistic)
         if (mounted) {
           setState(() {
             _cart = Cart();
@@ -1024,68 +1105,25 @@ class _SalesPageState extends State<SalesPage> {
           }
         }
         
+        // 4. Background Upload (Fire and forget)
+        // Initialize SyncService here or get from checkInContext
+        final syncService = SyncService(
+            database: widget.database,
+            masterApi:     PosMasterApi(ApiClient(accessToken: token)),
+            salesApi: salesApi // Already created above
+        );
+        
+        // Do not await this! Let it run in background
+        syncService.flushSalesQueue().then((count) {
+          if (count > 0) debugPrint('[OptimisticUI] Background sync success: $count sales');
+        }).catchError((err) {
+          debugPrint('[OptimisticUI] Background sync failed (will retry later): $err');
+        });
+
       } catch (e) {
         if (mounted) {
-          // HTTP 응답인 경우 진단 가능한 에러로 처리
-          if (e is http.Response) {
-            final diagnosticError = ErrorDiagnosticService.parseDiagnosticError(e);
-            
-            if (diagnosticError != null) {
-              // 시스템 정보 수집
-              final products = await widget.database.getProducts();
-              final categories = await widget.database.getCategories();
-              final productCount = products.length;
-              final categoryCount = categories.length;
-              final lastSyncStr = await widget.database.getSyncMetadata('lastMasterSync');
-              final lastSync = lastSyncStr != null ? DateTime.parse(lastSyncStr) : null;
-              
-              // ⚠️ 중복 결제 위험 체크
-              final isDuplicateRisk = diagnosticError.statusCode >= 500 || 
-                                     diagnosticError.errorCode.code.contains('TIMEOUT');
-              
-              await DiagnosticErrorDialog.show(
-                context: context,
-                error: diagnosticError,
-                onSyncPressed: () async {
-                  // 자동 동기화 실행
-                  await _performAutoSync();
-                },
-                onRetryPressed: isDuplicateRisk ? null : () async {
-                  // ⚠️ 서버 오류나 타임아웃일 경우 재시도 버튼 비활성화
-                  // (결제가 성공했는데 응답만 실패했을 수 있음)
-                  await _processPaymentSuccess(
-                    method,
-                    totalAmount,
-                    paidAmount: paidAmount,
-                    cardApprovalNumber: cardApprovalNumber,
-                    cardCompany: cardCompany,
-                    cardNumber: cardNumber,
-                    installmentMonths: installmentMonths,
-                    payments: payments,
-                  );
-                },
-                systemInfo: {
-                  'storeId': session['storeId'],
-                  'posId': session['posId'],
-                  'appVersion': '1.0.0',
-                  'lastSyncAt': lastSync?.toIso8601String() ?? 'Never',
-                  'productCount': productCount,
-                  'categoryCount': categoryCount,
-                  'cartItemCount': _cart.items.length,
-                  'totalAmount': totalAmount,
-                  'isDuplicateRisk': isDuplicateRisk,
-                  'warning': isDuplicateRisk 
-                    ? '서버 오류 또는 타임아웃: 결제가 실제로는 성공했을 수 있음' 
-                    : null,
-                },
-              );
-              return;
-            }
-          }
-          
-          // 구형 에러 처리 (fallback)
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('결제 처리 실패: $e')),
+            SnackBar(content: Text('결제 처리 실패 (로컬 저장 오류): $e')),
           );
         }
       }
@@ -1173,6 +1211,7 @@ class _SalesPageState extends State<SalesPage> {
                           cart: _cart,
                           onQuantityChanged: _onCartItemQuantityChanged,
                           onItemRemove: _onCartItemRemove,
+                          countryCode: _countryCode,
                         ),
                       ),
                       // 분리된 결제 버튼들
@@ -1205,7 +1244,16 @@ class _SalesPageState extends State<SalesPage> {
                                     elevation: 4,
                                   ),
                                 ),
+<<<<<<< HEAD
                               ),
+=======
+                                const SizedBox(width: 12),
+                                Text(
+                                  '|   ${LocaleHelper.getCurrencyFormat(_countryCode).format(_cart.total)}',
+                                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.normal, color: Colors.white70),
+                                ),
+                              ],
+>>>>>>> origin/main
                             ),
                             const SizedBox(width: 12),
                             // 테이크아웃 주문 버튼
@@ -1255,6 +1303,7 @@ class _SalesPageState extends State<SalesPage> {
                           onCategorySelected: _onCategorySelected,
                           onProductTap: _onProductTap,
                           showBarcodeInGrid: _showBarcodeInGrid,
+                          countryCode: _countryCode,
                         ),
                       ),
 

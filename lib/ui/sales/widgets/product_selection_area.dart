@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/local/models.dart';
+import '../../../core/i18n/locale_helper.dart';
 
 class ProductSelectionArea extends StatefulWidget {
   const ProductSelectionArea({
@@ -12,6 +13,7 @@ class ProductSelectionArea extends StatefulWidget {
     required this.onCategorySelected,
     required this.onProductTap,
     this.showBarcodeInGrid = false,
+    this.countryCode = 'KR',
   });
 
   final List<CategoryModel> categories;
@@ -20,6 +22,7 @@ class ProductSelectionArea extends StatefulWidget {
   final ValueChanged<String?> onCategorySelected;
   final ValueChanged<ProductModel> onProductTap;
   final bool showBarcodeInGrid;
+  final String countryCode;
 
   @override
   State<ProductSelectionArea> createState() => _ProductSelectionAreaState();
@@ -108,6 +111,7 @@ class _ProductSelectionAreaState extends State<ProductSelectionArea> {
                       product: widget.products[index],
                       onTap: () => widget.onProductTap(widget.products[index]),
                       showBarcode: widget.showBarcodeInGrid,
+                      countryCode: widget.countryCode,
                     );
                   },
                 ),
@@ -124,8 +128,8 @@ class _ProductSelectionAreaState extends State<ProductSelectionArea> {
           Icon(Icons.inventory_2_outlined, size: 64, color: AppTheme.textSecondary.withOpacity(0.2)),
           const SizedBox(height: 16),
           Text(
-            '등록된 상품이 없습니다',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+            AppLocalizations.of(context)!.translate('sales.noProducts') ?? '등록된 상품이 없습니다',
+            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 16),
           ),
         ],
       ),
@@ -207,17 +211,16 @@ class _ProductCard extends StatelessWidget {
     required this.product,
     required this.onTap,
     this.showBarcode = false,
+    this.countryCode = 'KR',
   });
 
   final ProductModel product;
   final VoidCallback onTap;
   final bool showBarcode;
+  final String countryCode;
 
   String _formatPrice(int price) {
-    return '₩${price.toString().replaceAllMapped(
-          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-          (match) => '${match[1]},',
-        )}';
+    return LocaleHelper.getCurrencyFormat(countryCode).format(price);
   }
 
   @override

@@ -4,6 +4,7 @@ import '../../core/storage/auth_storage.dart';
 import '../../core/storage/settings_storage.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/i18n/app_localizations.dart';
+import '../../core/i18n/locale_controller.dart';
 import '../../data/local/app_database.dart';
 import '../../data/remote/api_client.dart';
 import '../../data/remote/pos_master_api.dart';
@@ -52,7 +53,7 @@ class _HomePageState extends State<HomePage> {
       _performInitialSync(); // 그 다음 동기화 실행 (백그라운드)
       _loadDataCounts();
       _loadWeeklySales();
-      _checkUpdate();
+      VersionService().showUpdateDialogIfAvailable(context);
     }
   }
 
@@ -99,6 +100,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _logout() async {
     await _storage.clear();
+    await reloadLocale();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => LoginPage(database: widget.database)),
@@ -244,12 +246,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _checkUpdate() async {
-    final updateInfo = await VersionService().checkUpdate();
-    if (updateInfo != null && mounted) {
-      _showUpdateDialog(updateInfo);
-    }
-  }
+  // Removed _checkUpdate: handled by VersionService().showUpdateDialogIfAvailable(context)
 
   /// 앱 시작 시 자동 마스터 데이터 동기화 (전체 동기화)
   Future<void> _performInitialSync() async {
@@ -292,52 +289,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _showUpdateDialog(Map<String, dynamic> updateInfo) {
-    showDialog(
-      context: context,
-      barrierDismissible: !(updateInfo['mandatory'] ?? false),
-      builder: (context) => AlertDialog(
-        title: Text('새로운 버전 업데이트 (${updateInfo['version']})'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('최신 버전이 출시되었습니다. 업데이트하시겠습니까?'),
-            const SizedBox(height: 12),
-            const Text('변경사항:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            Text(updateInfo['changelog'] ?? '안정성 개선 및 버그 수정', style: const TextStyle(fontSize: 13)),
-          ],
-        ),
-        actions: [
-          if (!(updateInfo['mandatory'] ?? false))
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(AppLocalizations.of(context)!.translate('common.later') ?? '나중에'),
-            ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _downloadAndInstall(updateInfo['url']);
-            },
-            child: Text(AppLocalizations.of(context)!.translate('common.updateNow') ?? '지금 업데이트'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _downloadAndInstall(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('업데이트 페이지를 열 수 없습니다.'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
+  // Removed redundant update dialog and download methods; handled centrally by VersionService.
 
   @override
   Widget build(BuildContext context) {
@@ -533,7 +485,9 @@ class _HomePageState extends State<HomePage> {
                         flex: 2,
                         child: _buildMainActionButton(
                           onPressed: (!_usePosSession || _isSessionActive)
-                              ? () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SalesPage(database: widget.database)))
+                              ? () => Navigator.of(context).push(MaterialPageRoute(
+                                  builder: (_) => SalesPage(database: widget.database)
+                                ))
                               : null,
                           icon: Icons.receipt_long,
                           label: AppLocalizations.of(context)!.startSale,

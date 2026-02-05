@@ -3,6 +3,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/version_service.dart';
 import '../../core/auth/pos_auth_service.dart';
 import '../../core/storage/auth_storage.dart';
 import '../../core/utils/restart_widget.dart';
@@ -48,6 +49,11 @@ class _LoginPageState extends State<LoginPage> {
     super.initState();
     _loadSavedEmail();
     _initDeepLinks();
+    
+    // Check for updates on startup
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      VersionService().showUpdateDialogIfAvailable(context);
+    });
   }
 
   Future<void> _loadSavedEmail() async {

@@ -9,7 +9,7 @@ import 'models/bundle_models.dart';
 
 class AppDatabase {
   static const _databaseName = 'posace.db';
-  static const _databaseVersion = 13;
+  static const _databaseVersion = 14;
 
   Database? _database;
 
@@ -177,7 +177,9 @@ class AppDatabase {
         paymentMethod TEXT NOT NULL,
         status TEXT NOT NULL,
         createdAt TEXT NOT NULL,
-        syncedAt TEXT
+        syncedAt TEXT,
+        saleDate TEXT,
+        saleTime TEXT
       )
     ''');
 
@@ -629,6 +631,13 @@ class AppDatabase {
         await db.execute('ALTER TABLE products ADD COLUMN isKitchenPrintEnabled INTEGER NOT NULL DEFAULT 1');
       } catch (_) {}
     }
+
+    if (oldVersion < 14) {
+      try {
+        await db.execute('ALTER TABLE sales ADD COLUMN saleDate TEXT');
+        await db.execute('ALTER TABLE sales ADD COLUMN saleTime TEXT');
+      } catch (_) {}
+    }
   }
 
   Future<void> init() async {
@@ -714,6 +723,13 @@ class AppDatabase {
         }
       }
     });
+  }
+
+  Future<ProductModel?> getProductById(String id) async {
+    final db = await database;
+    final maps = await db.query('products', where: 'id = ?', whereArgs: [id]);
+    if (maps.isEmpty) return null;
+    return await _populateProduct(db, maps.first);
   }
 
   Future<List<ProductModel>> getProducts() async {
@@ -935,6 +951,13 @@ class AppDatabase {
   }
 
   // Members
+  Future<MemberModel?> getMemberById(String id) async {
+    final db = await database;
+    final maps = await db.query('members', where: 'id = ?', whereArgs: [id]);
+    if (maps.isEmpty) return null;
+    return MemberModel.fromMap(maps.first);
+  }
+
   Future<List<MemberModel>> getMembers() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query('members', orderBy: 'name ASC');

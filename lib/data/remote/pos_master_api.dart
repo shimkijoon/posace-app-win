@@ -67,39 +67,66 @@ class MasterDataResponse {
       return MasterDataResponse(
         serverTime: json['serverTime'] as String,
         store: StoreInfo.fromJson(json['store'] as Map<String, dynamic>),
-        categories: (json['categories'] as List)
-            .map((e) => CategoryModel.fromMap(e as Map<String, dynamic>))
-            .toList(),
-        products: (json['products'] as List).map((e) {
-          try {
-            return ProductModel.fromMap(e as Map<String, dynamic>);
-          } catch (e) {
-            print('[POS] Error parsing product: $e');
-            rethrow;
-          }
-        }).toList(),
-        discounts: (json['discounts'] as List)
-            .map((e) => DiscountModel.fromMap(e as Map<String, dynamic>))
-            .toList(),
-        taxes: (json['taxes'] as List? ?? [])
-            .map((e) => TaxModel.fromMap(e as Map<String, dynamic>))
-            .toList(),
-        tableLayouts: (json['tableLayouts'] as List? ?? [])
-            .map((e) => TableLayoutData.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        kitchenStations: (json['kitchenStations'] as List? ?? [])
-            .map((e) => KitchenStationModel.fromMap(e as Map<String, dynamic>))
-            .toList(),
+        categories: _parseList(
+          json['categories'],
+          (e) => CategoryModel.fromMap(e),
+          'category',
+        ),
+        products: _parseList(
+          json['products'],
+          (e) => ProductModel.fromMap(e),
+          'product',
+        ),
+        discounts: _parseList(
+          json['discounts'],
+          (e) => DiscountModel.fromMap(e),
+          'discount',
+        ),
+        taxes: _parseList(
+          json['taxes'],
+          (e) => TaxModel.fromMap(e),
+          'tax',
+        ),
+        tableLayouts: _parseList(
+          json['tableLayouts'],
+          (e) => TableLayoutData.fromJson(e),
+          'tableLayout',
+        ),
+        kitchenStations: _parseList(
+          json['kitchenStations'],
+          (e) => KitchenStationModel.fromMap(e),
+          'kitchenStation',
+        ),
         storeSettings: json['storeSettings'] != null
             ? StoreSettingsModel.fromMap(json['storeSettings'] as Map<String, dynamic>)
             : null,
       );
-
     } catch (e, stack) {
       print('[POS] Error parsing MasterDataResponse: $e');
       print(stack);
       rethrow;
     }
+  }
+
+  static List<T> _parseList<T>(
+    dynamic list,
+    T Function(Map<String, dynamic>) fromMap,
+    String itemName,
+  ) {
+    if (list == null || list is! List) return [];
+    final result = <T>[];
+    for (final item in list) {
+      try {
+        if (item is Map<String, dynamic>) {
+          result.add(fromMap(item));
+        } else {
+          print('[POS] Skipped invalid $itemName (not a map): $item');
+        }
+      } catch (e) {
+        print('[POS] Error parsing $itemName: $e');
+      }
+    }
+    return result;
   }
 }
 

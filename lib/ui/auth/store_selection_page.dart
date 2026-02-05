@@ -89,6 +89,11 @@ class _StoreSelectionPageState extends State<StoreSelectionPage> {
     // stores가 null이거나 비어있는 경우 처리
     final stores = widget.stores ?? [];
     
+    final loc = AppLocalizations.of(context);
+    String tr(String key, String fallback, {Map<String, String>? args}) {
+      final v = loc?.translate(key, args: args) ?? key;
+      return v == key ? fallback : v;
+    }
     
     if (stores.isEmpty) {
       return Padding(
@@ -99,12 +104,12 @@ class _StoreSelectionPageState extends State<StoreSelectionPage> {
             Icon(Icons.store_outlined, size: 80, color: Colors.grey.shade400),
             const SizedBox(height: 24),
             Text(
-              '등록된 매장이 없습니다',
+              tr('auth.noStoresTitle', '등록된 매장이 없습니다'),
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Text(
-              '백오피스에서 매장을 먼저 생성해주세요.',
+              tr('auth.noStoresDescription', '백오피스에서 매장을 먼저 생성해주세요.'),
               style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
               textAlign: TextAlign.center,
             ),
@@ -124,7 +129,7 @@ class _StoreSelectionPageState extends State<StoreSelectionPage> {
                       Icon(Icons.info_outline, color: Colors.blue.shade700),
                       const SizedBox(width: 8),
                       Text(
-                        '매장 생성 안내',
+                        tr('auth.storeCreationGuideTitle', '매장 생성 안내'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -135,11 +140,15 @@ class _StoreSelectionPageState extends State<StoreSelectionPage> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '1. 백오피스(${AppConfig.backofficeBaseUrl})에 접속\n'
-                    '2. 동일한 계정으로 로그인\n'
-                    '3. "매장 생성" 메뉴 선택\n'
-                    '4. 매장 유형 선택 (카페, 레스토랑 등)\n'
-                    '5. 샘플 데이터 자동 생성 옵션 선택',
+                    tr(
+                      'auth.storeCreationGuideSteps',
+                      '1. 백오피스(${AppConfig.backofficeBaseUrl})에 접속\n'
+                      '2. 동일한 계정으로 로그인\n'
+                      '3. "매장 생성" 메뉴 선택\n'
+                      '4. 매장 유형 선택 (카페, 레스토랑 등)\n'
+                      '5. 샘플 데이터 자동 생성 옵션 선택',
+                      args: {'backofficeUrl': AppConfig.backofficeBaseUrl},
+                    ),
                     style: TextStyle(fontSize: 14, height: 1.5),
                   ),
                   const SizedBox(height: 16),
@@ -154,7 +163,9 @@ class _StoreSelectionPageState extends State<StoreSelectionPage> {
                         }
                       },
                       icon: const Icon(Icons.open_in_browser),
-                      label: const Text('백오피스에서 매장 생성하기'),
+                      label: Text(
+                        tr('auth.createStoreInBackofficeButton', '백오피스에서 매장 생성하기'),
+                      ),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),

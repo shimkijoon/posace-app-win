@@ -11,7 +11,12 @@
     "email": "Email",
     "password": "Password",
     "selectStore": "Select Store",
-    "selectPos": "Select POS Device"
+    "selectPos": "Select POS Device",
+    "noStoresTitle": "No stores registered",
+    "noStoresDescription": "Please create a store in the backoffice first.",
+    "storeCreationGuideTitle": "Store creation guide",
+    "storeCreationGuideSteps": "1. Open Backoffice ({backofficeUrl})\n2. Log in with the same account\n3. Select the \"Create Store\" menu\n4. Choose a store type (cafe, restaurant, etc.)\n5. Choose the auto sample data option",
+    "createStoreInBackofficeButton": "Create a store in Backoffice"
   },
   "store": {
     "info": "Store Information",
@@ -35,13 +40,12 @@
     "startBusiness": "Start Business",
     "sessionNotUsed": "Session Not Used",
     "enterOpeningAmount": "Enter opening cash amount.",
-    "enterClosingAmount": "Enter final cash balance."
+    "enterClosingAmount": "Enter final cash balance.",
+    "updateTitle": "New Version Available",
+    "updateMessage": "A new version has been released. Would you like to update now?"
   },
   "taxes": {
     "title": "Tax"
-  },
-  "receipt": {
-    "kitchenOrder": "Kitchen Order"
   },
   "sales": {
     "title": "Sales",
@@ -66,13 +70,15 @@
     "total": "Total",
     "productName": "Product Name",
     "clear": "Clear",
+    "registerPrompt": "Would you like to register as a new member?",
+    "noSearchResultsTitle": "No member found.",
     "registerOrder": "Register Order",
     "amount": "Amount",
     "totalDiscount": "Total Discount",
     "noItemsToCheckout": "No items to checkout",
     "paymentCompleted": "Payment completed",
-    "paymentError": "Payment processing error",
-    "dataLoadFailed": "Data load failed",
+    "paymentError": "Could not complete payment",
+    "dataLoadFailed": "Could not retrieve info",
     "productNotFound": "Product not found",
     "noItemsToDiscount": "No items to apply discount",
     "nothingToCancel": "Nothing to cancel",
@@ -80,11 +86,11 @@
     "transactionCancelled": "Transaction cancelled",
     "holdTransactionConfirm": "Hold current transaction? (Viewable from other POS)",
     "transactionHeld": "Transaction held on server",
-    "holdTransactionFailed": "Hold transaction failed",
-    "recallHeldFailed": "Recall held transaction failed",
+    "holdTransactionFailed": "Could not hold transaction",
+    "recallHeldFailed": "Could not retrieve held transaction",
     "noItemsToOrder": "No items to order",
     "orderRegistered": "Order registered",
-    "orderRegistrationFailed": "Order registration failed",
+    "orderRegistrationFailed": "Could not register order",
     "noCartDiscounts": "No cart discounts available",
     "removeAllDiscounts": "Remove All Discounts",
     "points": "Points Balance",
@@ -110,7 +116,8 @@
     "date": "Date",
     "time": "Time",
     "dateTime": "Date & Time",
-    "transactionNumber": "Transaction NO"
+    "transactionNumber": "Transaction NO",
+    "kitchenOrder": "Kitchen Order"
   },
   "common": {
     "confirm": "Confirm",
@@ -128,7 +135,9 @@
     "refresh": "Refresh",
     "apply": "Apply",
     "reset": "Reset",
-    "select": "Select"
+    "select": "Select",
+    "updateNow": "Update Now",
+    "later": "Later"
   },
   "payment": {
     "splitPayment": "Split Payment",
@@ -201,7 +210,14 @@
     "baudRate": "Baud Rate",
     "testPrint": "Test Print",
     "connected": "Connected",
-    "disconnected": "Disconnected"
+    "disconnected": "Disconnected",
+    "appInfo": "App Information",
+    "checkForUpdates": "Check for updates",
+    "checkForUpdatesDesc": "View current version information and update to the latest version.",
+    "versionInfo": "Version Information",
+    "currentVersion": "Current Version",
+    "latestVersion": "Latest Version",
+    "forceUpdateDesc": "Click the button below to update to the latest version."
   },
   "session": {
     "startBusiness": "Start Business",

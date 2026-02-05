@@ -22,80 +22,142 @@ class SyncService {
     required String storeId,
     bool manual = false,
   }) async {
+    final resultErrors = <String>[];
+    int? categoriesCount;
+    int? productsCount;
+    int? discountsCount;
+    int? taxesCount;
+    int? tableLayoutsCount;
+    int? kitchenStationsCount;
+    int? membersCount;
+    String? serverTime;
+
     try {
       print('[POS] Starting Master Sync...');
+      
       // 마지막 동기화 시간 확인
       final lastSyncTime = await database.getSyncMetadata('lastMasterSync');
       final updatedAfter = manual ? null : lastSyncTime;
 
       // 서버에서 마스터 데이터 다운로드
+      print('[POS] Fetching data from API...');
       final response = await masterApi.getMasterData(storeId, updatedAfter: updatedAfter);
+      serverTime = response.serverTime;
 
-      // 로컬 DB에 저장
-      print('[POS] Saving ${response.categories.length} categories');
-      await database.upsertCategories(response.categories);
-      print('[POS] Saving ${response.products.length} products');
-      await database.upsertProducts(response.products);
-      await database.upsertDiscounts(response.discounts);
-      await database.upsertTaxes(response.taxes);
+      // 로컬 DB에 저장 - 각 단계별 에러 처리
+      try {
+        print('[POS] Saving ${response.categories.length} categories');
+        await database.upsertCategories(response.categories);
+        categoriesCount = response.categories.length;
+      } catch (e) {
+        print('[POS] Category sync failed: $e');
+        resultErrors.add('Category sync failed: $e');
+      }
+
+      try {
+        print('[POS] Saving ${response.products.length} products');
+        await database.upsertProducts(response.products);
+        productsCount = response.products.length;
+      } catch (e) {
+        print('[POS] Product sync failed: $e');
+        resultErrors.add('Product sync failed: $e');
+      }
+
+      try {
+        await database.upsertDiscounts(response.discounts);
+        discountsCount = response.discounts.length;
+      } catch (e) {
+        print('[POS] Discount sync failed: $e');
+        resultErrors.add('Discount sync failed: $e');
+      }
+
+      try {
+        await database.upsertTaxes(response.taxes);
+        taxesCount = response.taxes.length;
+      } catch (e) {
+        print('[POS] Tax sync failed: $e');
+        resultErrors.add('Tax sync failed: $e');
+      }
 
       // 테이블 레이아웃 저장
-      print('[POS] Saving ${response.tableLayouts.length} layouts to local DB');
-      await database.upsertTableLayouts(
-        response.tableLayouts.map((layout) => layout.toMap()).toList(),
-      );
+      try {
+        print('[POS] Saving ${response.tableLayouts.length} layouts to local DB');
+        await database.upsertTableLayouts(
+          response.tableLayouts.map((layout) => layout.toMap()).toList(),
+        );
+        tableLayoutsCount = response.tableLayouts.length;
+      } catch (e) {
+        print('[POS] Table Layout sync failed: $e');
+        resultErrors.add('Table Layout sync failed: $e');
+      }
 
       // 주방 스테이션 저장
-      print('[POS] Saving ${response.kitchenStations.length} kitchen stations');
-      await database.upsertKitchenStations(response.kitchenStations);
+      try {
+        print('[POS] Saving ${response.kitchenStations.length} kitchen stations');
+        await database.upsertKitchenStations(response.kitchenStations);
+        kitchenStationsCount = response.kitchenStations.length;
+      } catch (e) {
+        print('[POS] Kitchen Station sync failed: $e');
+        resultErrors.add('Kitchen Station sync failed: $e');
+      }
 
       // 동기화 시간 업데이트
       await database.setSyncMetadata('lastMasterSync', response.serverTime);
 
       // 매장 정보 업데이트
-      final session = await authStorage.getSessionInfo();
-      await authStorage.saveSession(
-        accessToken: session['accessToken'] ?? '',
-        storeId: session['storeId'] ?? '',
-        posId: session['posId'] ?? '',
-        storeName: response.store.name,
-        storeBizNo: response.store.businessNumber,
-        storeAddr: response.store.address,
-        storePhone: response.store.phone,
-      );
+      try {
+        final session = await authStorage.getSessionInfo();
+        await authStorage.saveSession(
+          accessToken: session['accessToken'] ?? '',
+          storeId: session['storeId'] ?? '',
+          posId: session['posId'] ?? '',
+          storeName: response.store.name,
+          storeBizNo: response.store.businessNumber,
+          storeAddr: response.store.address,
+          storePhone: response.store.phone,
+        );
+      } catch (e) {
+        print('[POS] Store info update failed: $e');
+        // This is not critical, so we don't add to resultErrors
+      }
 
       // 회원 동기화 추가
-      int membersCount = 0;
       try {
         membersCount = await syncMembers(storeId: storeId);
       } catch (e) {
         print('[POS] Member sync failed: $e');
+        resultErrors.add('Member sync failed: $e');
       }
 
       return SyncResult(
-        success: true,
-        categoriesCount: response.categories.length,
-        productsCount: response.products.length,
-        discountsCount: response.discounts.length,
-        taxesCount: response.taxes.length,
-        tableLayoutsCount: response.tableLayouts.length,
+        success: resultErrors.isEmpty,
+        categoriesCount: categoriesCount,
+        productsCount: productsCount,
+        discountsCount: discountsCount,
+        taxesCount: taxesCount,
+        tableLayoutsCount: tableLayoutsCount,
+        kitchenStationsCount: kitchenStationsCount, // Added to SyncResult
         membersCount: membersCount,
-        serverTime: response.serverTime,
+        serverTime: serverTime,
+        error: resultErrors.isNotEmpty ? resultErrors.join('\n') : null,
       );
-    } catch (e) {
+    } catch (e, stack) {
+      print('[POS] Critical Sync Error: $e');
+      print(stack);
       return SyncResult(
         success: false,
-        error: e.toString(),
+        error: 'Critical error: $e',
       );
     }
   }
 
   Future<int> syncMembers({required String storeId}) async {
-    // API에 모든 멤버 조회 엔드포인트가 있다고 가정하고 구현
-    // 만약 현재 API에 없다면, 나중에 추가하거나 현재는 빈 값 반환
     try {
-      final uri = masterApi.apiClient.buildUri('/customers/store/$storeId');
+      // Changed to use POS-specific endpoint that doesn't check owner permissions
+      final uri = masterApi.apiClient.buildUri('/pos/customers/list');
       final accessToken = await authStorage.getAccessToken();
+      print('[POS] Syncing members from $uri');
+      
       final response = await http.get(
         uri,
         headers: {
@@ -104,27 +166,56 @@ class SyncService {
         },
       );
 
+      print('[POS] Member sync status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+        print('[POS] Found ${data.length} members');
+        
+        int successCount = 0;
+        int skipCount = 0;
+
         for (final item in data) {
-          final customer = item['customer'];
-          final member = MemberModel(
-            id: item['id'],
-            storeId: storeId,
-            name: customer['name'] ?? '고객',
-            phone: customer['phoneNumber'],
-            points: (item['pointsBalance'] as num?)?.toInt() ?? 0,
-            createdAt: DateTime.parse(item['createdAt']),
-            updatedAt: DateTime.parse(item['updatedAt']),
-          );
-          await database.upsertMember(member);
+          try {
+            final customer = item['customer'];
+            if (customer == null) {
+              skipCount++;
+              continue;
+            }
+
+            final String? phoneNumber = customer['phoneNumber'];
+            if (phoneNumber == null || phoneNumber.isEmpty) {
+              // 전화번호가 없으면 로컬 DB 제약조건(NOT NULL) 때문에 저장 불가하므로 건너뜀
+              print('[POS] Skipping member ${item['id']} due to missing phone number');
+              skipCount++;
+              continue; 
+            }
+
+            final member = MemberModel(
+              id: item['id'] ?? '',
+              storeId: storeId,
+              name: customer['name'] ?? '고객',
+              phone: phoneNumber,
+              points: (item['pointsBalance'] as num?)?.toInt() ?? 0,
+              createdAt: item['createdAt'] != null ? DateTime.parse(item['createdAt']) : DateTime.now(),
+              updatedAt: item['updatedAt'] != null ? DateTime.parse(item['updatedAt']) : DateTime.now(),
+            );
+            await database.upsertMember(member);
+            successCount++;
+          } catch (e) {
+            print('[POS] Failed to process member item: $e');
+            skipCount++;
+          }
         }
-        return data.length;
+        print('[POS] Member sync completed. Success: $successCount, Skipped: $skipCount');
+        return successCount;
+      } else {
+        throw Exception('Failed to fetch members: ${response.statusCode}');
       }
     } catch (e) {
       print('[POS] syncMembers error: $e');
+      rethrow; // 상위에서 잡아서 결과에 포함시키기 위해 rethrow
     }
-    return 0;
   }
 
   Future<int> flushSalesQueue() async {
@@ -139,6 +230,11 @@ class SyncService {
           'storeId': sale.storeId,
           'posId': sale.posId,
           'clientSaleId': sale.id, // 로컬 ID를 클라이언트 세일 ID로 사용
+          'saleDate': sale.saleDate != null 
+              ? sale.saleDate!.toIso8601String().split('T')[0] 
+              : sale.createdAt.toIso8601String().split('T')[0], // YYYY-MM-DD
+          'saleTime': sale.saleTime ?? 
+              sale.createdAt.toIso8601String().split('T')[1].substring(0, 8), // HH:mm:ss
           'totalAmount': sale.totalAmount,
           'paidAmount': sale.paidAmount,
           // 'paymentMethod': sale.paymentMethod, // Removed
@@ -152,8 +248,8 @@ class SyncService {
           'payments': sale.payments.map((p) => {
             'method': p.method,
             'amount': p.amount,
-            // 'cardApproval': p.cardApproval, // If needed
-            // 'cardLast4': p.cardLast4, // If needed
+            'cardApproval': p.cardApproval, 
+            'cardLast4': p.cardLast4,
           }).toList(),
         };
 
@@ -181,6 +277,7 @@ class SyncResult {
   final int? discountsCount;
   final int? taxesCount;
   final int? tableLayoutsCount;
+  final int? kitchenStationsCount;
   final int? membersCount;
   final String? serverTime;
   final String? error;
@@ -192,6 +289,7 @@ class SyncResult {
     this.discountsCount,
     this.taxesCount,
     this.tableLayoutsCount,
+    this.kitchenStationsCount,
     this.membersCount,
     this.serverTime,
     this.error,

@@ -11,7 +11,12 @@
     "email": "電郵地址",
     "password": "密碼",
     "selectStore": "選擇店舖",
-    "selectPos": "選擇POS設備"
+    "selectPos": "選擇POS設備",
+    "noStoresTitle": "未有已登記店舖",
+    "noStoresDescription": "請先喺後台建立店舖。",
+    "storeCreationGuideTitle": "建立店舖指南",
+    "storeCreationGuideSteps": "1. 前往後台（{backofficeUrl}）\n2. 使用相同帳號登入\n3. 選擇「建立店舖」選單\n4. 選擇店舖類型（咖啡店、餐廳等）\n5. 選擇自動建立示例資料選項",
+    "createStoreInBackofficeButton": "喺後台建立店舖"
   },
   "store": {
     "info": "店舖資料",
@@ -35,13 +40,12 @@
     "startBusiness": "開始營業",
     "sessionNotUsed": "未使用營業",
     "enterOpeningAmount": "請輸入營業準備金(現金)。",
-    "enterClosingAmount": "請輸入最終現金餘額。"
+    "enterClosingAmount": "請輸入最終現金餘額。",
+    "updateTitle": "新版本更新",
+    "updateMessage": "最新版本已發佈。係咪而家更新？"
   },
   "taxes": {
     "title": "稅金"
-  },
-  "receipt": {
-    "kitchenOrder": "廚房訂單"
   },
   "sales": {
     "title": "銷售",
@@ -71,22 +75,20 @@
     "totalDiscount": "總折扣額",
     "noItemsToCheckout": "沒有商品可結帳",
     "paymentCompleted": "付款已完成",
-    "paymentError": "付款處理過程中發生錯誤",
-    "dataLoadFailed": "資料載入失敗",
+    "paymentError": "結帳處理唔夠順暢",
+    "dataLoadFailed": "無法讀取資訊",
     "productNotFound": "找不到商品",
     "noItemsToDiscount": "沒有商品可套用折扣",
     "nothingToCancel": "沒有內容可取消",
-    "cancelTransaction": "取消交易",
     "cancelTransactionConfirm": "是否取消目前的交易及所選會員資訊？",
     "transactionCancelled": "交易已取消",
-    "holdTransaction": "保留交易",
     "holdTransactionConfirm": "是否保留目前的交易？（其他POS也可查看）",
     "transactionHeld": "交易已保留至伺服器",
-    "holdTransactionFailed": "保留交易失敗",
-    "recallHeldFailed": "調用保留交易失敗",
+    "holdTransactionFailed": "無法保留交易",
+    "recallHeldFailed": "無法調用保留交易",
     "noItemsToOrder": "沒有商品可訂購",
     "orderRegistered": "訂單已登記",
-    "orderRegistrationFailed": "訂單登記失敗",
+    "orderRegistrationFailed": "無法登記訂單",
     "noCartDiscounts": "沒有可用的購物車折扣",
     "removeAllDiscounts": "取消所有折扣",
     "points": "持有積分",
@@ -112,7 +114,8 @@
     "date": "日期",
     "time": "時間",
     "dateTime": "日期時間",
-    "transactionNumber": "交易 NO"
+    "transactionNumber": "交易 NO",
+    "kitchenOrder": "廚房訂單"
   },
   "common": {
     "confirm": "確認",
@@ -130,7 +133,9 @@
     "refresh": "重新整理",
     "apply": "套用",
     "reset": "重設",
-    "select": "選擇"
+    "select": "選擇",
+    "updateNow": "立即更新",
+    "later": "稍後"
   },
   "payment": {
     "splitPayment": "分拆付款",
@@ -145,7 +150,7 @@
     "cashManual": "現金手動輸入",
     "cardManual": "信用卡手動輸入",
     "paymentComplete": "付款完成",
-    "amountInput": "金額輸入",
+    "amountInput": "金額 입력",
     "inputComplete": "輸入完成"
   },
   "tables": {
@@ -203,7 +208,14 @@
     "baudRate": "通訊速度 (Baud Rate)",
     "testPrint": "測試打印",
     "connected": "已連接",
-    "disconnected": "未連接"
+    "disconnected": "未連接",
+    "appInfo": "軟件資訊",
+    "checkForUpdates": "檢查更新",
+    "checkForUpdatesDesc": "查看目前版本資訊並更新至最新版本。",
+    "versionInfo": "版本資訊",
+    "currentVersion": "目前版本",
+    "latestVersion": "最新版本",
+    "forceUpdateDesc": "點擊下方按鈕開始更新至最新版本。"
   },
   "session": {
     "startBusiness": "開始營業",
@@ -215,5 +227,21 @@
     "cancel": "取消",
     "start": "開始營業",
     "end": "結束營業"
+  },
+  "customers": {
+    "searchTitle": "會員搜尋",
+    "searchHint": "輸入手機號碼",
+    "noSearchResults": "沒有搜尋結果。",
+    "searchErrorNotice": "搜尋資訊時發生問題。",
+    "registerPrompt": "是否註冊為新會員？",
+    "noSearchResultsTitle": "未搜尋到會員資訊。",
+    "registerNew": "新會員註冊",
+    "name": "姓名",
+    "enterName": "請輸入姓名。",
+    "phone": "手機號碼",
+    "phoneHint": "輸入電話號碼",
+    "enterPhone": "請輸入號碼。",
+    "phoneTooShort": "號碼太短。",
+    "registerFailed": "無法完成會員註冊"
   }
 }

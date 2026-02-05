@@ -304,12 +304,18 @@ class MemberModel {
   }
 
   factory MemberModel.fromMap(Map<String, dynamic> map) {
+    // points can be Decimal (String) or int
+    final pointsValue = map['points'];
+    final points = pointsValue is String
+        ? (double.tryParse(pointsValue)?.round() ?? 0)
+        : (pointsValue as num?)?.round() ?? 0;
+
     return MemberModel(
       id: map['id'] as String,
       storeId: map['storeId'] as String,
       name: map['name'] as String,
       phone: map['phone'] as String,
-      points: map['points'] as int? ?? 0,
+      points: points,
       createdAt: DateTime.parse(map['createdAt'] as String),
       updatedAt: DateTime.parse(map['updatedAt'] as String),
     );
@@ -337,6 +343,8 @@ class SaleModel {
   final int memberPointsEarned;
 
   final List<SalePaymentModel> payments; // Added
+  final DateTime? saleDate;
+  final String? saleTime;
 
   SaleModel({
     required this.id,
@@ -357,6 +365,8 @@ class SaleModel {
     this.cartDiscountsJson,
     this.memberPointsEarned = 0,
     this.payments = const [],
+    this.saleDate,
+    this.saleTime,
   });
 
   Map<String, dynamic> toMap() {
@@ -378,6 +388,8 @@ class SaleModel {
       'discountAmount': discountAmount,
       'cartDiscountsJson': cartDiscountsJson,
       'memberPointsEarned': memberPointsEarned,
+      'saleDate': saleDate?.toIso8601String(),
+      'saleTime': saleTime,
     };
   }
 
@@ -400,6 +412,9 @@ class SaleModel {
       discountAmount: map['discountAmount'] as int? ?? 0,
       cartDiscountsJson: map['cartDiscountsJson'] as String?,
       memberPointsEarned: map['memberPointsEarned'] as int? ?? 0,
+
+      saleDate: map['saleDate'] != null ? DateTime.parse(map['saleDate'] as String) : null,
+      saleTime: map['saleTime'] as String?,
       payments: payments,
     );
   }

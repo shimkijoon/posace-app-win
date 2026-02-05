@@ -8,6 +8,7 @@ import 'core/storage/auth_storage.dart';
 import 'core/theme/app_theme.dart';
 import 'core/i18n/app_localizations.dart';
 import 'core/i18n/locale_helper.dart';
+import 'core/i18n/locale_controller.dart';
 import 'data/local/app_database.dart';
 import 'ui/auth/login_page.dart';
 import 'ui/home/home_page.dart';
@@ -23,15 +24,12 @@ class PosaceApp extends StatefulWidget {
 }
 
 class _PosaceAppState extends State<PosaceApp> with WindowListener {
-  Locale? _locale;
-  bool _isLoadingLocale = true;
-
   @override
   void initState() {
     super.initState();
     windowManager.addListener(this);
     _initWindowManager();
-    _loadLocale();
+    reloadLocale();
   }
 
   Future<void> _initWindowManager() async {
@@ -58,27 +56,8 @@ class _PosaceAppState extends State<PosaceApp> with WindowListener {
 
   Future<void> _cleanupAndExit() async {
     print('[PosaceApp] Starting cleanup and exit...');
-    
-    // Fallback: 2초 내에 정상 종료되지 않으면 강제 종료 처리
-    Future.delayed(const Duration(seconds: 2)).then((_) {
-      print('[PosaceApp] Exit timeout reached. Forcing exit via dart:io...');
-      exit(0);
-    });
-
-    try {
-      // 비동기 작업 정리 (예: 프린터 종료 대기 등)
-      // 필요한 핵심 리소스 정리를 여기에 추가
-      
-      // UI 스레드가 이벤트를 처리할 시간을 줌
-      await Future.delayed(const Duration(milliseconds: 100));
-      
-      print('[PosaceApp] Destroying window...');
-      await windowManager.destroy();
-    } catch (e) {
-      print('[PosaceApp] Error during cleanup: $e');
-      // 오류 발생 시에도 시스템 강제 종료
-      exit(0);
-    }
+    // Force exit immediately to prevent window manager freeze
+    exit(0);
   }
 
   Future<bool> _showExitConfirmDialog() async {
@@ -113,54 +92,46 @@ class _PosaceAppState extends State<PosaceApp> with WindowListener {
     return result ?? false;
   }
 
-  Future<void> _loadLocale() async {
-    final locale = await LocaleHelper.getLocale();
-    print('[PosaceApp] Loaded locale: ${locale.languageCode}${locale.countryCode != null ? '-${locale.countryCode}' : ''}');
-    if (mounted) {
-      setState(() {
-        _locale = locale;
-        _isLoadingLocale = false;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_isLoadingLocale) {
-      return MaterialApp(
-        home: Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
-      );
-    }
+    return ValueListenableBuilder<Locale?>(
+      valueListenable: appLocaleNotifier,
+      builder: (context, locale, _) {
+        if (locale == null) {
+          return const MaterialApp(
+            home: Scaffold(body: Center(child: CircularProgressIndicator())),
+          );
+        }
 
-    return MaterialApp(
-      title: AppConfig.appName,
-      theme: AppTheme.light(),
-      locale: _locale,
-      navigatorKey: navigatorKey,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: LocaleHelper.supportedLocales,
-      home: FutureBuilder<bool>(
-        future: _checkAuth(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final isAuthenticated = snapshot.data ?? false;
-          if (!isAuthenticated) {
-            return LoginPage(database: widget.database);
-          }
-          return HomePage(database: widget.database);
-        },
-      ),
+        return MaterialApp(
+          title: AppConfig.appName,
+          theme: AppTheme.light(),
+          locale: locale,
+          navigatorKey: navigatorKey,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: LocaleHelper.supportedLocales,
+          home: FutureBuilder<bool>(
+            future: _checkAuth(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              final isAuthenticated = snapshot.data ?? false;
+              if (!isAuthenticated) {
+                return LoginPage(database: widget.database);
+              }
+              return HomePage(database: widget.database);
+            },
+          ),
+        );
+      },
     );
   }
 

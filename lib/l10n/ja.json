@@ -13,6 +13,11 @@
     "selectStore": "店舗選択",
     "selectPos": "POS機器選択",
     "noStores": "登録された店舗がありません。",
+    "noStoresTitle": "登録された店舗がありません",
+    "noStoresDescription": "バックオフィスで先に店舗を作成してください。",
+    "storeCreationGuideTitle": "店舗作成ガイド",
+    "storeCreationGuideSteps": "1. バックオフィス({backofficeUrl})にアクセス\n2. 同じアカウントでログイン\n3. 「店舗作成」メニューを選択\n4. 店舗タイプを選択（カフェ、レストランなど）\n5. サンプルデータ自動生成オプションを選択",
+    "createStoreInBackofficeButton": "バックオフィスで店舗を作成する",
     "selectStorePrompt": "接続する店舗を選択してください",
     "noName": "名前なし",
     "posDeviceCount": "POS機器: {count}台",
@@ -44,7 +49,9 @@
     "startBusiness": "営業開始",
     "sessionNotUsed": "営業未使用",
     "enterOpeningAmount": "営業準備金(現金)を入力してください。",
-    "enterClosingAmount": "最終現金残高を入力してください。"
+    "enterClosingAmount": "最終現金残高を入力してください。",
+    "updateTitle": "新しいバージョンのアップデート",
+    "updateMessage": "最新バージョンがリリースされました。今すぐアップデートしますか？"
   },
   "taxes": {
     "title": "税金"
@@ -75,8 +82,8 @@
     "totalDiscount": "総割引額",
     "noItemsToCheckout": "決済する商品がありません",
     "paymentCompleted": "決済が完了しました",
-    "paymentError": "決済処理中にエラーが発生しました",
-    "dataLoadFailed": "データの読み込みに失敗しました",
+    "paymentError": "決済がスムーズに完了しませんでした",
+    "dataLoadFailed": "情報を取得できませんでした",
     "productNotFound": "商品が見つかりません",
     "noItemsToDiscount": "割引を適用する商品がありません",
     "nothingToCancel": "キャンセルする内容がありません",
@@ -86,11 +93,11 @@
     "holdTransaction": "取引保留",
     "holdTransactionConfirm": "現在の取引を保留しますか？（他のPOSでも確認可能）",
     "transactionHeld": "取引がサーバーに保留されました",
-    "holdTransactionFailed": "取引保留に失敗しました",
-    "recallHeldFailed": "保留取引の呼び出しに失敗しました",
+    "holdTransactionFailed": "取引を保留できませんでした",
+    "recallHeldFailed": "保留された取引を取得できませんでした",
     "noItemsToOrder": "注文する商品がありません",
     "orderRegistered": "注文が登録されました",
-    "orderRegistrationFailed": "注文登録に失敗しました",
+    "orderRegistrationFailed": "注文を登録できませんでした",
     "noCartDiscounts": "利用可能なカート割引がありません",
     "removeAllDiscounts": "割引をすべてキャンセル",
     "points": "保有ポイント",
@@ -180,7 +187,14 @@
     "baudRate": "通信速度 (Baud Rate)",
     "testPrint": "テスト印刷",
     "connected": "接続済み",
-    "disconnected": "未接続"
+    "disconnected": "未接続",
+    "appInfo": "アプリ情報",
+    "checkForUpdates": "アップデート確認",
+    "checkForUpdatesDesc": "現在バージョン情報を確認し、最新バージョンにアップデートします。",
+    "versionInfo": "バージョン情報",
+    "currentVersion": "現在バージョン",
+    "latestVersion": "最新バージョン",
+    "forceUpdateDesc": "最新バージョンにアップデートを開始するには、下のボタンをクリックしてください。"
   },
   "session": {
     "startBusiness": "営業開始",
@@ -209,7 +223,9 @@
     "refresh": "更新",
     "apply": "適用",
     "reset": "リセット",
-    "select": "選択"
+    "select": "選択",
+    "updateNow": "今すぐアップデート",
+    "later": "後で"
   },
   "payment": {
     "splitPayment": "分割決済",
@@ -226,5 +242,21 @@
     "paymentComplete": "決済完了",
     "amountInput": "金額入力",
     "inputComplete": "入力完了"
+  },
+  "customers": {
+    "searchTitle": "会員検索",
+    "searchHint": "電話番号入力",
+    "noSearchResults": "検索結果がありません。",
+    "searchErrorNotice": "情報の検索中に問題が発生しました。",
+    "registerPrompt": "新規会員として登録しますか？",
+    "noSearchResultsTitle": "検索された会員がいません。",
+    "registerNew": "新規会員登録",
+    "name": "名前",
+    "enterName": "名前を入力してください。",
+    "phone": "電話番号",
+    "phoneHint": "電話番号入力",
+    "enterPhone": "番号を入力してください。",
+    "phoneTooShort": "番号が短すぎます。",
+    "registerFailed": "会員登録を完了できませんでした"
   }
 }

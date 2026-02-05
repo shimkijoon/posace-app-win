@@ -13,6 +13,11 @@
     "selectStore": "매장 선택",
     "selectPos": "POS 기기 선택",
     "noStores": "등록된 매장이 없습니다.",
+    "noStoresTitle": "등록된 매장이 없습니다",
+    "noStoresDescription": "백오피스에서 매장을 먼저 생성해주세요.",
+    "storeCreationGuideTitle": "매장 생성 안내",
+    "storeCreationGuideSteps": "1. 백오피스({backofficeUrl})에 접속\n2. 동일한 계정으로 로그인\n3. \"매장 생성\" 메뉴 선택\n4. 매장 유형 선택 (카페, 레스토랑 등)\n5. 샘플 데이터 자동 생성 옵션 선택",
+    "createStoreInBackofficeButton": "백오피스에서 매장 생성하기",
     "selectStorePrompt": "접속할 매장을 선택하세요",
     "noName": "이름 없음",
     "posDeviceCount": "POS 기기: {count}대",
@@ -44,7 +49,9 @@
     "startBusiness": "영업 시작",
     "sessionNotUsed": "영업 미사용",
     "enterOpeningAmount": "영업 준비금(시재)을 입력하세요.",
-    "enterClosingAmount": "최종 시재(현금 잔액)를 입력하세요."
+    "enterClosingAmount": "최종 시재(현금 잔액)를 입력하세요.",
+    "updateTitle": "새로운 버전 업데이트",
+    "updateMessage": "최신 버전이 출시되었습니다. 업데이트하시겠습니까?"
   },
   "taxes": {
     "title": "세금"
@@ -75,8 +82,8 @@
     "totalDiscount": "총 할인액",
     "noItemsToCheckout": "결제할 상품이 없습니다",
     "paymentCompleted": "결제가 완료되었습니다",
-    "paymentError": "결제 처리 중 오류 발생",
-    "dataLoadFailed": "데이터 로드 실패",
+    "paymentError": "결제 처리가 원활하지 않습니다",
+    "dataLoadFailed": "정보를 가져오지 못했습니다",
     "productNotFound": "상품을 찾을 수 없습니다",
     "noItemsToDiscount": "할인을 적용할 상품이 없습니다",
     "nothingToCancel": "취소할 내역이 없습니다",
@@ -86,11 +93,11 @@
     "holdTransaction": "거래 보류",
     "holdTransactionConfirm": "현재 거래를 보류하시겠습니까? (다른 POS에서도 확인 가능)",
     "transactionHeld": "거래가 서버에 보류되었습니다",
-    "holdTransactionFailed": "거래 보류 실패",
-    "recallHeldFailed": "보류 거래 호출 실패",
+    "holdTransactionFailed": "거래를 보류하지 못했습니다",
+    "recallHeldFailed": "보류된 거래를 가져오지 못했습니다",
     "noItemsToOrder": "주문할 상품이 없습니다",
     "orderRegistered": "주문이 등록되었습니다",
-    "orderRegistrationFailed": "주문 등록 실패",
+    "orderRegistrationFailed": "주문을 등록하지 못했습니다",
     "noCartDiscounts": "사용 가능한 장바구니 할인이 없습니다",
     "removeAllDiscounts": "할인 모두 취소",
     "points": "보유 포인트",
@@ -180,7 +187,14 @@
     "baudRate": "통신 속도 (Baud Rate)",
     "testPrint": "테스트 인쇄",
     "connected": "연결됨",
-    "disconnected": "연결 안 됨"
+    "disconnected": "연결 안 됨",
+    "appInfo": "앱 정보",
+    "checkForUpdates": "업데이트 확인",
+    "checkForUpdatesDesc": "현재 버전 정보를 확인하고 최신 버전으로 업데이트합니다.",
+    "versionInfo": "버전 정보",
+    "currentVersion": "현재 버전",
+    "latestVersion": "최신 버전",
+    "forceUpdateDesc": "최신 버전으로 업데이트를 시작하려면 아래 버튼을 클릭하세요."
   },
   "session": {
     "startBusiness": "영업 시작",
@@ -209,7 +223,9 @@
     "refresh": "새로고침",
     "apply": "적용",
     "reset": "초기화",
-    "select": "선택"
+    "select": "선택",
+    "updateNow": "지금 업데이트",
+    "later": "나중에"
   },
   "payment": {
     "splitPayment": "분할 결제",
@@ -226,5 +242,21 @@
     "paymentComplete": "결제 완료",
     "amountInput": "금액 입력",
     "inputComplete": "입력 완료"
+  },
+  "customers": {
+    "searchTitle": "회원 검색",
+    "searchHint": "휴대폰 번호 입력",
+    "noSearchResults": "검색 결과가 없습니다.",
+    "searchErrorNotice": "정보를 검색하는 중에 문제가 발생했습니다.",
+    "registerPrompt": "신규 회원으로 등록하시겠습니까?",
+    "noSearchResultsTitle": "검색된 회원이 없습니다.",
+    "registerNew": "신규 회원 등록",
+    "name": "이름",
+    "enterName": "이름을 입력하세요.",
+    "phone": "휴대폰 번호",
+    "phoneHint": "전화번호 입력",
+    "enterPhone": "번호를 입력하세요.",
+    "phoneTooShort": "번호가 너무 짧습니다.",
+    "registerFailed": "회원 등록이 원활하지 않습니다"
   }
 }

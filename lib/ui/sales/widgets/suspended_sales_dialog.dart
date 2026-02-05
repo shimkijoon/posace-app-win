@@ -5,6 +5,7 @@ import '../../../../core/i18n/app_localizations.dart';
 import '../../../../data/local/app_database.dart';
 import '../../../../core/storage/auth_storage.dart';
 import '../../../../data/remote/pos_suspended_api.dart';
+import '../../../../core/i18n/locale_helper.dart';
 
 class SuspendedSalesDialog extends StatefulWidget {
   const SuspendedSalesDialog({
@@ -21,6 +22,7 @@ class SuspendedSalesDialog extends StatefulWidget {
 class _SuspendedSalesDialogState extends State<SuspendedSalesDialog> {
   List<dynamic> _suspendedSales = [];
   bool _isLoading = true;
+  String _countryCode = 'KR';
 
   @override
   void initState() {
@@ -36,8 +38,19 @@ class _SuspendedSalesDialogState extends State<SuspendedSalesDialog> {
       final session = await auth.getSessionInfo();
       final token = await auth.getAccessToken();
       final storeId = session['storeId'];
+      final sessionCountry = (session['country'] as String?)?.trim();
+      final uiLanguage = (session['uiLanguage'] as String?)?.trim() ?? '';
 
       if (storeId == null) throw Exception('매장 정보가 없습니다.');
+      final derivedCountry = () {
+        if (uiLanguage.startsWith('ja')) return 'JP';
+        if (uiLanguage == 'zh-TW') return 'TW';
+        if (uiLanguage == 'zh-HK') return 'HK';
+        if (uiLanguage == 'en-SG') return 'SG';
+        if (uiLanguage == 'en-AU') return 'AU';
+        return 'KR';
+      }();
+      _countryCode = (sessionCountry != null && sessionCountry.isNotEmpty) ? sessionCountry : derivedCountry;
 
       // ✅ 1. 로컬 DB에서 보류 거래 조회
       List<dynamic> localSales = [];
@@ -166,7 +179,7 @@ class _SuspendedSalesDialogState extends State<SuspendedSalesDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(locale: 'ko_KR', symbol: '₩');
+    final currencyFormat = LocaleHelper.getCurrencyFormat(_countryCode);
     final dateFormat = DateFormat('yyyy-MM-dd HH:mm:ss');
 
     return Dialog(
@@ -224,7 +237,7 @@ class _SuspendedSalesDialogState extends State<SuspendedSalesDialog> {
                         ),
                       ),
                       child: ListTile(
-                        onTap: () => Navigator.pop(context, sale['id']),
+                        onTap: () => Navigator.pop(context, sale),
                         leading: isLocalOnly
                             ? const Tooltip(
                                 message: '미전송 (서버 동기화 필요)',
@@ -257,7 +270,7 @@ class _SuspendedSalesDialogState extends State<SuspendedSalesDialog> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             TextButton(
-                              onPressed: () => Navigator.pop(context, sale['id']),
+                              onPressed: () => Navigator.pop(context, sale),
                               child: Text(AppLocalizations.of(context)!.translate('sales.retrieve')),
                             ),
                             IconButton(

@@ -10,6 +10,7 @@ import '../../../core/printer/receipt_templates.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/storage/settings_storage.dart';
 import '../../../core/storage/auth_storage.dart';
+import '../../../core/i18n/locale_helper.dart';
 
 class ReceiptDetailDialog extends StatefulWidget {
   const ReceiptDetailDialog({
@@ -86,7 +87,19 @@ class _ReceiptDetailDialogState extends State<ReceiptDetailDialog> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final currencyFormat = NumberFormat.currency(locale: 'ko_KR', symbol: '₩');
+    final sessionCountry = (_storeInfo['country'] as String?)?.trim();
+    final uiLanguage = (_storeInfo['uiLanguage'] as String?)?.trim() ?? '';
+    final derivedCountry = () {
+      if (uiLanguage.startsWith('ja')) return 'JP';
+      if (uiLanguage == 'zh-TW') return 'TW';
+      if (uiLanguage == 'zh-HK') return 'HK';
+      if (uiLanguage == 'en-SG') return 'SG';
+      if (uiLanguage == 'en-AU') return 'AU';
+      return 'KR';
+    }();
+    final countryCode =
+        (sessionCountry != null && sessionCountry.isNotEmpty) ? sessionCountry : derivedCountry;
+    final currencyFormat = LocaleHelper.getCurrencyFormat(countryCode);
     final storeName = _storeInfo['name'] ?? 'POSAce Store';
     final bizNo = _storeInfo['businessNumber'] ?? '-';
     final address = _storeInfo['address']?.replaceAll('||', ' ') ?? '-';
