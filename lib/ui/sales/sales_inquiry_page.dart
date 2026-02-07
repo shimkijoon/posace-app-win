@@ -6,6 +6,8 @@ import '../../data/local/models.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../../core/theme/app_theme.dart';
 import '../sales/widgets/title_bar.dart';
+import '../common/navigation_title_bar.dart';
+import '../common/navigation_tab.dart';
 import 'widgets/receipt_detail_dialog.dart';
 import '../../core/storage/auth_storage.dart';
 import '../../core/i18n/locale_helper.dart';
@@ -203,9 +205,9 @@ class _SalesInquiryPageState extends State<SalesInquiryPage> {
       backgroundColor: AppTheme.background,
       body: Column(
         children: [
-          TitleBar(
-            title: AppLocalizations.of(context)!.translate('salesInquiry.title'),
-            onHomePressed: () => Navigator.pop(context),
+          NavigationTitleBar(
+            currentTab: NavigationTab.history,
+            database: widget.database,
           ),
           
           // Filters

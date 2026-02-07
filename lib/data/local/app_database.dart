@@ -9,7 +9,7 @@ import 'models/bundle_models.dart';
 
 class AppDatabase {
   static const _databaseName = 'posace.db';
-  static const _databaseVersion = 14;
+  static const _databaseVersion = 15;
 
   Database? _database;
 
@@ -64,6 +64,7 @@ class AppDatabase {
         stockEnabled INTEGER NOT NULL,
         stockQuantity INTEGER,
         isActive INTEGER NOT NULL,
+        sortOrder INTEGER NOT NULL DEFAULT 0,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         kitchenStationId TEXT,
@@ -638,6 +639,12 @@ class AppDatabase {
         await db.execute('ALTER TABLE sales ADD COLUMN saleTime TEXT');
       } catch (_) {}
     }
+
+    if (oldVersion < 15) {
+      try {
+        await db.execute('ALTER TABLE products ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0');
+      } catch (_) {}
+    }
   }
 
   Future<void> init() async {
@@ -734,7 +741,7 @@ class AppDatabase {
 
   Future<List<ProductModel>> getProducts() async {
     final db = await database;
-    final maps = await db.query('products', orderBy: 'createdAt DESC');
+    final maps = await db.query('products', orderBy: 'sortOrder ASC, createdAt DESC');
     
     List<ProductModel> products = [];
     for (final map in maps) {
@@ -750,7 +757,7 @@ class AppDatabase {
       'products',
       where: 'categoryId = ? AND isActive = 1',
       whereArgs: [categoryId],
-      orderBy: 'createdAt DESC',
+      orderBy: 'sortOrder ASC, createdAt DESC',
     );
     
     List<ProductModel> products = [];

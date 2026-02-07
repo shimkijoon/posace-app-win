@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/unified_order.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/app_localizations.dart';
 
 class OrderFilterBar extends StatelessWidget {
   final String? selectedStatus;
@@ -41,8 +42,8 @@ class OrderFilterBar extends StatelessWidget {
             children: [
               const Icon(Icons.filter_list, size: 20),
               const SizedBox(width: 8),
-              const Text(
-                '필터',
+              Text(
+                AppLocalizations.of(context)!.translate('orders.filter.title'),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -53,7 +54,7 @@ class OrderFilterBar extends StatelessWidget {
                 TextButton.icon(
                   onPressed: onClearFilters,
                   icon: const Icon(Icons.clear, size: 16),
-                  label: const Text('초기화'),
+                  label: Text(AppLocalizations.of(context)!.translate('orders.filter.reset')),
                   style: TextButton.styleFrom(
                     foregroundColor: Colors.grey[600],
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -69,7 +70,7 @@ class OrderFilterBar extends StatelessWidget {
             runSpacing: 8,
             children: [
               // 주문 타입 필터
-              _buildTypeFilterChips(),
+              _buildTypeFilterChips(context),
               
               // 구분선
               Container(
@@ -80,7 +81,7 @@ class OrderFilterBar extends StatelessWidget {
               ),
               
               // 상태 필터
-              _buildStatusFilterChips(),
+              _buildStatusFilterChips(context),
             ],
           ),
         ],
@@ -88,32 +89,32 @@ class OrderFilterBar extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeFilterChips() {
+  Widget _buildTypeFilterChips(BuildContext context) {
     return Wrap(
       spacing: 8,
       children: [
         _buildFilterChip(
-          label: '전체',
+          label: AppLocalizations.of(context)!.translate('orders.filter.typeAll'),
           isSelected: selectedType == null,
           onTap: () => onTypeChanged(null),
           icon: Icons.all_inclusive,
         ),
         _buildFilterChip(
-          label: '테이블',
+          label: AppLocalizations.of(context)!.translate('orders.filter.typeTable'),
           isSelected: selectedType == OrderType.TABLE,
           onTap: () => onTypeChanged(OrderType.TABLE),
           icon: Icons.table_restaurant,
           color: Colors.blue,
         ),
         _buildFilterChip(
-          label: '테이크아웃',
+          label: AppLocalizations.of(context)!.translate('orders.filter.typeTakeout'),
           isSelected: selectedType == OrderType.TAKEOUT,
           onTap: () => onTypeChanged(OrderType.TAKEOUT),
           icon: Icons.takeout_dining,
           color: Colors.green,
         ),
         _buildFilterChip(
-          label: '배달',
+          label: AppLocalizations.of(context)!.translate('orders.filter.typeDelivery'),
           isSelected: selectedType == OrderType.DELIVERY,
           onTap: () => onTypeChanged(OrderType.DELIVERY),
           icon: Icons.delivery_dining,
@@ -123,46 +124,46 @@ class OrderFilterBar extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusFilterChips() {
+  Widget _buildStatusFilterChips(BuildContext context) {
     return Wrap(
       spacing: 8,
       children: [
         _buildFilterChip(
-          label: '전체',
+          label: AppLocalizations.of(context)!.translate('orders.filter.statusAll'),
           isSelected: selectedStatus == null,
           onTap: () => onStatusChanged(null),
           icon: Icons.all_inclusive,
         ),
         _buildFilterChip(
-          label: '접수',
+          label: AppLocalizations.of(context)!.translate('orders.filter.statusPending'),
           isSelected: selectedStatus == 'PENDING',
           onTap: () => onStatusChanged('PENDING'),
           icon: Icons.hourglass_empty,
           color: Colors.grey,
         ),
         _buildFilterChip(
-          label: '확정',
+          label: AppLocalizations.of(context)!.translate('orders.filter.statusConfirmed'),
           isSelected: selectedStatus == 'CONFIRMED',
           onTap: () => onStatusChanged('CONFIRMED'),
           icon: Icons.check_circle_outline,
           color: Colors.blue,
         ),
         _buildFilterChip(
-          label: '조리중',
+          label: AppLocalizations.of(context)!.translate('orders.filter.statusCooking'),
           isSelected: selectedStatus == 'COOKING',
           onTap: () => onStatusChanged('COOKING'),
           icon: Icons.restaurant,
           color: Colors.orange,
         ),
         _buildFilterChip(
-          label: '준비완료',
+          label: AppLocalizations.of(context)!.translate('orders.filter.statusReady'),
           isSelected: selectedStatus == 'READY',
           onTap: () => onStatusChanged('READY'),
           icon: Icons.done,
           color: Colors.green,
         ),
         _buildFilterChip(
-          label: '완료',
+          label: AppLocalizations.of(context)!.translate('orders.filter.statusCompleted'),
           isSelected: selectedStatus == 'SERVED' || selectedStatus == 'PICKED_UP',
           onTap: () => onStatusChanged('SERVED'),
           icon: Icons.done_all,

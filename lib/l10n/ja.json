@@ -44,6 +44,7 @@
     "weeklySalesTrend": "週間売上推移",
     "startSale": "販売開始",
     "tableOrder": "テーブル注文",
+    "unifiedOrderManagement": "注文管理",
     "salesHistory": "売上履歴照会",
     "posSettings": "POS設定",
     "startBusiness": "営業開始",
@@ -52,6 +53,141 @@
     "enterClosingAmount": "最終現金残高を入力してください。",
     "updateTitle": "新しいバージョンのアップデート",
     "updateMessage": "最新バージョンがリリースされました。今すぐアップデートしますか？"
+  },
+  "nav": {
+    "home": "ホーム",
+    "sales": "販売",
+    "tables": "テーブル",
+    "orders": "注文管理",
+    "history": "売上履歴",
+    "settings": "設定"
+  },
+  "orders": {
+    "tabs": {
+      "waiting": "待機",
+      "cookingQueue": "調理待ち",
+      "unpaid": "未決済",
+      "takeout": "テイクアウト",
+      "table": "テーブル",
+      "all": "全体"
+    },
+    "empty": {
+      "waiting": "待機中の注文はありません",
+      "unpaid": "未決済の注文はありません",
+      "takeout": "テイクアウトの注文はありません",
+      "table": "テーブル注文はありません",
+      "all": "注文はありません"
+    },
+    "tooltip": {
+      "refresh": "更新",
+      "settings": "設定"
+    },
+    "button": {
+      "refresh": "更新",
+      "close": "閉じる"
+    },
+    "snackbar": {
+      "loadFailed": "注文データの読み込みに失敗しました: {error}",
+      "statusUpdated": "注文状態が更新されました",
+      "statusUpdateFailed": "状態の更新に失敗しました: {error}",
+      "cookingStart": "調理を開始しました",
+      "cookingComplete": "調理が完了しました",
+      "cookingWaiting": "調理待ちに変更しました",
+      "cookingUpdateFailed": "調理状態の更新に失敗しました: {error}"
+    },
+    "detail": {
+      "title": "注文詳細 - {orderNumber}",
+      "orderType": "注文タイプ",
+      "status": "状態",
+      "cookingStatus": "調理状態",
+      "totalAmount": "合計金額",
+      "orderTime": "注文時間",
+      "customerName": "顧客名",
+      "contact": "連絡先",
+      "scheduledTime": "予約時間",
+      "table": "テーブル",
+      "memo": "メモ",
+      "items": "注文アイテム:"
+    },
+    "type": {
+      "table": "テーブル",
+      "takeout": "テイクアウト",
+      "delivery": "配達"
+    },
+    "status": {
+      "pending": "注文受付",
+      "confirmed": "注文確定",
+      "cooking": "調理中",
+      "pickupReady": "受け取り待ち",
+      "serveReady": "提供待ち",
+      "served": "提供完了",
+      "pickedUp": "受け取り完了",
+      "cancelled": "キャンセル",
+      "modified": "変更"
+    },
+    "cookingStatus": {
+      "waiting": "調理待ち",
+      "inProgress": "調理中",
+      "completed": "調理完了",
+      "unknown": "未定"
+    },
+    "paymentBadge": {
+      "paid": "決済済み",
+      "unpaid": "未決済"
+    },
+    "action": {
+      "confirmOrder": "注文確定",
+      "startCooking": "調理開始",
+      "readyComplete": "準備完了",
+      "switchTable": "テーブル移動",
+      "cookingStart": "調理開始",
+      "cookingComplete": "調理完了",
+      "serveComplete": "提供完了",
+      "pickupComplete": "受け取り完了"
+    },
+    "card": {
+      "tableLabel": "テーブル {tableNumber}",
+      "guestCount": "{count}名",
+      "pickupSchedule": "受け取り予定: {time}",
+      "itemsSummary": "注文内容 ({count}件)",
+      "itemsMore": "他 {count}件",
+      "eta": "完了予定: {time}"
+    },
+    "filter": {
+      "title": "フィルター",
+      "reset": "リセット",
+      "typeAll": "全体",
+      "typeTable": "テーブル",
+      "typeTakeout": "テイクアウト",
+      "typeDelivery": "配達",
+      "statusAll": "全体",
+      "statusPending": "受付",
+      "statusConfirmed": "確定",
+      "statusCooking": "調理中",
+      "statusReady": "準備完了",
+      "statusCompleted": "完了"
+    },
+    "queue": {
+      "title": "調理待ち",
+      "waitingCount": "{count}件の注文待ち",
+      "stat": {
+        "waiting": "待機",
+        "cooking": "調理中",
+        "done": "完了"
+      },
+      "empty": {
+        "title": "調理待ちの注文はありません",
+        "subtitle": "新しい注文はここに表示されます"
+      },
+      "eta": "完了予定: {time}"
+    },
+    "priority": {
+      "regular": "常連客",
+      "bulk": "大量注文",
+      "vip": "VIP客",
+      "urgent": "緊急注文",
+      "default": "優先度 {priority}"
+    }
   },
   "taxes": {
     "title": "税金"
@@ -106,6 +242,7 @@
     "suspendedOrderLoadFailed": "保留注文の読み込みに失敗しました",
     "suspendedOrderDeleteFailed": "保留注文の削除に失敗しました",
     "noSuspendedOrders": "保留された取引がありません",
+    "suspendedSalesTitle": "保留取引一覧",
     "retrieve": "取得"
   },
   "receipt": {
@@ -241,7 +378,17 @@
     "cardManual": "カード直接入力",
     "paymentComplete": "決済完了",
     "amountInput": "金額入力",
-    "inputComplete": "入力完了"
+    "inputComplete": "入力完了",
+    "cashPayment": "現金決済",
+    "cardPayment": "カード決済",
+    "orderComplete": "注文完了",
+    "cashOrderCompleted": "現金{orderType}注文が完了しました。",
+    "cardOrderCompleted": "カード{orderType}注文が完了しました。",
+    "orderCompleted": "{orderType}注文が完了しました。",
+    "orderProcessFailed": "注文処理失敗",
+    "tableOrderAccepted": "テーブル注文が受付されました。",
+    "takeoutOrder": "テイクアウト",
+    "tableOrder": "テーブル"
   },
   "customers": {
     "searchTitle": "会員検索",

@@ -9,6 +9,8 @@ import '../../data/remote/api_client.dart';
 import '../../data/remote/table_management_api.dart';
 import '../sales/sales_page.dart';
 import '../sales/widgets/title_bar.dart';
+import '../common/navigation_title_bar.dart';
+import '../common/navigation_tab.dart';
 import 'widgets/table_management_dialog.dart';
 
 class TableLayoutPage extends StatefulWidget {
@@ -175,9 +177,9 @@ class _TableLayoutPageState extends State<TableLayoutPage> {
       backgroundColor: AppTheme.background,
       body: Column(
         children: [
-          TitleBar(
-            title: AppLocalizations.of(context)!.tableOrder,
-            onHomePressed: () => Navigator.pop(context),
+          NavigationTitleBar(
+            currentTab: NavigationTab.tables,
+            database: widget.database,
           ),
           _buildSubHeader(),
           Expanded(

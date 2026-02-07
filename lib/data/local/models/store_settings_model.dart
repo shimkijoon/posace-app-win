@@ -33,18 +33,18 @@ class StoreSettingsModel {
 
   factory StoreSettingsModel.fromMap(Map<String, dynamic> map) {
     return StoreSettingsModel(
-      id: map['id'] as String,
-      storeId: map['storeId'] as String,
-      receiptTemplateId: map['receiptTemplateId'] as String,
-      uiLanguage: map['uiLanguage'] as String,
-      taxCalculationMethod: map['taxCalculationMethod'] as String,
-      defaultTaxInclusive: map['defaultTaxInclusive'] as bool,
-      discountDisplayFormat: map['discountDisplayFormat'] as String,
-      allowMultipleDiscounts: map['allowMultipleDiscounts'] as bool,
+      id: map['id'] as String? ?? '',
+      storeId: map['storeId'] as String? ?? '',
+      receiptTemplateId: map['receiptTemplateId'] as String? ?? '',
+      uiLanguage: map['uiLanguage'] as String? ?? 'ko',
+      taxCalculationMethod: map['taxCalculationMethod'] as String? ?? 'VAT_INCLUDED',
+      defaultTaxInclusive: map['defaultTaxInclusive'] as bool? ?? true,
+      discountDisplayFormat: map['discountDisplayFormat'] as String? ?? 'PERCENTAGE',
+      allowMultipleDiscounts: map['allowMultipleDiscounts'] as bool? ?? false,
       receiptHeader: map['receiptHeader'] as String?,
       receiptFooter: map['receiptFooter'] as String?,
-      receiptShowTaxDetails: map['receiptShowTaxDetails'] as bool,
-      receiptShowDiscountDetails: map['receiptShowDiscountDetails'] as bool,
+      receiptShowTaxDetails: map['receiptShowTaxDetails'] as bool? ?? true,
+      receiptShowDiscountDetails: map['receiptShowDiscountDetails'] as bool? ?? true,
       receiptTemplate: map['receiptTemplate'] != null 
           ? ReceiptTemplateModel.fromMap(map['receiptTemplate'] as Map<String, dynamic>)
           : null,

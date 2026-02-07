@@ -398,6 +398,11 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     side: BorderSide(color: Colors.grey.shade400),
+                    textStyle: const TextStyle(
+                      inherit: true, // inherit 값을 명시적으로 설정
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ),
@@ -421,13 +426,10 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     side: BorderSide(color: Colors.blue.shade300),
-                  ).copyWith(
-                    textStyle: MaterialStateProperty.all<TextStyle>(
-                      const TextStyle(
-                        inherit: false,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    textStyle: const TextStyle(
+                      inherit: true, // inherit 값을 true로 통일
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                     child: Text(_showTestAccounts ? '테스트 계정 선택 닫기' : '테스트 계정 선택'),
@@ -518,11 +520,13 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       side: BorderSide(color: Colors.blue.shade200),
+                      textStyle: const TextStyle(
+                        inherit: true, // inherit 값을 명시적으로 설정
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                    child: const Text(
-                      '기본 테스트 계정으로 로그인',
-                      style: TextStyle(fontSize: 13),
-                    ),
+                    child: const Text('기본 테스트 계정으로 로그인'),
                   ),
                 ),
                 ],

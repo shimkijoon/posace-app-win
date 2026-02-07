@@ -8,9 +8,13 @@ import '../../data/local/app_database.dart';
 import '../../core/storage/auth_storage.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/cache/order_cache_service.dart';
+import '../../core/i18n/app_localizations.dart';
 import 'widgets/order_card.dart';
 import 'widgets/cooking_queue_section.dart';
 import 'widgets/order_filter_bar.dart';
+import '../common/navigation_title_bar.dart';
+import '../common/navigation_tab.dart';
+import '../tables/table_layout_page.dart';
 
 class UnifiedOrderManagementPage extends StatefulWidget {
   final AppDatabase database;
@@ -48,7 +52,7 @@ class _UnifiedOrderManagementPageState extends State<UnifiedOrderManagementPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _storage = AuthStorage();
     _cacheService = OrderCacheService();
     _initializeApi();
@@ -91,10 +95,16 @@ class _UnifiedOrderManagementPageState extends State<UnifiedOrderManagementPage>
               _cookingQueue = orders;
               break;
             case 2:
-              _takeoutOrders = orders;
+              _allOrders = orders;
               break;
             case 3:
+              _takeoutOrders = orders;
+              break;
+            case 4:
               _tableOrders = orders;
+              break;
+            case 5:
+              _allOrders = orders;
               break;
           }
         });
@@ -153,7 +163,11 @@ class _UnifiedOrderManagementPageState extends State<UnifiedOrderManagementPage>
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('주문 데이터 로드 실패: $e')),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.translate('orders.snackbar.loadFailed').replaceAll('{error}', '$e'),
+            ),
+          ),
         );
       }
     }
@@ -165,11 +179,17 @@ class _UnifiedOrderManagementPageState extends State<UnifiedOrderManagementPage>
       _loadOrders(); // 새로고침
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('주문 상태가 업데이트되었습니다')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.translate('orders.snackbar.statusUpdated')),
+        ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('상태 업데이트 실패: $e')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.translate('orders.snackbar.statusUpdateFailed').replaceAll('{error}', '$e'),
+          ),
+        ),
       );
     }
   }
@@ -177,18 +197,25 @@ class _UnifiedOrderManagementPageState extends State<UnifiedOrderManagementPage>
   Future<void> _updateCookingStatus(String orderId, CookingStatus status) async {
     try {
       await _orderApi.updateCookingStatus(orderId, status);
+      // 조리 상태와 주문 상태를 함께 갱신
+      if (status == CookingStatus.IN_PROGRESS) {
+        await _orderApi.updateOrderStatus(orderId, UnifiedOrderStatus.COOKING);
+      }
+      if (status == CookingStatus.COMPLETED) {
+        await _orderApi.updateOrderStatus(orderId, UnifiedOrderStatus.READY);
+      }
       _loadOrders(); // 새로고침
       
       String message = '';
       switch (status) {
         case CookingStatus.IN_PROGRESS:
-          message = '조리를 시작했습니다';
+          message = AppLocalizations.of(context)!.translate('orders.snackbar.cookingStart');
           break;
         case CookingStatus.COMPLETED:
-          message = '조리가 완료되었습니다';
+          message = AppLocalizations.of(context)!.translate('orders.snackbar.cookingComplete');
           break;
         case CookingStatus.WAITING:
-          message = '조리 대기 상태로 변경되었습니다';
+          message = AppLocalizations.of(context)!.translate('orders.snackbar.cookingWaiting');
           break;
       }
       
@@ -197,7 +224,11 @@ class _UnifiedOrderManagementPageState extends State<UnifiedOrderManagementPage>
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('조리 상태 업데이트 실패: $e')),
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.translate('orders.snackbar.cookingUpdateFailed').replaceAll('{error}', '$e'),
+          ),
+        ),
       );
     }
   }
@@ -216,106 +247,168 @@ class _UnifiedOrderManagementPageState extends State<UnifiedOrderManagementPage>
     return filtered;
   }
 
+  List<UnifiedOrder> _getUnpaidOrders() {
+    return _allOrders.where((order) => !order.isPaid).toList();
+  }
+
+  List<UnifiedOrder> _getWaitingOrders() {
+    return _allOrders
+        .where((order) => order.status == UnifiedOrderStatus.PENDING)
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('통합 주문 관리'),
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadOrders,
+      backgroundColor: AppTheme.background,
+      body: Column(
+        children: [
+          NavigationTitleBar(
+            currentTab: NavigationTab.orders,
+            database: widget.database,
           ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              // TODO: 주문 관리 설정 화면
-            },
+          // 새로고침 버튼을 포함한 상단 액션 바
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: const BoxDecoration(
+              color: AppTheme.surface,
+              border: Border(
+                bottom: BorderSide(color: AppTheme.border, width: 1),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _loadOrders,
+                  tooltip: AppLocalizations.of(context)!.translate('orders.tooltip.refresh'),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.settings),
+                  onPressed: () {
+                    // TODO: 주문 관리 설정 화면
+                  },
+                  tooltip: AppLocalizations.of(context)!.translate('orders.tooltip.settings'),
+                ),
+              ],
+            ),
           ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          // 탭 바
+          Container(
+            color: AppTheme.primary,
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: Colors.white,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
           tabs: [
             Tab(
-              text: '조리 대기열',
+              text: AppLocalizations.of(context)!.translate('orders.tabs.waiting'),
+              icon: Badge(
+                label: Text('${_getWaitingOrders().length}'),
+                child: const Icon(Icons.queue),
+              ),
+            ),
+            Tab(
+              text: AppLocalizations.of(context)!.translate('orders.tabs.cookingQueue'),
               icon: Badge(
                 label: Text('${_cookingQueue.length}'),
                 child: const Icon(Icons.restaurant),
               ),
             ),
             Tab(
-              text: '테이크아웃',
+              text: AppLocalizations.of(context)!.translate('orders.tabs.unpaid'),
+              icon: Badge(
+                label: Text('${_getUnpaidOrders().length}'),
+                child: const Icon(Icons.payments_outlined),
+              ),
+            ),
+            Tab(
+              text: AppLocalizations.of(context)!.translate('orders.tabs.takeout'),
               icon: Badge(
                 label: Text('${_takeoutOrders.length}'),
                 child: const Icon(Icons.takeout_dining),
               ),
             ),
             Tab(
-              text: '테이블',
+              text: AppLocalizations.of(context)!.translate('orders.tabs.table'),
               icon: Badge(
                 label: Text('${_tableOrders.length}'),
                 child: const Icon(Icons.table_restaurant),
               ),
             ),
             Tab(
-              text: '전체',
+              text: AppLocalizations.of(context)!.translate('orders.tabs.all'),
               icon: Badge(
                 label: Text('${_allOrders.length}'),
                 child: const Icon(Icons.list_alt),
               ),
             ),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          // 필터 바
-          OrderFilterBar(
-            selectedStatus: _selectedStatus,
-            selectedType: _selectedType,
-            onStatusChanged: (status) => setState(() => _selectedStatus = status),
-            onTypeChanged: (type) => setState(() => _selectedType = type),
-            onClearFilters: () => setState(() {
-              _selectedStatus = null;
-              _selectedType = null;
-            }),
+              ],
+            ),
           ),
-          
-          // 탭 콘텐츠
+          // 메인 콘텐츠
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
+            child: Column(
               children: [
-                // 조리 대기열
-                CookingQueueSection(
-                  orders: _getFilteredOrders(_cookingQueue),
-                  isLoading: _isLoading,
-                  onStartCooking: (orderId) => _updateCookingStatus(orderId, CookingStatus.IN_PROGRESS),
-                  onCompleteCooking: (orderId) => _updateCookingStatus(orderId, CookingStatus.COMPLETED),
-                  onRefresh: _loadOrders,
+                // 필터 바
+                OrderFilterBar(
+                  selectedStatus: _selectedStatus,
+                  selectedType: _selectedType,
+                  onStatusChanged: (status) => setState(() => _selectedStatus = status),
+                  onTypeChanged: (type) => setState(() => _selectedType = type),
+                  onClearFilters: () => setState(() {
+                    _selectedStatus = null;
+                    _selectedType = null;
+                  }),
                 ),
                 
-                // 테이크아웃 주문
-                _buildOrderList(
-                  _getFilteredOrders(_takeoutOrders),
-                  emptyMessage: '테이크아웃 주문이 없습니다',
-                ),
-                
-                // 테이블 주문
-                _buildOrderList(
-                  _getFilteredOrders(_tableOrders),
-                  emptyMessage: '테이블 주문이 없습니다',
-                ),
-                
-                // 전체 주문
-                _buildOrderList(
-                  _getFilteredOrders(_allOrders),
-                  emptyMessage: '주문이 없습니다',
+                // 탭 콘텐츠
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      // 대기 주문
+                      _buildOrderList(
+                        _getFilteredOrders(_getWaitingOrders()),
+                        emptyMessage: AppLocalizations.of(context)!.translate('orders.empty.waiting'),
+                      ),
+
+                      // 조리 대기열
+                      CookingQueueSection(
+                        orders: _getFilteredOrders(_cookingQueue),
+                        isLoading: _isLoading,
+                        onStartCooking: (orderId) => _updateCookingStatus(orderId, CookingStatus.IN_PROGRESS),
+                        onCompleteCooking: (orderId) => _updateCookingStatus(orderId, CookingStatus.COMPLETED),
+                        onRefresh: _loadOrders,
+                      ),
+
+                      // 결제 대기 주문
+                      _buildOrderList(
+                        _getFilteredOrders(_getUnpaidOrders()),
+                        emptyMessage: AppLocalizations.of(context)!.translate('orders.empty.unpaid'),
+                      ),
+                      
+                      // 테이크아웃 주문
+                      _buildOrderList(
+                        _getFilteredOrders(_takeoutOrders),
+                        emptyMessage: AppLocalizations.of(context)!.translate('orders.empty.takeout'),
+                      ),
+                      
+                      // 테이블 주문
+                      _buildOrderList(
+                        _getFilteredOrders(_tableOrders),
+                        emptyMessage: AppLocalizations.of(context)!.translate('orders.empty.table'),
+                      ),
+                      
+                      // 전체 주문
+                      _buildOrderList(
+                        _getFilteredOrders(_allOrders),
+                        emptyMessage: AppLocalizations.of(context)!.translate('orders.empty.all'),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -352,7 +445,7 @@ class _UnifiedOrderManagementPageState extends State<UnifiedOrderManagementPage>
             ElevatedButton.icon(
               onPressed: _loadOrders,
               icon: const Icon(Icons.refresh),
-              label: const Text('새로고침'),
+              label: Text(AppLocalizations.of(context)!.translate('orders.button.refresh')),
             ),
           ],
         ),
@@ -372,6 +465,13 @@ class _UnifiedOrderManagementPageState extends State<UnifiedOrderManagementPage>
               order: order,
               onStatusUpdate: _updateOrderStatus,
               onCookingStatusUpdate: _updateCookingStatus,
+              onTableManage: order.isTableOrder
+                  ? () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => TableLayoutPage(database: widget.database),
+                        ),
+                      )
+                  : null,
               onTap: () => _showOrderDetail(order),
             ),
           );
@@ -384,31 +484,48 @@ class _UnifiedOrderManagementPageState extends State<UnifiedOrderManagementPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('주문 상세 - ${order.orderNumber}'),
+        title: Text(
+          AppLocalizations.of(context)!.translate('orders.detail.title').replaceAll('{orderNumber}', order.orderNumber),
+        ),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailRow('주문 타입', order.type.name),
-              _buildDetailRow('상태', order.statusDisplayText),
-              _buildDetailRow('조리 상태', order.cookingStatusDisplayText),
-              _buildDetailRow('총 금액', '₩${NumberFormat('#,###').format(order.totalAmount)}'),
-              _buildDetailRow('주문 시간', DateFormat('MM/dd HH:mm').format(order.createdAt)),
+              _buildDetailRow(AppLocalizations.of(context)!.translate('orders.detail.orderType'), _orderTypeLabel(context, order.type)),
+              _buildDetailRow(AppLocalizations.of(context)!.translate('orders.detail.status'), _statusLabel(context, order.status, order.type)),
+              _buildDetailRow(AppLocalizations.of(context)!.translate('orders.detail.cookingStatus'), _cookingStatusLabel(context, order.cookingStatus)),
+              _buildDetailRow(
+                AppLocalizations.of(context)!.translate('orders.detail.totalAmount'),
+                '₩${NumberFormat('#,###').format(order.totalAmount)}',
+              ),
+              _buildDetailRow(
+                AppLocalizations.of(context)!.translate('orders.detail.orderTime'),
+                DateFormat('MM/dd HH:mm').format(order.createdAt),
+              ),
               
               if (order.customerName != null)
-                _buildDetailRow('고객명', order.customerName!),
+                _buildDetailRow(AppLocalizations.of(context)!.translate('orders.detail.customerName'), order.customerName!),
               if (order.customerPhone != null)
-                _buildDetailRow('연락처', order.customerPhone!),
+                _buildDetailRow(AppLocalizations.of(context)!.translate('orders.detail.contact'), order.customerPhone!),
               if (order.scheduledTime != null)
-                _buildDetailRow('예약 시간', DateFormat('MM/dd HH:mm').format(order.scheduledTime!)),
+                _buildDetailRow(
+                  AppLocalizations.of(context)!.translate('orders.detail.scheduledTime'),
+                  DateFormat('MM/dd HH:mm').format(order.scheduledTime!),
+                ),
               if (order.table != null)
-                _buildDetailRow('테이블', order.table!['tableNumber'] ?? ''),
+                _buildDetailRow(
+                  AppLocalizations.of(context)!.translate('orders.detail.table'),
+                  '${order.table!['tableNumber'] ?? ''}',
+                ),
               if (order.note != null)
-                _buildDetailRow('메모', order.note!),
+                _buildDetailRow(AppLocalizations.of(context)!.translate('orders.detail.memo'), order.note!),
               
               const SizedBox(height: 16),
-              const Text('주문 아이템:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(
+                AppLocalizations.of(context)!.translate('orders.detail.items'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               
               ...order.items.map((item) => Padding(
@@ -428,7 +545,7 @@ class _UnifiedOrderManagementPageState extends State<UnifiedOrderManagementPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('닫기'),
+            child: Text(AppLocalizations.of(context)!.translate('orders.button.close')),
           ),
         ],
       ),
@@ -452,5 +569,52 @@ class _UnifiedOrderManagementPageState extends State<UnifiedOrderManagementPage>
         ],
       ),
     );
+  }
+
+  String _orderTypeLabel(BuildContext context, OrderType type) {
+    switch (type) {
+      case OrderType.TABLE:
+        return AppLocalizations.of(context)!.translate('orders.type.table');
+      case OrderType.TAKEOUT:
+        return AppLocalizations.of(context)!.translate('orders.type.takeout');
+      case OrderType.DELIVERY:
+        return AppLocalizations.of(context)!.translate('orders.type.delivery');
+    }
+  }
+
+  String _statusLabel(BuildContext context, UnifiedOrderStatus status, OrderType type) {
+    switch (status) {
+      case UnifiedOrderStatus.PENDING:
+        return AppLocalizations.of(context)!.translate('orders.status.pending');
+      case UnifiedOrderStatus.CONFIRMED:
+        return AppLocalizations.of(context)!.translate('orders.status.confirmed');
+      case UnifiedOrderStatus.COOKING:
+        return AppLocalizations.of(context)!.translate('orders.status.cooking');
+      case UnifiedOrderStatus.READY:
+        return type == OrderType.TAKEOUT
+            ? AppLocalizations.of(context)!.translate('orders.status.pickupReady')
+            : AppLocalizations.of(context)!.translate('orders.status.serveReady');
+      case UnifiedOrderStatus.SERVED:
+        return AppLocalizations.of(context)!.translate('orders.status.served');
+      case UnifiedOrderStatus.PICKED_UP:
+        return AppLocalizations.of(context)!.translate('orders.status.pickedUp');
+      case UnifiedOrderStatus.CANCELLED:
+        return AppLocalizations.of(context)!.translate('orders.status.cancelled');
+      case UnifiedOrderStatus.MODIFIED:
+        return AppLocalizations.of(context)!.translate('orders.status.modified');
+    }
+  }
+
+  String _cookingStatusLabel(BuildContext context, CookingStatus? status) {
+    switch (status) {
+      case CookingStatus.WAITING:
+        return AppLocalizations.of(context)!.translate('orders.cookingStatus.waiting');
+      case CookingStatus.IN_PROGRESS:
+        return AppLocalizations.of(context)!.translate('orders.cookingStatus.inProgress');
+      case CookingStatus.COMPLETED:
+        return AppLocalizations.of(context)!.translate('orders.cookingStatus.completed');
+      case null:
+        return AppLocalizations.of(context)!.translate('orders.cookingStatus.unknown');
+    }
   }
 }

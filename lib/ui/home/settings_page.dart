@@ -17,6 +17,8 @@ import '../../data/remote/pos_master_api.dart';
 import '../../data/remote/pos_sales_api.dart';
 import '../../sync/sync_service.dart';
 import '../sales/widgets/title_bar.dart';
+import '../common/navigation_title_bar.dart';
+import '../common/navigation_tab.dart';
 import '../../core/version_service.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -510,9 +512,9 @@ class _SettingsPageState extends State<SettingsPage> {
       backgroundColor: AppTheme.background,
       body: Column(
         children: [
-          TitleBar(
-            title: AppLocalizations.of(context)!.translate('settings.title'),
-            onHomePressed: () => Navigator.pop(context),
+          NavigationTitleBar(
+            currentTab: NavigationTab.settings,
+            database: widget.database,
           ),
           Expanded(
             child: _isLoading 

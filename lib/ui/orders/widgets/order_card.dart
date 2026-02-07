@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../data/models/unified_order.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/app_localizations.dart';
 
 class OrderCard extends StatelessWidget {
   final UnifiedOrder order;
   final Function(String orderId, UnifiedOrderStatus status)? onStatusUpdate;
   final Function(String orderId, CookingStatus status)? onCookingStatusUpdate;
+  final VoidCallback? onTableManage;
   final VoidCallback? onTap;
 
   const OrderCard({
@@ -14,11 +16,13 @@ class OrderCard extends StatelessWidget {
     required this.order,
     this.onStatusUpdate,
     this.onCookingStatusUpdate,
+    this.onTableManage,
     this.onTap,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -71,8 +75,10 @@ class OrderCard extends StatelessWidget {
                     ),
                   ),
                   
-                  // 상태 배지
-                  _buildStatusBadge(),
+                  // 상태/결제 배지
+                  _buildStatusBadge(context),
+                  const SizedBox(width: 6),
+                  _buildPaymentBadge(context),
                 ],
               ),
               
@@ -108,14 +114,16 @@ class OrderCard extends StatelessWidget {
                     Icon(Icons.table_restaurant, size: 16, color: Colors.grey[600]),
                     const SizedBox(width: 4),
                     Text(
-                      '테이블 ${order.table!['tableNumber']}',
+                      l10n.translate('orders.card.tableLabel').replaceAll('{tableNumber}', '${order.table!['tableNumber']}'),
                       style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                     if (order.guestCount != null) ...[
                       const SizedBox(width: 8),
                       Icon(Icons.people, size: 16, color: Colors.grey[600]),
                       const SizedBox(width: 4),
-                      Text('${order.guestCount}명'),
+                      Text(
+                        l10n.translate('orders.card.guestCount').replaceAll('{count}', '${order.guestCount}'),
+                      ),
                     ],
                   ],
                 ),
@@ -129,7 +137,9 @@ class OrderCard extends StatelessWidget {
                     Icon(Icons.schedule, size: 16, color: Colors.orange[600]),
                     const SizedBox(width: 4),
                     Text(
-                      '픽업 예정: ${DateFormat('HH:mm').format(order.scheduledTime!)}',
+                      l10n
+                          .translate('orders.card.pickupSchedule')
+                          .replaceAll('{time}', DateFormat('HH:mm').format(order.scheduledTime!)),
                       style: TextStyle(
                         color: Colors.orange[600],
                         fontWeight: FontWeight.w500,
@@ -154,7 +164,9 @@ class OrderCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '주문 내역 (${order.items.length}개)',
+                          l10n
+                              .translate('orders.card.itemsSummary')
+                              .replaceAll('{count}', '${order.items.length}'),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -183,7 +195,9 @@ class OrderCard extends StatelessWidget {
                     )),
                     if (order.items.length > 2)
                       Text(
-                        '외 ${order.items.length - 2}개',
+                        l10n
+                            .translate('orders.card.itemsMore')
+                            .replaceAll('{count}', '${order.items.length - 2}'),
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -214,7 +228,9 @@ class OrderCard extends StatelessWidget {
                     const Spacer(),
                     if (order.estimatedCompletionTime != null)
                       Text(
-                        '예상 완료: ${DateFormat('HH:mm').format(order.estimatedCompletionTime!)}',
+                        l10n
+                            .translate('orders.card.eta')
+                            .replaceAll('{time}', DateFormat('HH:mm').format(order.estimatedCompletionTime!)),
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -255,7 +271,7 @@ class OrderCard extends StatelessWidget {
               
               // 액션 버튼들
               const SizedBox(height: 12),
-              _buildActionButtons(),
+              _buildActionButtons(context),
             ],
           ),
         ),
@@ -263,8 +279,9 @@ class OrderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge() {
+  Widget _buildStatusBadge(BuildContext context) {
     final color = _getStatusColor(order.status);
+    final label = _statusLabel(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -273,7 +290,7 @@ class OrderCard extends StatelessWidget {
         border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Text(
-        order.statusDisplayText,
+        label,
         style: TextStyle(
           fontSize: 12,
           color: color,
@@ -283,8 +300,122 @@ class OrderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons() {
+  String _statusLabel(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (order.status) {
+      case UnifiedOrderStatus.PENDING:
+        return l10n.translate('orders.status.pending');
+      case UnifiedOrderStatus.CONFIRMED:
+        return l10n.translate('orders.status.confirmed');
+      case UnifiedOrderStatus.COOKING:
+        return l10n.translate('orders.status.cooking');
+      case UnifiedOrderStatus.READY:
+        return order.isTakeoutOrder
+            ? l10n.translate('orders.status.pickupReady')
+            : l10n.translate('orders.status.serveReady');
+      case UnifiedOrderStatus.SERVED:
+        return l10n.translate('orders.status.served');
+      case UnifiedOrderStatus.PICKED_UP:
+        return l10n.translate('orders.status.pickedUp');
+      case UnifiedOrderStatus.CANCELLED:
+        return l10n.translate('orders.status.cancelled');
+      case UnifiedOrderStatus.MODIFIED:
+        return l10n.translate('orders.status.modified');
+    }
+  }
+
+  Widget _buildPaymentBadge(BuildContext context) {
+    final isPaid = order.isPaid;
+    final color = isPaid ? Colors.green : Colors.red;
+    final label = isPaid
+        ? AppLocalizations.of(context)!.translate('orders.paymentBadge.paid')
+        : AppLocalizations.of(context)!.translate('orders.paymentBadge.unpaid');
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          color: color,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(BuildContext context) {
     final buttons = <Widget>[];
+
+    // 주문 상태 전환 버튼
+    if (order.status == UnifiedOrderStatus.PENDING && onStatusUpdate != null) {
+      buttons.add(
+        ElevatedButton.icon(
+          onPressed: () => onStatusUpdate!(order.id, UnifiedOrderStatus.CONFIRMED),
+          icon: const Icon(Icons.check_circle, size: 16),
+          label: Text(AppLocalizations.of(context)!.translate('orders.action.confirmOrder')),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+      );
+    }
+
+    if (order.status == UnifiedOrderStatus.CONFIRMED &&
+        order.cookingStatus == null &&
+        onStatusUpdate != null) {
+      buttons.add(
+        ElevatedButton.icon(
+          onPressed: () => onStatusUpdate!(order.id, UnifiedOrderStatus.COOKING),
+          icon: const Icon(Icons.play_arrow, size: 16),
+          label: Text(AppLocalizations.of(context)!.translate('orders.action.startCooking')),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+      );
+    }
+
+    if (order.status == UnifiedOrderStatus.COOKING &&
+        order.cookingStatus == null &&
+        onStatusUpdate != null) {
+      buttons.add(
+        ElevatedButton.icon(
+          onPressed: () => onStatusUpdate!(order.id, UnifiedOrderStatus.READY),
+          icon: const Icon(Icons.done, size: 16),
+          label: Text(AppLocalizations.of(context)!.translate('orders.action.readyComplete')),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+      );
+    }
+
+    // 테이블 전환 (테이블 주문만)
+    if (order.isTableOrder && onTableManage != null) {
+      buttons.add(
+        OutlinedButton.icon(
+          onPressed: onTableManage,
+          icon: const Icon(Icons.swap_horiz, size: 16),
+          label: Text(AppLocalizations.of(context)!.translate('orders.action.switchTable')),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppTheme.primary,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+      );
+    }
 
     // 조리 관련 버튼
     if (order.cookingStatus == CookingStatus.WAITING && onCookingStatusUpdate != null) {
@@ -292,7 +423,7 @@ class OrderCard extends StatelessWidget {
         ElevatedButton.icon(
           onPressed: () => onCookingStatusUpdate!(order.id, CookingStatus.IN_PROGRESS),
           icon: const Icon(Icons.play_arrow, size: 16),
-          label: const Text('조리 시작'),
+          label: Text(AppLocalizations.of(context)!.translate('orders.action.cookingStart')),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             foregroundColor: Colors.white,
@@ -307,7 +438,7 @@ class OrderCard extends StatelessWidget {
         ElevatedButton.icon(
           onPressed: () => onCookingStatusUpdate!(order.id, CookingStatus.COMPLETED),
           icon: const Icon(Icons.check, size: 16),
-          label: const Text('조리 완료'),
+          label: Text(AppLocalizations.of(context)!.translate('orders.action.cookingComplete')),
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.orange,
             foregroundColor: Colors.white,
@@ -322,7 +453,9 @@ class OrderCard extends StatelessWidget {
       final completeStatus = order.isTableOrder 
           ? UnifiedOrderStatus.SERVED 
           : UnifiedOrderStatus.PICKED_UP;
-      final buttonText = order.isTableOrder ? '서빙 완료' : '픽업 완료';
+      final buttonText = order.isTableOrder
+          ? AppLocalizations.of(context)!.translate('orders.action.serveComplete')
+          : AppLocalizations.of(context)!.translate('orders.action.pickupComplete');
       
       buttons.add(
         ElevatedButton.icon(

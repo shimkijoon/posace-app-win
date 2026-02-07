@@ -81,6 +81,7 @@ class ProductModel {
   final bool stockEnabled;
   final int? stockQuantity;
   final bool isActive;
+  final int sortOrder;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -102,6 +103,7 @@ class ProductModel {
     required this.stockEnabled,
     this.stockQuantity,
     required this.isActive,
+    this.sortOrder = 0,
     required this.createdAt,
     required this.updatedAt,
     this.kitchenStationId,
@@ -123,6 +125,7 @@ class ProductModel {
       'stockEnabled': stockEnabled ? 1 : 0,
       'stockQuantity': stockQuantity,
       'isActive': isActive ? 1 : 0,
+      'sortOrder': sortOrder,
       'kitchenStationId': kitchenStationId,
       'isKitchenPrintEnabled': isKitchenPrintEnabled ? 1 : 0,
       'createdAt': createdAt.toIso8601String(),
@@ -161,6 +164,9 @@ class ProductModel {
       isActive: map['isActive'] is bool
           ? map['isActive'] as bool
           : (map['isActive'] is int ? map['isActive'] as int : int.tryParse(map['isActive'].toString()) ?? 0) == 1,
+      sortOrder: (map['sortOrder'] is int)
+          ? map['sortOrder'] as int
+          : int.tryParse(map['sortOrder'].toString()) ?? 0,
       kitchenStationId: map['kitchenStationId'] as String?,
       isKitchenPrintEnabled: map['isKitchenPrintEnabled'] == 1 || map['isKitchenPrintEnabled'] == true || map['isKitchenPrintEnabled'] == null,
       createdAt: DateTime.parse(map['createdAt'] as String),

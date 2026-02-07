@@ -35,14 +35,150 @@
     "weeklySalesTrend": "Weekly Sales Trend",
     "startSale": "Start Sale",
     "tableOrder": "Table Order",
-    "salesHistory": "View Sales History",
-    "posSettings": "POS Settings",
+    "unifiedOrderManagement": "Order Management",
+    "salesHistory": "Sales History",
+    "posSettings": "Settings",
     "startBusiness": "Start Business",
     "sessionNotUsed": "Session Not Used",
     "enterOpeningAmount": "Enter opening cash amount.",
     "enterClosingAmount": "Enter final cash balance.",
     "updateTitle": "New Version Available",
     "updateMessage": "A new version has been released. Would you like to update now?"
+  },
+  "nav": {
+    "home": "Home",
+    "sales": "Sales",
+    "tables": "Tables",
+    "orders": "Order Management",
+    "history": "Sales History",
+    "settings": "Settings"
+  },
+  "orders": {
+    "tabs": {
+      "waiting": "Waiting",
+      "cookingQueue": "Cooking Queue",
+      "unpaid": "Unpaid",
+      "takeout": "Takeout",
+      "table": "Table",
+      "all": "All"
+    },
+    "empty": {
+      "waiting": "No waiting orders",
+      "unpaid": "No unpaid orders",
+      "takeout": "No takeout orders",
+      "table": "No table orders",
+      "all": "No orders"
+    },
+    "tooltip": {
+      "refresh": "Refresh",
+      "settings": "Settings"
+    },
+    "button": {
+      "refresh": "Refresh",
+      "close": "Close"
+    },
+    "snackbar": {
+      "loadFailed": "Failed to load orders: {error}",
+      "statusUpdated": "Order status updated",
+      "statusUpdateFailed": "Status update failed: {error}",
+      "cookingStart": "Cooking started",
+      "cookingComplete": "Cooking completed",
+      "cookingWaiting": "Set to waiting",
+      "cookingUpdateFailed": "Cooking status update failed: {error}"
+    },
+    "detail": {
+      "title": "Order Details - {orderNumber}",
+      "orderType": "Order Type",
+      "status": "Status",
+      "cookingStatus": "Cooking Status",
+      "totalAmount": "Total Amount",
+      "orderTime": "Order Time",
+      "customerName": "Customer Name",
+      "contact": "Contact",
+      "scheduledTime": "Scheduled Time",
+      "table": "Table",
+      "memo": "Memo",
+      "items": "Order Items:"
+    },
+    "type": {
+      "table": "Table",
+      "takeout": "Takeout",
+      "delivery": "Delivery"
+    },
+    "status": {
+      "pending": "Order Received",
+      "confirmed": "Order Confirmed",
+      "cooking": "Cooking",
+      "pickupReady": "Pickup Ready",
+      "serveReady": "Ready to Serve",
+      "served": "Served",
+      "pickedUp": "Picked Up",
+      "cancelled": "Cancelled",
+      "modified": "Modified"
+    },
+    "cookingStatus": {
+      "waiting": "Waiting",
+      "inProgress": "Cooking",
+      "completed": "Completed",
+      "unknown": "Unknown"
+    },
+    "paymentBadge": {
+      "paid": "Paid",
+      "unpaid": "Unpaid"
+    },
+    "action": {
+      "confirmOrder": "Confirm Order",
+      "startCooking": "Start Cooking",
+      "readyComplete": "Ready",
+      "switchTable": "Switch Table",
+      "cookingStart": "Start Cooking",
+      "cookingComplete": "Cooking Complete",
+      "serveComplete": "Serve Complete",
+      "pickupComplete": "Pickup Complete"
+    },
+    "card": {
+      "tableLabel": "Table {tableNumber}",
+      "guestCount": "{count} guests",
+      "pickupSchedule": "Pickup at {time}",
+      "itemsSummary": "Items ({count})",
+      "itemsMore": "and {count} more",
+      "eta": "ETA: {time}"
+    },
+    "filter": {
+      "title": "Filter",
+      "reset": "Reset",
+      "typeAll": "All",
+      "typeTable": "Table",
+      "typeTakeout": "Takeout",
+      "typeDelivery": "Delivery",
+      "statusAll": "All",
+      "statusPending": "Pending",
+      "statusConfirmed": "Confirmed",
+      "statusCooking": "Cooking",
+      "statusReady": "Ready",
+      "statusCompleted": "Completed"
+    },
+    "queue": {
+      "title": "Cooking Queue",
+      "waitingCount": "{count} orders waiting",
+      "stat": {
+        "waiting": "Waiting",
+        "cooking": "Cooking",
+        "done": "Done"
+      },
+      "empty": {
+        "title": "No orders in cooking queue",
+        "subtitle": "New orders will appear here"
+      },
+      "eta": "ETA: {time}"
+    },
+    "priority": {
+      "regular": "Regular Customer",
+      "bulk": "Bulk Order",
+      "vip": "VIP Customer",
+      "urgent": "Urgent Order",
+      "default": "Priority {priority}"
+    }
   },
   "taxes": {
     "title": "Tax"
@@ -99,6 +235,7 @@
     "suspendedOrderLoadFailed": "Failed to load suspended orders",
     "suspendedOrderDeleteFailed": "Failed to delete suspended order",
     "noSuspendedOrders": "No suspended orders",
+    "suspendedSalesTitle": "Suspended Sales",
     "retrieve": "Retrieve"
   },
   "receipt": {
@@ -153,7 +290,17 @@
     "cardManual": "Card Manual Input",
     "paymentComplete": "Payment Complete",
     "amountInput": "Amount Input",
-    "inputComplete": "Input Complete"
+    "inputComplete": "Input Complete",
+    "cashPayment": "Cash Payment",
+    "cardPayment": "Card Payment",
+    "orderComplete": "Order Complete",
+    "cashOrderCompleted": "Cash {orderType} order has been completed.",
+    "cardOrderCompleted": "Card {orderType} order has been completed.",
+    "orderCompleted": "{orderType} order has been completed.",
+    "orderProcessFailed": "Order processing failed",
+    "tableOrderAccepted": "Table order has been accepted.",
+    "takeoutOrder": "takeout",
+    "tableOrder": "table"
   },
   "tables": {
     "title": "Table Orders",

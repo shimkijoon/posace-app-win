@@ -13,6 +13,8 @@ import '../common/diagnostic_error_dialog.dart';
 import '../../core/storage/auth_storage.dart';
 import '../home/home_page.dart';
 import 'widgets/title_bar.dart';
+import '../common/navigation_title_bar.dart';
+import '../common/navigation_tab.dart';
 import 'widgets/cart_grid.dart';
 import 'widgets/product_selection_area.dart';
 import 'widgets/function_buttons.dart';
@@ -901,66 +903,123 @@ class _SalesPageState extends State<SalesPage> {
     }
   }
 
+  /// 기존 테이블 주문 메서드 (호환성 유지용)
   Future<void> _onOrder() async {
+    // 새로운 통합 메서드로 리다이렉트
+    await _handleTableOrder();
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.translate('payment.tableOrderAccepted'))),
+      );
+      // 테이블 뷰로 돌아가지 않고 현재 화면 유지 (탭 네비게이션 사용)
+    }
+  }
+
+  /// 현금 결제 처리 (주문 등록 + 현금 결제 표시)
+  Future<void> _onCashPayment() async {
     if (_cart.isEmpty) return;
     
+    // 현금 결제로 주문 등록 후 장바구니 초기화
+    await _registerOrderOnly(paymentType: '현금');
+  }
+
+  /// 카드 결제 처리 (주문 등록 + 카드 결제 표시)
+  Future<void> _onCardPayment() async {
+    if (_cart.isEmpty) return;
+    
+    // 카드 결제로 주문 등록 후 장바구니 초기화
+    await _registerOrderOnly(paymentType: '카드');
+  }
+
+  /// 주문 완료 처리 (결제 방식 미지정)
+  void _onSplitCheckout() async {
+    if (_cart.isEmpty) return;
+    
+    // 주문 완료 처리 후 장바구니 초기화 (주문관리에서 결제 진행)
+    await _registerOrderOnly();
+  }
+
+  /// 주문 등록 처리 메서드 (테이블/테이크아웃 통합)
+  Future<void> _registerOrderOnly({String? paymentType}) async {
     try {
-      final auth = AuthStorage();
-      final session = await auth.getSessionInfo();
-      final token = await auth.getAccessToken();
-
-      if (token == null || session['storeId'] == null) {
-        throw Exception('Not logged in');
+      // 테이블 주문과 테이크아웃 주문을 동일하게 처리
+      if (widget.tableId == null) {
+        // 테이크아웃 주문
+        await _handleTakeoutOrder();
+      } else {
+        // 테이블 주문 - 기존 _onOrder 로직 사용하지만 단순화
+        await _handleTableOrder();
       }
-
-      final apiClient = ApiClient(accessToken: token);
-      final tableApi = TableManagementApi(apiClient);
-
-      await tableApi.createOrUpdateOrder({
-        'storeId': session['storeId'],
-        'tableId': widget.tableId!,
-        'guestCount': _guestCount,
-        'items': _cart.items.map((item) => {
-          'productId': item.product.id,
-          'qty': item.quantity,
-          'price': item.product.price,
-          'options': item.selectedOptions.map((o) => o.toMap()).toList(),
-        }).toList(),
-      });
-
+      
+      // 주문 등록 완료 후 장바구니 초기화
       if (mounted) {
+        setState(() {
+          _cart = Cart();
+          _selectedManualDiscountIds = {};
+          _selectedMember = null;
+        });
+        
+        final orderType = widget.tableId != null 
+          ? AppLocalizations.of(context)!.translate('payment.tableOrder')
+          : AppLocalizations.of(context)!.translate('payment.takeoutOrder');
+        final message = paymentType != null 
+          ? AppLocalizations.of(context)!.translate('payment.${paymentType == '현금' ? 'cashOrderCompleted' : 'cardOrderCompleted'}').replaceAll('{orderType}', orderType)
+          : AppLocalizations.of(context)!.translate('payment.orderCompleted').replaceAll('{orderType}', orderType);
+          
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('주문이 접수되었습니다.')),
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text(message)),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
         );
-        Navigator.pop(context); // Go back to table view
+        
+        _searchFocusNode.requestFocus();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('주문 접수 실패: $e')),
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)!.translate('payment.orderProcessFailed')}: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 
-  void _onSplitCheckout() {
-    showDialog(
-      context: context,
-      builder: (context) => SplitPaymentDialog(
-        totalAmount: _cart.total, 
-      ),
-    ).then((result) async {
-       if (result != null && result is List) {
-          final payments = result.cast<SalePaymentModel>();
-          // 복합 결제 (Split Payment)
-          await _processPaymentSuccess(
-            PaymentMethod.easy_payment, // Or 'SPLIT' if enum supports, using easy_payment as placeholder or add split
-            _cart.total, 
-            paidAmount: _cart.total, 
-            payments: payments, // Add this parameter
-          );
-       }
-       _searchFocusNode.requestFocus();
+  /// 테이블 주문 처리 (기존 _onOrder 로직 단순화)
+  Future<void> _handleTableOrder() async {
+    if (_cart.isEmpty) return;
+    
+    final auth = AuthStorage();
+    final session = await auth.getSessionInfo();
+    final token = await auth.getAccessToken();
+
+    if (token == null || session['storeId'] == null) {
+      throw Exception('로그인 정보가 없습니다');
+    }
+
+    final apiClient = ApiClient(accessToken: token);
+    final tableApi = TableManagementApi(apiClient);
+
+    await tableApi.createOrUpdateOrder({
+      'storeId': session['storeId'],
+      'tableId': widget.tableId!,
+      'guestCount': _guestCount,
+      'items': _cart.items.map((item) => {
+        'productId': item.product.id,
+        'qty': item.quantity,
+        'price': item.product.price,
+        'options': item.selectedOptions.map((o) => o.toMap()).toList(),
+      }).toList(),
     });
   }
 
@@ -1087,7 +1146,7 @@ class _SalesPageState extends State<SalesPage> {
       );
 
       if (confirmed == true) {
-        // 장바구니 초기화
+        // 주문 등록 완료 - 장바구니 초기화 (주문관리에서 결제 처리)
         setState(() {
           _cart.clear();
         });
@@ -1509,16 +1568,10 @@ class _SalesPageState extends State<SalesPage> {
       backgroundColor: AppTheme.background,
       body: Column(
         children: [
-          // 1. 상단 타이틀바
-          TitleBar(
-            title: widget.tableId != null 
-                ? '${AppLocalizations.of(context)!.tableOrder} - ${widget.tableName}' 
-                : AppLocalizations.of(context)!.sales,
-            onHomePressed: _onHomePressed,
-            leadingIcon: widget.tableId != null ? Icons.grid_view : Icons.home,
-            leadingTooltip: widget.tableId != null 
-                ? AppLocalizations.of(context)!.translate('sales.backToTable')
-                : AppLocalizations.of(context)!.translate('common.backToHome'),
+          // 1. 상단 네비게이션 타이틀바
+          NavigationTitleBar(
+            currentTab: NavigationTab.sales,
+            database: widget.database,
           ),
 
           // 테이블 정보 바 (테이블 모드일 때만 표시)
@@ -1580,29 +1633,30 @@ class _SalesPageState extends State<SalesPage> {
                           onItemRemove: _onCartItemRemove,
                         ),
                       ),
-                      // 분리된 결제 버튼들
+                      // 결제 방식별 버튼들
                       Container(
                         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         color: AppTheme.surface,
                         child: Row(
                           children: [
-                            // 즉시 결제 버튼
+                            // 현금 주문 버튼
                             Expanded(
                               flex: 1,
                               child: SizedBox(
                                 height: 70,
                                 child: ElevatedButton.icon(
-                                  onPressed: !_cart.isEmpty ? _onSplitCheckout : null,
-                                  icon: const Icon(Icons.payment, size: 20),
-                                  label: const Text(
-                                    '즉시 결제',
-                                    style: TextStyle(
+                                  onPressed: !_cart.isEmpty ? () => _onCashPayment() : null,
+                                  icon: const Icon(Icons.money, size: 20),
+                                  label: Text(
+                                    AppLocalizations.of(context)!.translate('payment.cashPayment'),
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                                      fontSize: 14,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppTheme.primary,
+                                    backgroundColor: Colors.green,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
@@ -1612,36 +1666,62 @@ class _SalesPageState extends State<SalesPage> {
                                 ),
                               ),
                             ),
-                            // 테이블 주문이 아닐 때만 "주문" 버튼 표시
-                            if (_selectedTableOrder == null) ...[
-                              const SizedBox(width: 12),
-                              // 주문 버튼
-                              Expanded(
-                                flex: 1,
-                                child: SizedBox(
-                                  height: 70,
-                                  child: ElevatedButton.icon(
-                                    onPressed: !_cart.isEmpty ? _handleTakeoutOrder : null,
-                                    icon: const Icon(Icons.receipt_long, size: 20),
-                                    label: const Text(
-                                      '주문',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
+                            const SizedBox(width: 8),
+                            // 카드 주문 버튼
+                            Expanded(
+                              flex: 1,
+                              child: SizedBox(
+                                height: 70,
+                                child: ElevatedButton.icon(
+                                  onPressed: !_cart.isEmpty ? () => _onCardPayment() : null,
+                                  icon: const Icon(Icons.credit_card, size: 20),
+                                  label: Text(
+                                    AppLocalizations.of(context)!.translate('payment.cardPayment'),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
                                     ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.orange,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      elevation: 4,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
+                                    elevation: 4,
                                   ),
                                 ),
                               ),
-                            ],
+                            ),
+                            const SizedBox(width: 8),
+                            // 일반 주문 버튼
+                            Expanded(
+                              flex: 1,
+                              child: SizedBox(
+                                height: 70,
+                                child: ElevatedButton.icon(
+                                  onPressed: !_cart.isEmpty ? _onSplitCheckout : null,
+                                  icon: const Icon(Icons.check_circle, size: 20),
+                                  label: Text(
+                                    AppLocalizations.of(context)!.translate('payment.orderComplete'),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    elevation: 4,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -1672,7 +1752,7 @@ class _SalesPageState extends State<SalesPage> {
                         onMember: _onMember,
                         onCancel: _onCancel,
                         onHold: _onHold,
-                        onOrder: widget.tableId != null ? _onOrder : null,
+                        showHold: widget.tableId == null,
                       ),
                     ],
                   ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../data/models/unified_order.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/i18n/app_localizations.dart';
 import 'order_card.dart';
 
 class CookingQueueSection extends StatelessWidget {
@@ -22,6 +23,7 @@ class CookingQueueSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -54,7 +56,7 @@ class CookingQueueSection extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '조리 대기열',
+                      l10n.translate('orders.queue.title'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -63,7 +65,7 @@ class CookingQueueSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${orders.length}개 주문 대기 중',
+                      l10n.translate('orders.queue.waitingCount').replaceAll('{count}', '${orders.length}'),
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey[600],
@@ -72,20 +74,21 @@ class CookingQueueSection extends StatelessWidget {
                   ],
                 ),
               ),
-              _buildQueueStats(),
+              _buildQueueStats(context),
             ],
           ),
         ),
 
         // 주문 목록
         Expanded(
-          child: orders.isEmpty ? _buildEmptyState() : _buildOrderList(),
+          child: orders.isEmpty ? _buildEmptyState(context) : _buildOrderList(context),
         ),
       ],
     );
   }
 
-  Widget _buildQueueStats() {
+  Widget _buildQueueStats(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final waitingCount = orders.where((o) => o.cookingStatus == CookingStatus.WAITING).length;
     final cookingCount = orders.where((o) => o.cookingStatus == CookingStatus.IN_PROGRESS).length;
     final readyCount = orders.where((o) => o.cookingStatus == CookingStatus.COMPLETED).length;
@@ -95,11 +98,11 @@ class CookingQueueSection extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildStatChip('대기', waitingCount, Colors.grey),
+            _buildStatChip(l10n.translate('orders.queue.stat.waiting'), waitingCount, Colors.grey),
             const SizedBox(width: 8),
-            _buildStatChip('조리중', cookingCount, Colors.orange),
+            _buildStatChip(l10n.translate('orders.queue.stat.cooking'), cookingCount, Colors.orange),
             const SizedBox(width: 8),
-            _buildStatChip('완료', readyCount, Colors.green),
+            _buildStatChip(l10n.translate('orders.queue.stat.done'), readyCount, Colors.green),
           ],
         ),
       ],
@@ -137,7 +140,8 @@ class CookingQueueSection extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -149,7 +153,7 @@ class CookingQueueSection extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            '조리 대기 중인 주문이 없습니다',
+            l10n.translate('orders.queue.empty.title'),
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey[600],
@@ -157,7 +161,7 @@ class CookingQueueSection extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '새로운 주문이 들어오면 여기에 표시됩니다',
+            l10n.translate('orders.queue.empty.subtitle'),
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[500],
@@ -167,14 +171,14 @@ class CookingQueueSection extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: onRefresh,
             icon: const Icon(Icons.refresh),
-            label: const Text('새로고침'),
+            label: Text(l10n.translate('orders.button.refresh')),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildOrderList() {
+  Widget _buildOrderList(BuildContext context) {
     // 우선순위별로 그룹화
     final priorityGroups = <int, List<UnifiedOrder>>{};
     for (final order in orders) {
@@ -189,7 +193,7 @@ class CookingQueueSection extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _getTotalItemCount(sortedPriorities, priorityGroups),
         itemBuilder: (context, index) {
-          return _buildListItem(index, sortedPriorities, priorityGroups);
+          return _buildListItem(context, index, sortedPriorities, priorityGroups);
         },
       ),
     );
@@ -204,14 +208,14 @@ class CookingQueueSection extends StatelessWidget {
     return count;
   }
 
-  Widget _buildListItem(int index, List<int> priorities, Map<int, List<UnifiedOrder>> groups) {
+  Widget _buildListItem(BuildContext context, int index, List<int> priorities, Map<int, List<UnifiedOrder>> groups) {
     int currentIndex = 0;
     
     for (final priority in priorities) {
       // 우선순위 헤더 (priority > 0일 때만)
       if (priority > 0) {
         if (currentIndex == index) {
-          return _buildPriorityHeader(priority);
+          return _buildPriorityHeader(context, priority);
         }
         currentIndex++;
       }
@@ -222,7 +226,7 @@ class CookingQueueSection extends StatelessWidget {
         if (currentIndex == index) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: _buildQueueOrderCard(ordersInPriority[i], i + 1),
+            child: _buildQueueOrderCard(context, ordersInPriority[i], i + 1),
           );
         }
         currentIndex++;
@@ -232,29 +236,30 @@ class CookingQueueSection extends StatelessWidget {
     return const SizedBox.shrink();
   }
 
-  Widget _buildPriorityHeader(int priority) {
+  Widget _buildPriorityHeader(BuildContext context, int priority) {
+    final l10n = AppLocalizations.of(context)!;
     String priorityText;
     Color priorityColor;
     
     switch (priority) {
       case 1:
-        priorityText = '단골 고객';
+        priorityText = l10n.translate('orders.priority.regular');
         priorityColor = Colors.blue;
         break;
       case 2:
-        priorityText = '대량 주문';
+        priorityText = l10n.translate('orders.priority.bulk');
         priorityColor = Colors.purple;
         break;
       case 3:
-        priorityText = 'VIP 고객';
+        priorityText = l10n.translate('orders.priority.vip');
         priorityColor = Colors.amber;
         break;
       case 4:
-        priorityText = '긴급 주문';
+        priorityText = l10n.translate('orders.priority.urgent');
         priorityColor = Colors.red;
         break;
       default:
-        priorityText = '우선순위 $priority';
+        priorityText = l10n.translate('orders.priority.default').replaceAll('{priority}', '$priority');
         priorityColor = Colors.orange;
     }
 
@@ -282,7 +287,7 @@ class CookingQueueSection extends StatelessWidget {
     );
   }
 
-  Widget _buildQueueOrderCard(UnifiedOrder order, int queuePosition) {
+  Widget _buildQueueOrderCard(BuildContext context, UnifiedOrder order, int queuePosition) {
     return Stack(
       children: [
         OrderCard(
@@ -329,7 +334,9 @@ class CookingQueueSection extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '완료 예정: ${DateFormat('HH:mm').format(order.estimatedCompletionTime!)}',
+                AppLocalizations.of(context)!
+                    .translate('orders.queue.eta')
+                    .replaceAll('{time}', DateFormat('HH:mm').format(order.estimatedCompletionTime!)),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,

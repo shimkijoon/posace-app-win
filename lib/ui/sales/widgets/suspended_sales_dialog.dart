@@ -195,14 +195,15 @@ class _SuspendedSalesDialogState extends State<SuspendedSalesDialog> {
               children: [
                 Icon(Icons.pause_circle_outline, color: AppTheme.warning),
                 const SizedBox(width: 12),
-                const Text(
-                  '보류 거래 내역',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  AppLocalizations.of(context)!.translate('sales.suspendedSalesTitle'),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 IconButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
                   icon: const Icon(Icons.close),
+                  tooltip: AppLocalizations.of(context)!.translate('common.close'),
                 ),
               ],
             ),

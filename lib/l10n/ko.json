@@ -44,6 +44,7 @@
     "weeklySalesTrend": "주간 매출 추이",
     "startSale": "판매 시작",
     "tableOrder": "테이블 주문",
+    "unifiedOrderManagement": "주문 관리",
     "salesHistory": "매출 내역 조회",
     "posSettings": "포스 설정",
     "startBusiness": "영업 시작",
@@ -52,6 +53,141 @@
     "enterClosingAmount": "최종 시재(현금 잔액)를 입력하세요.",
     "updateTitle": "새로운 버전 업데이트",
     "updateMessage": "최신 버전이 출시되었습니다. 업데이트하시겠습니까?"
+  },
+  "nav": {
+    "home": "홈",
+    "sales": "판매",
+    "tables": "테이블",
+    "orders": "주문관리",
+    "history": "판매내역",
+    "settings": "설정"
+  },
+  "orders": {
+    "tabs": {
+      "waiting": "대기",
+      "cookingQueue": "조리 대기열",
+      "unpaid": "결제 대기",
+      "takeout": "테이크아웃",
+      "table": "테이블",
+      "all": "전체"
+    },
+    "empty": {
+      "waiting": "대기 중인 주문이 없습니다",
+      "unpaid": "결제 대기 주문이 없습니다",
+      "takeout": "테이크아웃 주문이 없습니다",
+      "table": "테이블 주문이 없습니다",
+      "all": "주문이 없습니다"
+    },
+    "tooltip": {
+      "refresh": "새로고침",
+      "settings": "설정"
+    },
+    "button": {
+      "refresh": "새로고침",
+      "close": "닫기"
+    },
+    "snackbar": {
+      "loadFailed": "주문 데이터 로드 실패: {error}",
+      "statusUpdated": "주문 상태가 업데이트되었습니다",
+      "statusUpdateFailed": "상태 업데이트 실패: {error}",
+      "cookingStart": "조리를 시작했습니다",
+      "cookingComplete": "조리가 완료되었습니다",
+      "cookingWaiting": "조리 대기 상태로 변경되었습니다",
+      "cookingUpdateFailed": "조리 상태 업데이트 실패: {error}"
+    },
+    "detail": {
+      "title": "주문 상세 - {orderNumber}",
+      "orderType": "주문 타입",
+      "status": "상태",
+      "cookingStatus": "조리 상태",
+      "totalAmount": "총 금액",
+      "orderTime": "주문 시간",
+      "customerName": "고객명",
+      "contact": "연락처",
+      "scheduledTime": "예약 시간",
+      "table": "테이블",
+      "memo": "메모",
+      "items": "주문 아이템:"
+    },
+    "type": {
+      "table": "테이블",
+      "takeout": "테이크아웃",
+      "delivery": "배달"
+    },
+    "status": {
+      "pending": "주문 접수",
+      "confirmed": "주문 확정",
+      "cooking": "조리 중",
+      "pickupReady": "픽업 대기",
+      "serveReady": "서빙 대기",
+      "served": "서빙 완료",
+      "pickedUp": "픽업 완료",
+      "cancelled": "취소됨",
+      "modified": "변경됨"
+    },
+    "cookingStatus": {
+      "waiting": "조리 대기",
+      "inProgress": "조리 중",
+      "completed": "조리 완료",
+      "unknown": "미정"
+    },
+    "paymentBadge": {
+      "paid": "결제 완료",
+      "unpaid": "미결제"
+    },
+    "action": {
+      "confirmOrder": "주문 확정",
+      "startCooking": "조리 시작",
+      "readyComplete": "준비 완료",
+      "switchTable": "테이블 전환",
+      "cookingStart": "조리 시작",
+      "cookingComplete": "조리 완료",
+      "serveComplete": "서빙 완료",
+      "pickupComplete": "픽업 완료"
+    },
+    "card": {
+      "tableLabel": "테이블 {tableNumber}",
+      "guestCount": "{count}명",
+      "pickupSchedule": "픽업 예정: {time}",
+      "itemsSummary": "주문 내역 ({count}개)",
+      "itemsMore": "외 {count}개",
+      "eta": "예상 완료: {time}"
+    },
+    "filter": {
+      "title": "필터",
+      "reset": "초기화",
+      "typeAll": "전체",
+      "typeTable": "테이블",
+      "typeTakeout": "테이크아웃",
+      "typeDelivery": "배달",
+      "statusAll": "전체",
+      "statusPending": "접수",
+      "statusConfirmed": "확정",
+      "statusCooking": "조리중",
+      "statusReady": "준비완료",
+      "statusCompleted": "완료"
+    },
+    "queue": {
+      "title": "조리 대기열",
+      "waitingCount": "{count}개 주문 대기 중",
+      "stat": {
+        "waiting": "대기",
+        "cooking": "조리중",
+        "done": "완료"
+      },
+      "empty": {
+        "title": "조리 대기 중인 주문이 없습니다",
+        "subtitle": "새로운 주문이 들어오면 여기에 표시됩니다"
+      },
+      "eta": "완료 예정: {time}"
+    },
+    "priority": {
+      "regular": "단골 고객",
+      "bulk": "대량 주문",
+      "vip": "VIP 고객",
+      "urgent": "긴급 주문",
+      "default": "우선순위 {priority}"
+    }
   },
   "taxes": {
     "title": "세금"
@@ -106,6 +242,7 @@
     "suspendedOrderLoadFailed": "보류 주문 로드 실패",
     "suspendedOrderDeleteFailed": "보류 주문 삭제 실패",
     "noSuspendedOrders": "보류된 거래가 없습니다",
+    "suspendedSalesTitle": "보류 거래 내역",
     "retrieve": "가져오기"
   },
   "receipt": {
@@ -241,7 +378,17 @@
     "cardManual": "카드 직접 입력",
     "paymentComplete": "결제 완료",
     "amountInput": "금액 입력",
-    "inputComplete": "입력 완료"
+    "inputComplete": "입력 완료",
+    "cashPayment": "현금결제",
+    "cardPayment": "카드결제",
+    "orderComplete": "주문완료",
+    "cashOrderCompleted": "현금 {orderType} 주문이 완료되었습니다.",
+    "cardOrderCompleted": "카드 {orderType} 주문이 완료되었습니다.",
+    "orderCompleted": "{orderType} 주문이 완료되었습니다.",
+    "orderProcessFailed": "주문 처리 실패",
+    "tableOrderAccepted": "테이블 주문이 접수되었습니다.",
+    "takeoutOrder": "테이크아웃",
+    "tableOrder": "테이블"
   },
   "customers": {
     "searchTitle": "회원 검색",

@@ -35,6 +35,7 @@
     "weeklySalesTrend": "每週銷售趨勢",
     "startSale": "開始銷售",
     "tableOrder": "桌位訂單",
+    "unifiedOrderManagement": "訂單管理",
     "salesHistory": "查看銷售記錄",
     "posSettings": "POS設定",
     "startBusiness": "開始營業",
@@ -43,6 +44,141 @@
     "enterClosingAmount": "請輸入最終現金餘額。",
     "updateTitle": "新版本更新",
     "updateMessage": "最新版本已發佈。係咪而家更新？"
+  },
+  "nav": {
+    "home": "首頁",
+    "sales": "銷售",
+    "tables": "桌位",
+    "orders": "訂單管理",
+    "history": "銷售記錄",
+    "settings": "設定"
+  },
+  "orders": {
+    "tabs": {
+      "waiting": "等候",
+      "cookingQueue": "烹調隊列",
+      "unpaid": "待付款",
+      "takeout": "外帶",
+      "table": "桌位",
+      "all": "全部"
+    },
+    "empty": {
+      "waiting": "沒有等候中的訂單",
+      "unpaid": "沒有待付款訂單",
+      "takeout": "沒有外帶訂單",
+      "table": "沒有桌位訂單",
+      "all": "沒有訂單"
+    },
+    "tooltip": {
+      "refresh": "重新整理",
+      "settings": "設定"
+    },
+    "button": {
+      "refresh": "重新整理",
+      "close": "關閉"
+    },
+    "snackbar": {
+      "loadFailed": "訂單資料載入失敗: {error}",
+      "statusUpdated": "訂單狀態已更新",
+      "statusUpdateFailed": "狀態更新失敗: {error}",
+      "cookingStart": "已開始烹調",
+      "cookingComplete": "烹調完成",
+      "cookingWaiting": "已改為烹調等候",
+      "cookingUpdateFailed": "烹調狀態更新失敗: {error}"
+    },
+    "detail": {
+      "title": "訂單詳情 - {orderNumber}",
+      "orderType": "訂單類型",
+      "status": "狀態",
+      "cookingStatus": "烹調狀態",
+      "totalAmount": "總金額",
+      "orderTime": "訂單時間",
+      "customerName": "客戶姓名",
+      "contact": "聯絡方式",
+      "scheduledTime": "預約時間",
+      "table": "桌位",
+      "memo": "備註",
+      "items": "訂單項目:"
+    },
+    "type": {
+      "table": "桌位",
+      "takeout": "外帶",
+      "delivery": "外送"
+    },
+    "status": {
+      "pending": "已接單",
+      "confirmed": "已確認",
+      "cooking": "烹調中",
+      "pickupReady": "取餐等候",
+      "serveReady": "待上菜",
+      "served": "已上菜",
+      "pickedUp": "已取餐",
+      "cancelled": "已取消",
+      "modified": "已變更"
+    },
+    "cookingStatus": {
+      "waiting": "烹調等候",
+      "inProgress": "烹調中",
+      "completed": "烹調完成",
+      "unknown": "未定"
+    },
+    "paymentBadge": {
+      "paid": "已付款",
+      "unpaid": "未付款"
+    },
+    "action": {
+      "confirmOrder": "確認訂單",
+      "startCooking": "開始烹調",
+      "readyComplete": "準備完成",
+      "switchTable": "桌位轉換",
+      "cookingStart": "開始烹調",
+      "cookingComplete": "烹調完成",
+      "serveComplete": "上菜完成",
+      "pickupComplete": "取餐完成"
+    },
+    "card": {
+      "tableLabel": "桌位 {tableNumber}",
+      "guestCount": "{count}位",
+      "pickupSchedule": "取餐時間: {time}",
+      "itemsSummary": "訂單內容（{count}項）",
+      "itemsMore": "另有 {count} 項",
+      "eta": "預計完成: {time}"
+    },
+    "filter": {
+      "title": "篩選",
+      "reset": "重設",
+      "typeAll": "全部",
+      "typeTable": "桌位",
+      "typeTakeout": "外帶",
+      "typeDelivery": "外送",
+      "statusAll": "全部",
+      "statusPending": "接單",
+      "statusConfirmed": "確認",
+      "statusCooking": "烹調中",
+      "statusReady": "準備完成",
+      "statusCompleted": "完成"
+    },
+    "queue": {
+      "title": "烹調隊列",
+      "waitingCount": "{count}筆訂單等候中",
+      "stat": {
+        "waiting": "等候",
+        "cooking": "烹調中",
+        "done": "完成"
+      },
+      "empty": {
+        "title": "沒有烹調等候中的訂單",
+        "subtitle": "新訂單會在此顯示"
+      },
+      "eta": "預計完成: {time}"
+    },
+    "priority": {
+      "regular": "常客",
+      "bulk": "大量訂單",
+      "vip": "VIP 客戶",
+      "urgent": "緊急訂單",
+      "default": "優先順序 {priority}"
+    }
   },
   "taxes": {
     "title": "稅金"
@@ -97,6 +233,7 @@
     "suspendedOrderLoadFailed": "載入保留訂單失敗",
     "suspendedOrderDeleteFailed": "刪除保留訂單失敗",
     "noSuspendedOrders": "沒有保留的交易",
+    "suspendedSalesTitle": "保留交易清單",
     "retrieve": "取回"
   },
   "receipt": {
@@ -150,8 +287,18 @@
     "cashManual": "現金手動輸入",
     "cardManual": "信用卡手動輸入",
     "paymentComplete": "付款完成",
-    "amountInput": "金額 입력",
-    "inputComplete": "輸入完成"
+    "amountInput": "金額輸入",
+    "inputComplete": "輸入完成",
+    "cashPayment": "現金付款",
+    "cardPayment": "信用卡付款",
+    "orderComplete": "訂單完成",
+    "cashOrderCompleted": "現金{orderType}訂單已完成。",
+    "cardOrderCompleted": "信用卡{orderType}訂單已完成。",
+    "orderCompleted": "{orderType}訂單已完成。",
+    "orderProcessFailed": "訂單處理失敗",
+    "tableOrderAccepted": "枱位訂單已接受。",
+    "takeoutOrder": "外賣",
+    "tableOrder": "枱位"
   },
   "tables": {
     "title": "枱位點餐",

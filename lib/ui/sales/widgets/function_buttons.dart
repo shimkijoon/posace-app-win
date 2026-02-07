@@ -9,19 +9,19 @@ class FunctionButtons extends StatelessWidget {
     required this.onMember,
     required this.onCancel,
     required this.onHold,
-    this.onOrder,
+    this.showHold = true,
   });
 
   final VoidCallback onDiscount;
   final VoidCallback onMember;
   final VoidCallback onCancel;
   final VoidCallback onHold;
-  final VoidCallback? onOrder;
+  final bool showHold;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: AppTheme.surface,
         border: Border(
@@ -56,18 +56,8 @@ class FunctionButtons extends StatelessWidget {
               onTap: onCancel,
             ),
           ),
-          const SizedBox(width: 8),
-          if (onOrder != null)
-            Expanded(
-              child: _FunctionButton(
-                label: AppLocalizations.of(context)!.translate('sales.registerOrder'),
-                icon: Icons.send,
-                color: const Color(0xFF1B64DA), // Toast Blue
-                onTap: onOrder!,
-                isPrimary: true,
-              ),
-            )
-          else
+          if (showHold) ...[
+            const SizedBox(width: 8),
             Expanded(
               child: _FunctionButton(
                 label: AppLocalizations.of(context)!.holdTransaction,
@@ -76,6 +66,7 @@ class FunctionButtons extends StatelessWidget {
                 onTap: onHold,
               ),
             ),
+          ],
         ],
       ),
     );
@@ -106,19 +97,24 @@ class _FunctionButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
+          height: 64, // 하단 오버플로우 방지
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center, // 가로 중앙 정렬 명시
             children: [
-              Icon(icon, color: isPrimary ? Colors.white : color, size: 24),
-              const SizedBox(height: 8),
+              Icon(icon, color: isPrimary ? Colors.white : color, size: 22),
+              const SizedBox(height: 4),
               Text(
                 label,
+                textAlign: TextAlign.center, // 텍스트 중앙 정렬
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 13,
+                  fontSize: 11, // 폰트 크기 약간 줄여서 버튼에 맞게 조정
                   color: isPrimary ? Colors.white : AppTheme.textPrimary,
                 ),
+                maxLines: 2, // 최대 2줄로 제한
+                overflow: TextOverflow.ellipsis, // 긴 텍스트 처리
               ),
             ],
           ),

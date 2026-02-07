@@ -295,259 +295,281 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        backgroundColor: AppTheme.surface,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        surfaceTintColor: Colors.transparent,
-        shape: const Border(bottom: BorderSide(color: AppTheme.border, width: 1)),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: TextButton.icon(
-              onPressed: _logout,
-              icon: const Icon(Icons.logout, size: 18),
-              label: Text(AppLocalizations.of(context)!.logout),
-              style: TextButton.styleFrom(foregroundColor: AppTheme.textSecondary),
+      body: Column(
+        children: [
+          // 로그아웃 버튼
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: const BoxDecoration(
+              color: AppTheme.surface,
+              border: Border(bottom: BorderSide(color: AppTheme.border, width: 0.5)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: _logout,
+                  icon: const Icon(Icons.logout, size: 18),
+                  label: Text(AppLocalizations.of(context)!.logout),
+                  style: TextButton.styleFrom(foregroundColor: AppTheme.textSecondary),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1000),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  AppLocalizations.of(context)!.todayStoreStatus,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                
-                // 매장 정보 & 영업 상태 Row
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: _buildInfoCard(
-                        title: AppLocalizations.of(context)!.storeInfo,
-                        icon: Icons.store,
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          _buildInfoRow(AppLocalizations.of(context)!.storeName, _session['name'] ?? '-', isBold: true),
-                          _buildInfoRow(AppLocalizations.of(context)!.businessNumber, _session['businessNumber'] ?? '-'),
-                          _buildInfoRow(AppLocalizations.of(context)!.phone, _session['phone'] ?? '-'),
-                          _buildInfoRow(AppLocalizations.of(context)!.address, _session['address'] ?? '-'),
-                        ],
+          // 메인 콘텐츠
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppLocalizations.of(context)!.todayStoreStatus,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 2,
-                      child: _buildInfoCard(
-                        title: AppLocalizations.of(context)!.operatingStatus,
-                        icon: Icons.access_time_filled,
-                        padding: const EdgeInsets.all(16),
+                      const SizedBox(height: 12),
+
+                      // 매장 정보 & 영업 상태 Row
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 4),
-                          Center(
-                            child: Column(
+                          Expanded(
+                            flex: 3,
+                            child: _buildInfoCard(
+                              title: AppLocalizations.of(context)!.storeInfo,
+                              icon: Icons.store,
+                              padding: const EdgeInsets.all(16),
                               children: [
-                                Text(
-                                  _usePosSession 
-                                    ? (_isSessionActive ? AppLocalizations.of(context)!.operating : AppLocalizations.of(context)!.closed)
-                                    : AppLocalizations.of(context)!.translate('home.sessionNotUsed'),
-                                  style: TextStyle(
-                                    color: (_usePosSession && !_isSessionActive) ? AppTheme.error : AppTheme.success, 
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 22,
-                                    letterSpacing: -0.5,
+                                _buildInfoRow(AppLocalizations.of(context)!.storeName, _session['name'] ?? '-', isBold: true),
+                                _buildInfoRow(AppLocalizations.of(context)!.businessNumber, _session['businessNumber'] ?? '-'),
+                                _buildInfoRow(AppLocalizations.of(context)!.phone, _session['phone'] ?? '-'),
+                                _buildInfoRow(AppLocalizations.of(context)!.address, _session['address'] ?? '-'),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: _buildInfoCard(
+                              title: AppLocalizations.of(context)!.operatingStatus,
+                              icon: Icons.access_time_filled,
+                              padding: const EdgeInsets.all(16),
+                              children: [
+                                const SizedBox(height: 4),
+                                Center(
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        _usePosSession
+                                            ? (_isSessionActive ? AppLocalizations.of(context)!.operating : AppLocalizations.of(context)!.closed)
+                                            : AppLocalizations.of(context)!.translate('home.sessionNotUsed'),
+                                        style: TextStyle(
+                                          color: (_usePosSession && !_isSessionActive) ? AppTheme.error : AppTheme.success,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 22,
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      if (_usePosSession)
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton.icon(
+                                            onPressed: _isSessionActive ? _handleCloseSession : _handleOpenSession,
+                                            icon: Icon(_isSessionActive ? Icons.logout : Icons.login, size: 16),
+                                            label: Text(
+                                              _isSessionActive ? AppLocalizations.of(context)!.closeBusiness : AppLocalizations.of(context)!.translate('home.startBusiness'),
+                                              style: const TextStyle(fontSize: 13),
+                                            ),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: _isSessionActive ? AppTheme.error : AppTheme.success,
+                                              padding: const EdgeInsets.symmetric(vertical: 10),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                if (_usePosSession)
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: _isSessionActive ? _handleCloseSession : _handleOpenSession,
-                                      icon: Icon(_isSessionActive ? Icons.logout : Icons.login, size: 16),
-                                      label: Text(_isSessionActive ? AppLocalizations.of(context)!.closeBusiness : AppLocalizations.of(context)!.translate('home.startBusiness'), style: const TextStyle(fontSize: 13)),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: _isSessionActive ? AppTheme.error : AppTheme.success,
-                                        padding: const EdgeInsets.symmetric(vertical: 10),
-                                      ),
-                                    ),
-                                  ),
                               ],
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 12),
-                
-                // 마스터 데이터 동기화 섹션
-                Text(
-                  AppLocalizations.of(context)!.managementTools,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                _buildInfoCard(
-                  title: AppLocalizations.of(context)!.weeklySalesTrend,
-                  icon: Icons.show_chart,
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    SizedBox(
-                      height: 150,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16, top: 8),
-                        child: LineChart(
-                          LineChartData(
-                            gridData: FlGridData(show: true, drawVerticalLine: false),
-                            titlesData: FlTitlesData(
-                              leftTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 50,
-                                  getTitlesWidget: (value, meta) {
-                                    return Text(
-                                      '${(value / 1000).toStringAsFixed(0)}K',
-                                      style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
-                                    );
-                                  },
+
+                      const SizedBox(height: 12),
+
+                      // 마스터 데이터 동기화 섹션
+                      Text(
+                        AppLocalizations.of(context)!.managementTools,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildInfoCard(
+                        title: AppLocalizations.of(context)!.weeklySalesTrend,
+                        icon: Icons.show_chart,
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          SizedBox(
+                            height: 150,
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 16, top: 8),
+                              child: LineChart(
+                                LineChartData(
+                                  gridData: FlGridData(show: true, drawVerticalLine: false),
+                                  titlesData: FlTitlesData(
+                                    leftTitles: AxisTitles(
+                                      sideTitles: SideTitles(
+                                        showTitles: true,
+                                        reservedSize: 50,
+                                        getTitlesWidget: (value, meta) {
+                                          return Text(
+                                            '${(value / 1000).toStringAsFixed(0)}K',
+                                            style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    bottomTitles: AxisTitles(
+                                      sideTitles: SideTitles(
+                                        showTitles: true,
+                                        interval: 1, // Show label for every data point (0, 1, 2, 3, 4, 5, 6)
+                                        reservedSize: 30,
+                                        getTitlesWidget: (value, meta) {
+                                          final index = value.toInt();
+                                          if (index >= 0 && index < _weeklySales.length) {
+                                            final dateStr = _weeklySales[index]['date'] as String;
+                                            final date = DateTime.parse(dateStr);
+                                            return Padding(
+                                              padding: const EdgeInsets.only(top: 8.0),
+                                              child: Text(
+                                                '${date.month}/${date.day}',
+                                                style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
+                                              ),
+                                            );
+                                          }
+                                          return const Text('');
+                                        },
+                                      ),
+                                    ),
+                                    rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                    topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                  ),
+                                  borderData: FlBorderData(show: false),
+                                  lineBarsData: [
+                                    LineChartBarData(
+                                      spots: _weeklySales.asMap().entries.map((entry) {
+                                        final total = (entry.value['total'] as num?)?.toDouble() ?? 0.0;
+                                        return FlSpot(entry.key.toDouble(), total);
+                                      }).toList(),
+                                      isCurved: true,
+                                      color: AppTheme.primary,
+                                      barWidth: 3,
+                                      dotData: FlDotData(show: true),
+                                      belowBarData: BarAreaData(
+                                        show: true,
+                                        color: AppTheme.primary.withOpacity(0.1),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              bottomTitles: AxisTitles(
-                                sideTitles: SideTitles(
-                                  showTitles: true,
-                                  interval: 1, // Show label for every data point (0, 1, 2, 3, 4, 5, 6)
-                                  reservedSize: 30,
-                                  getTitlesWidget: (value, meta) {
-                                    final index = value.toInt();
-                                    if (index >= 0 && index < _weeklySales.length) {
-                                      final dateStr = _weeklySales[index]['date'] as String;
-                                      final date = DateTime.parse(dateStr);
-                                      return Padding(
-                                        padding: const EdgeInsets.only(top: 8.0),
-                                        child: Text(
-                                          '${date.month}/${date.day}',
-                                          style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
-                                        ),
-                                      );
-                                    }
-                                    return const Text('');
-                                  },
-                                ),
-                              ),
-                              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                             ),
-                            borderData: FlBorderData(show: false),
-                            lineBarsData: [
-                              LineChartBarData(
-                                spots: _weeklySales.asMap().entries.map((entry) {
-                                  final total = (entry.value['total'] as num?)?.toDouble() ?? 0.0;
-                                  return FlSpot(entry.key.toDouble(), total);
-                                }).toList(),
-                                isCurved: true,
-                                color: AppTheme.primary,
-                                barWidth: 3,
-                                dotData: FlDotData(show: true),
-                                belowBarData: BarAreaData(
-                                  show: true,
-                                  color: AppTheme.primary.withOpacity(0.1),
-                                ),
-                              ),
-                            ],
                           ),
-                        ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 12),
-                
-                // Single row of action buttons
-                SizedBox(
-                  height: 100,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: _buildMainActionButton(
-                          onPressed: (!_usePosSession || _isSessionActive)
-                              ? () => Navigator.of(context).push(MaterialPageRoute(
-                                  builder: (_) => SalesPage(database: widget.database)
-                                ))
-                              : null,
-                          icon: Icons.receipt_long,
-                          label: AppLocalizations.of(context)!.startSale,
-                          color: AppTheme.primary,
-                          height: double.infinity,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: _buildMainActionButton(
-                          onPressed: (!_usePosSession || _isSessionActive)
-                              ? () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TableLayoutPage(database: widget.database)))
-                              : null,
-                          icon: Icons.table_restaurant,
-                          label: AppLocalizations.of(context)!.tableOrder,
-                          color: AppTheme.secondary,
-                          height: double.infinity,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: _buildMainActionButton(
-                          onPressed: (!_usePosSession || _isSessionActive)
-                              ? () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => UnifiedOrderManagementPage(database: widget.database)))
-                              : null,
-                          icon: Icons.restaurant_menu,
-                          label: '통합 주문 관리',
-                          color: Colors.orange,
-                          height: double.infinity,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 1,
-                        child: _buildSecondaryActionButton(
-                          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SalesInquiryPage(database: widget.database))),
-                          icon: Icons.history,
-                          label: AppLocalizations.of(context)!.salesHistory,
-                          height: double.infinity,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 1,
-                        child: _buildSecondaryActionButton(
-                          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SettingsPage(database: widget.database))),
-                          icon: Icons.settings,
-                          label: AppLocalizations.of(context)!.posSettings,
-                          height: double.infinity,
+
+                      const SizedBox(height: 12),
+
+                      // Single row of action buttons
+                      SizedBox(
+                        height: 96,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: _buildMainActionButton(
+                                onPressed: (!_usePosSession || _isSessionActive)
+                                    ? () => Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (_) => SalesPage(database: widget.database),
+                                          ),
+                                        )
+                                    : null,
+                                icon: Icons.receipt_long,
+                                label: AppLocalizations.of(context)!.startSale,
+                                color: AppTheme.primary,
+                                height: double.infinity,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 2,
+                              child: _buildMainActionButton(
+                                onPressed: (!_usePosSession || _isSessionActive)
+                                    ? () => Navigator.of(context).push(
+                                          MaterialPageRoute(builder: (_) => TableLayoutPage(database: widget.database)),
+                                        )
+                                    : null,
+                                icon: Icons.table_restaurant,
+                                label: AppLocalizations.of(context)!.tableOrder,
+                                color: AppTheme.secondary,
+                                height: double.infinity,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 2,
+                              child: _buildMainActionButton(
+                                onPressed: (!_usePosSession || _isSessionActive)
+                                    ? () => Navigator.of(context).push(
+                                          MaterialPageRoute(builder: (_) => UnifiedOrderManagementPage(database: widget.database)),
+                                        )
+                                    : null,
+                                icon: Icons.restaurant_menu,
+                                label: AppLocalizations.of(context)!.translate('home.unifiedOrderManagement'),
+                                color: Colors.orange,
+                                height: double.infinity,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 1,
+                              child: _buildSecondaryActionButton(
+                                onPressed: () => Navigator.of(context).push(
+                                      MaterialPageRoute(builder: (_) => SalesInquiryPage(database: widget.database)),
+                                    ),
+                                icon: Icons.history,
+                                label: AppLocalizations.of(context)!.salesHistory,
+                                height: double.infinity,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 1,
+                              child: _buildSecondaryActionButton(
+                                onPressed: () => Navigator.of(context).push(
+                                      MaterialPageRoute(builder: (_) => SettingsPage(database: widget.database)),
+                                    ),
+                                icon: Icons.settings,
+                                label: AppLocalizations.of(context)!.posSettings,
+                                height: double.infinity,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -621,7 +643,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildMainActionButton({required VoidCallback? onPressed, required IconData icon, required String label, required Color color, double height = 120}) {
+  Widget _buildMainActionButton({required VoidCallback? onPressed, required IconData icon, required String label, required Color color, double height = 96}) {
     return SizedBox(
       height: height,
       child: ElevatedButton(
@@ -631,29 +653,47 @@ class _HomePageState extends State<HomePage> {
           disabledBackgroundColor: AppTheme.border,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         ),
-        child: Row(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 28, color: Colors.white),
-            const SizedBox(width: 12),
-            Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+            Icon(icon, size: 26, color: Colors.white),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSecondaryActionButton({required VoidCallback onPressed, required IconData icon, required String label, double height = 80}) {
+  Widget _buildSecondaryActionButton({required VoidCallback onPressed, required IconData icon, required String label, double height = 96}) {
     return SizedBox(
       height: height,
-      child: OutlinedButton.icon(
+      child: OutlinedButton(
         onPressed: onPressed,
-        icon: Icon(icon, size: 20),
-        label: Text(label, style: const TextStyle(fontSize: 14)),
         style: OutlinedButton.styleFrom(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           side: const BorderSide(color: AppTheme.border, width: 1.5),
           backgroundColor: AppTheme.surface,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 22, color: AppTheme.textSecondary),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ],
         ),
       ),
     );
